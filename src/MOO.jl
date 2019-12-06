@@ -8,4 +8,8 @@ module MOO
 import MathOptInterface
 const MOI = MathOptInterface
 
+include("utils.jl")
+
+include("algorithms/nise.jl")
+
 end

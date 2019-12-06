@@ -1,2 +1,19 @@
+name = "MOO"
+uuid = "0327d340-17cd-11ea-3e99-2fd5d98cecda"
+authors = ["Oscar Dowson <oscar.dowson@northwestern.edu"]
+version = "0.0.1"
+
 [deps]
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
+
+[compat]
+GLPK = "0.12"
+MathOptInterface = "0.9.7"
+julia = "1"
+
+[extras]
+GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["GLPK", "Test"]
