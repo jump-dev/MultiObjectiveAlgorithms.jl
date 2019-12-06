@@ -5,33 +5,16 @@
 
 @testset "NISE" begin
     model = MOO.NISE(GLPK.Optimizer())
-    x = MOI.add_variables(model, 2)
-    MOI.add_constraint(model, MOI.SingleVariable(x[1]), MOI.GreaterThan(0.0))
-    MOI.add_constraint(model, MOI.SingleVariable(x[2]), MOI.GreaterThan(0.25))
-    MOI.add_constraint(
-        model,
-        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.([1.0, 1.0], x), 0.0),
-        MOI.GreaterThan(1.0)
-    )
-    MOI.add_constraint(
-        model,
-        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.([0.5, 1.0], x), 0.0),
-        MOI.GreaterThan(0.75)
-    )
-    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    MOI.set(
-        model,
-        MOI.ObjectiveFunction{MOI.VectorAffineFunction{Float64}}(),
-        MOI.VectorAffineFunction(
-            MOI.VectorAffineTerm{Float64}[
-                MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(2.0, x[1])),
-                MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x[2])),
-                MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(1.0, x[1])),
-                MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(3.0, x[2]))
-            ],
-            [0.0, 0.0]
-        )
-    )
+    MOI.Utilities.loadfromstring!(model, """
+    variables: x, y
+    minobjective: [2 * x + y, x + 3 * y]
+    c1: x + y >= 1.0
+    c2: 0.5 * x + y >= 0.75
+    c3: x >= 0.0
+    c4: y >= 0.25
+    """)
+    x = MOI.get(model, MOI.VariableIndex, "x")
+    y = MOI.get(model, MOI.VariableIndex, "y")
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     @test MOI.get(model, MOI.ResultCount()) == 3
@@ -41,7 +24,8 @@
         @test MOI.get(model, MOI.PrimalStatus(i)) == MOI.FEASIBLE_POINT
         @test MOI.get(model, MOI.DualStatus(i)) == MOI.NO_SOLUTION
         @test MOI.get(model, MOI.ObjectiveValue(i)) == Y[i]
-        @test MOI.get.(model, MOI.VariablePrimal(i), x) == X[i]
+        @test MOI.get(model, MOI.VariablePrimal(i), x) == X[i][1]
+        @test MOI.get(model, MOI.VariablePrimal(i), y) == X[i][2]
     end
     @test MOI.get(model, MOI.ObjectiveBound()) == [1.0, 1.75]
 end

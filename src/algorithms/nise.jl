@@ -48,6 +48,12 @@ end
 function MOI.get(model::NISE, attr::_ATTRIBUTES, args...)
     return MOI.get(model.inner, attr, args...)
 end
+function MOI.get(model::NISE, ::Type{MOI.VariableIndex}, args...)
+    return MOI.get(model.inner, MOI.VariableIndex, args...)
+end
+function MOI.get(model::NISE, T::Type{<:MOI.ConstraintIndex}, args...)
+    return MOI.get(model.inner, T, args...)
+end
 
 MOI.add_variable(model::NISE) = MOI.add_variable(model.inner)
 MOI.add_variables(model::NISE, n::Int) = MOI.add_variables(model.inner, n)
