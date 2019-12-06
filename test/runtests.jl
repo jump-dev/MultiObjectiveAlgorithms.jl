@@ -9,4 +9,6 @@ using Test
 
 const MOI = MOO.MOI
 
+include("mo_models.jl")
+
 include("nise.jl")

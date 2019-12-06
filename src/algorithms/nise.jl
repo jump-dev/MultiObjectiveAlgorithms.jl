@@ -3,6 +3,15 @@
 #  distributed with this file, You can obtain one at
 #  http://mozilla.org/MPL/2.0/.
 
+mutable struct NISEOptions
+    solution_limit::Int
+    function NISEOptions()
+        return new(
+            typemax(Int),
+        )
+    end
+end
+
 """
     NISE(optimizer)
 
@@ -21,9 +30,31 @@ mutable struct NISE <: MOI.AbstractOptimizer
     f::Union{Nothing, MOI.AbstractVectorFunction}
     solutions::Union{Nothing, Vector{ParetoSolution}}
     termination_status::MOI.TerminationStatusCode
+    options::NISEOptions
     function NISE(optimizer)
-        return new(optimizer, nothing, nothing, MOI.OPTIMIZE_NOT_CALLED)
+        return new(
+            optimizer,
+            nothing,
+            nothing,
+            MOI.OPTIMIZE_NOT_CALLED,
+            NISEOptions()
+        )
     end
+end
+
+function MOI.empty!(model::NISE)
+    MOI.empty!(model.inner)
+    model.f = nothing
+    model.solutions = nothing
+    model.termination_status = MOI.OPTIMIZE_NOT_CALLED
+    return
+end
+
+function MOI.is_empty(model::NISE)
+    return MOI.is_empty(model) &&
+        model.f === nothing &&
+        model.solutions === nothing &&
+        model.termination_status == MOI.OPTIMIZE_NOT_CALLED
 end
 
 function MOI.supports(
@@ -118,6 +149,30 @@ end
 
 MOI.get(::NISE, ::MOI.DualStatus) = MOI.NO_SOLUTION
 
+function MOI.set(model::NISE, attr::MOI.RawParameter, val::T) where {T}
+    if !(Symbol(attr.name) in fieldnames(NISEOptions))
+        throw(MOI.UnsupportedAttribute(
+            attr, "Parameter name $(attr.name) is not a valid parameter."
+        ))
+    elseif fieldtype(NISEOptions, Symbol(attr.name)) != T
+        error(
+            "Expected type $(fieldtype(NISEOptions, Symbol(attr.name))) when " *
+            "setting parameter $(attr.name). Got $(T)."
+        )
+    end
+    setfield!(model.options, Symbol(attr.name), val)
+    return
+end
+
+function MOI.get(model::NISE, attr::MOI.RawParameter)
+    if !(Symbol(attr.name) in fieldnames(NISEOptions))
+        throw(MOI.UnsupportedAttribute(
+            attr, "Parameter name $(attr.name) is not a valid parameter."
+        ))
+    end
+    return getfield(model.options, Symbol(attr.name))
+end
+
 function _solve_weighted_sum(model::NISE, weight::Float64)
     f = _scalarise(model.f, [weight, 1 - weight])
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
@@ -147,8 +202,8 @@ function MOI.optimize!(model::NISE)
     if !(solutions[0.0] ≈ solutions[1.0])
         push!(queue, (0.0, 1.0))
     end
-    while length(queue) > 0
-        (a, b) = pop!(queue)
+    while length(queue) > 0 && length(solutions) < model.options.solution_limit
+        (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
         status, solution = _solve_weighted_sum(model, w)
