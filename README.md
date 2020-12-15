@@ -1,3 +1,5 @@
+**This package was an experimental attempt at multi-objective optimization in JuMP. It no longer works.**
+
 # MOO: the Multi-Objective Optimizer
 
 MOO is a collection of algorithms for multi-objective optimization.
