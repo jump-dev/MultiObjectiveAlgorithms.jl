@@ -3,9 +3,6 @@
 #  distributed with this file, You can obtain one at
 #  http://mozilla.org/MPL/2.0/.
 
-import Pkg
-Pkg.pkg"add MathOptInterface#od/vector-optimization"
-
 using MOO
 using Test
 
