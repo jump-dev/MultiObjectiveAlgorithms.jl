@@ -8,9 +8,9 @@ It currently implements:
 
 - The Non-inferior Set Estimation algorithm of Cohon et al. (1979).
     ```julia
-    using GLPK
     using MOO
-    model = MOO.NISE(GLPK.Optimizer())
+    import HiGHS
+    model = MOO.NISE(HiGHS.Optimizer())
     ```
 
 ## Installation
