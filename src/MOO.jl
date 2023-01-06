@@ -70,10 +70,16 @@ function MOI.empty!(model::Optimizer)
 end
 
 function MOI.is_empty(model::Optimizer)
-    return MOI.is_empty(model) &&
+    return MOI.is_empty(model.inner) &&
            model.f === nothing &&
            model.solutions === nothing &&
            model.termination_status == MOI.OPTIMIZE_NOT_CALLED
+end
+
+MOI.supports_incremental_interface(::Optimizer) = true
+
+function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
+    return MOI.Utilities.default_copy_to(dest, src)
 end
 
 function MOI.supports(
@@ -107,7 +113,29 @@ function MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute)
     end
 end
 
-MOI.supports(model::Optimizer, args...) = MOI.supports(model.inner, args...)
+function MOI.supports(model::Optimizer, arg::MOI.AbstractModelAttribute)
+    return MOI.supports(model.inner, arg)
+end
+
+function MOI.supports(model::Optimizer, arg::MOI.AbstractOptimizerAttribute)
+    return MOI.supports(model.inner, arg)
+end
+
+function MOI.supports(
+    model::Optimizer,
+    arg::MOI.AbstractVariableAttribute,
+    ::Type{MOI.VariableIndex},
+)
+    return MOI.supports(model.inner, arg, MOI.VariableIndex)
+end
+
+function MOI.supports(
+    model::Optimizer,
+    arg::MOI.AbstractConstraintAttribute,
+    ::Type{MOI.ConstraintIndex{F,S}}
+) where {F<:MOI.AbstractFunction,S<:MOI.AbstractSet}
+    return MOI.supports(model.inner, arg, MOI.ConstraintIndex{F,S})
+end
 
 function MOI.set(model::Optimizer, attr::_ATTRIBUTES, args...)
     return MOI.set(model.inner, attr, args...)
