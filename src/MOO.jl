@@ -40,6 +40,10 @@ end
 
 abstract type AbstractAlgorithm end
 
+for file in readdir(joinpath(@__DIR__, "algorithms"))
+    include(joinpath(@__DIR__, "algorithms", file))
+end
+
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::AbstractAlgorithm
@@ -48,11 +52,11 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     termination_status::MOI.TerminationStatusCode
 
     function Optimizer(
-        optimizer::MOI.AbstractOptimizer,
-        algorithm::AbstractAlgorithm,
+        optimizer_factory,
+        algorithm::AbstractAlgorithm = NISE(),
     )
         return new(
-            optimizer,
+            MOI.instantiate(optimizer_factory),
             algorithm,
             nothing,
             nothing,
@@ -97,7 +101,9 @@ const _ATTRIBUTES = Union{
 }
 
 function MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value)
-    if MOI.supports(model.algorithm, attr)
+    if attr.name == "algorithm"
+        model.algorithm = value
+    elseif MOI.supports(model.algorithm, attr)
         MOI.set(model.algorithm, attr, value)
     else
         MOI.set(model.inner, attr, value)
@@ -106,7 +112,9 @@ function MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value)
 end
 
 function MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute)
-    if MOI.supports(model.algorithm, attr)
+    if attr.name == "algorithm"
+        return model.algorithm
+    elseif MOI.supports(model.algorithm, attr)
         return MOI.get(model.algorithm, attr)
     else
         return MOI.get(model.inner, attr)
@@ -236,9 +244,5 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
 end
 
 MOI.get(::Optimizer, ::MOI.DualStatus) = MOI.NO_SOLUTION
-
-for file in readdir(joinpath(@__DIR__, "algorithms"))
-    include(joinpath(@__DIR__, "algorithms", file))
-end
 
 end

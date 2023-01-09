@@ -5,6 +5,7 @@
 
 import Pkg
 Pkg.pkg"add MathOptInterface#od/vector-optimization"
+Pkg.pkg"add JuMP#od/vector-optimization"
 
 using MOO
 using Test
@@ -17,12 +18,16 @@ include("mo_models.jl")
 
 @testset "$name" for (name, alg) in Dict("NISE" => MOO.NISE())
     TestModels.run_tests() do
-        return MOO.Optimizer(HiGHS.Optimizer(), alg)
+        return MOI.OptimizerWithAttributes(
+            MOO.Optimizer(HiGHS.Optimizer),
+            "algorithm" => alg,
+        )
     end
 end
 
 @testset "test_NISE_basics" begin
-    model = MOO.Optimizer(HiGHS.Optimizer(), MOO.NISE())
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOI.RawOptimizerAttribute("algorithm"), MOO.NISE())
     @test MOI.get(model, MOI.RawOptimizerAttribute("solution_limit")) ==
           typemax(Int)
     MOI.set(model, MOI.RawOptimizerAttribute("solution_limit"), 1)
