@@ -40,24 +40,17 @@ end
 
 abstract type AbstractAlgorithm end
 
-for file in readdir(joinpath(@__DIR__, "algorithms"))
-    include(joinpath(@__DIR__, "algorithms", file))
-end
-
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
-    algorithm::AbstractAlgorithm
+    algorithm::Union{Nothing,AbstractAlgorithm}
     f::Union{Nothing,MOI.AbstractVectorFunction}
     solutions::Union{Nothing,Vector{ParetoSolution}}
     termination_status::MOI.TerminationStatusCode
 
-    function Optimizer(
-        optimizer_factory,
-        algorithm::AbstractAlgorithm = NISE(),
-    )
+    function Optimizer(optimizer_factory)
         return new(
             MOI.instantiate(optimizer_factory),
-            algorithm,
+            nothing,
             nothing,
             nothing,
             MOI.OPTIMIZE_NOT_CALLED,
@@ -244,5 +237,9 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
 end
 
 MOI.get(::Optimizer, ::MOI.DualStatus) = MOI.NO_SOLUTION
+
+for file in readdir(joinpath(@__DIR__, "algorithms"))
+    include(joinpath(@__DIR__, "algorithms", file))
+end
 
 end

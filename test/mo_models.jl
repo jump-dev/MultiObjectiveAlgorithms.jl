@@ -188,5 +188,4 @@ function example_jump_bolp_1_min_max(f)
     return
 end
 
-
 end  # module

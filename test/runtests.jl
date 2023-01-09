@@ -17,12 +17,12 @@ const MOI = MOO.MOI
 include("mo_models.jl")
 
 @testset "$name" for (name, alg) in Dict("NISE" => MOO.NISE())
-    TestModels.run_tests() do
-        return MOI.OptimizerWithAttributes(
-            MOO.Optimizer(HiGHS.Optimizer),
+    TestModels.run_tests(
+        MOI.OptimizerWithAttributes(
+            () -> MOO.Optimizer(HiGHS.Optimizer),
             "algorithm" => alg,
-        )
-    end
+        ),
+    )
 end
 
 @testset "test_NISE_basics" begin
