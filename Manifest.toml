@@ -140,9 +140,7 @@ version = "0.21.3"
 
 [[JuMP]]
 deps = ["LinearAlgebra", "MathOptInterface", "MutableArithmetics", "OrderedCollections", "Printf", "SparseArrays"]
-git-tree-sha1 = "c234acfdc440d9d809be6f6c98da4c781ef12fda"
-repo-rev = "od/vector-optimization"
-repo-url = "https://github.com/jump-dev/JuMP.jl.git"
+git-tree-sha1 = "821341783388cd26bbb9bab4ad9d0992e78259a4"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
 version = "1.6.0"
 
@@ -190,9 +188,7 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[MathOptInterface]]
 deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "Printf", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
-git-tree-sha1 = "61198c72bad43942b95048075f28b8415b07ea27"
-repo-rev = "od/vector-optimization"
-repo-url = "https://github.com/jump-dev/MathOptInterface.jl.git"
+git-tree-sha1 = "f21d9bb78cea58d9b535b9d9f2a1e601112ef0ed"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 version = "1.11.2"
 
@@ -321,9 +317,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TranscodingStreams]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "e4bdc63f5c6d62e80eb1c0043fcc0360d5950ff7"
+git-tree-sha1 = "94f38103c984f89cf77c402f2a68dbd870f8165f"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.9.10"
+version = "0.9.11"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]
