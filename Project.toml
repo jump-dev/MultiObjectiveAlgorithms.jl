@@ -4,18 +4,18 @@ authors = ["Oscar Dowson <o.dowson@gmail.com>"]
 version = "0.0.1"
 
 [deps]
-HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
-JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [compat]
+JuMP = "1"
 MathOptInterface = "1"
 julia = "1.6"
 
 [extras]
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["HiGHS", "Test"]
+test = ["HiGHS", "JuMP", "Test"]
