@@ -233,4 +233,28 @@ function example_jump_bolp_1_min_max_scalar(f)
     return
 end
 
+function example_jump_biobjective_knapsack(f)
+    p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
+    p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
+    w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
+    model = Model(f; add_bridges = false)
+    set_silent(model)
+    @variable(model, x[1:length(w)], Bin)
+    @objective(model, Max, [p1' * x, p2' * x])
+    @constraint(model, w' * x <= 900)
+    optimize!(model)
+    results = Dict(
+        [955.0, 906.0] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
+        [948.0, 939.0] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
+        [934.0, 971.0] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+        [918.0, 983.0] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
+    )
+    for i in 1:result_count(model)
+        X = findall(elt -> elt > 0.9, value.(x; result = i))
+        Y = objective_value(model; result = i)
+        @test results[Y] == X
+    end
+    return
+end
+
 end  # module
