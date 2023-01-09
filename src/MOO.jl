@@ -133,7 +133,7 @@ end
 function MOI.supports(
     model::Optimizer,
     arg::MOI.AbstractConstraintAttribute,
-    ::Type{MOI.ConstraintIndex{F,S}}
+    ::Type{MOI.ConstraintIndex{F,S}},
 ) where {F<:MOI.AbstractFunction,S<:MOI.AbstractSet}
     return MOI.supports(model.inner, arg, MOI.ConstraintIndex{F,S})
 end
