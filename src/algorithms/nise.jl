@@ -43,7 +43,11 @@ function MOI.get(alg::NISE, attr::MOI.RawOptimizerAttribute)
 end
 
 function _solve_weighted_sum(model::Optimizer, weight::Float64)
-    f = _scalarise(model.f, [weight, 1 - weight])
+    return _solve_weighted_sum(model, [weight, 1 - weight])
+end
+
+function _solve_weighted_sum(model::Optimizer, weights::Vector{Float64})
+    f = _scalarise(model.f, weights)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model.inner)
     status = MOI.get(model.inner, MOI.TerminationStatus())
@@ -56,6 +60,10 @@ function _solve_weighted_sum(model::Optimizer, weight::Float64)
 end
 
 function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
+    if MOI.output_dimension(model.f) == 1
+        status, solution = _solve_weighted_sum(model, [1.0])
+        return status, [solution]
+    end
     solutions = Dict{Float64,ParetoSolution}()
     for w in (0.0, 1.0)
         status, solution = _solve_weighted_sum(model, w)

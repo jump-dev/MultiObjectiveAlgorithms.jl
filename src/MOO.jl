@@ -179,8 +179,8 @@ function MOI.set(
     ::MOI.ObjectiveFunction{F},
     f::F,
 ) where {F<:MOI.AbstractVectorFunction}
-    if MOI.output_dimension(f) != 2
-        error("Only bi-objective problems supported.")
+    if MOI.output_dimension(f) > 2
+        error("Only scalar or bi-objective problems supported.")
     end
     model.f = f
     return

@@ -188,4 +188,49 @@ function example_jump_bolp_1_min_max(f)
     return
 end
 
+function example_jump_bolp_1_min_max_scalar(f)
+    model = Model(f; add_bridges = false)
+    set_silent(model)
+    @variable(model, x >= 0.0)
+    @variable(model, y >= 0.25)
+    @constraint(model, x + y >= 1.0)
+    @constraint(model, 0.5 * x + y >= 0.75)
+    @expression(model, obj1, 2 * x + y)
+    @expression(model, obj2, -x - 3 * y)
+    # We want
+    #   min obj1
+    #   max obj2
+    # But you must pick a single sense.
+    @objective(model, Min, [obj1, -obj2])
+    optimize!(model)
+    @test termination_status(model) == OPTIMAL
+    @test result_count(model) == 3
+    X = [[0.0, 1.0], [0.5, 0.5], [1.0, 0.25]]
+    Y = [[1.0, 3.0], [1.5, 2.0], [2.25, 1.75]]
+    for i in 1:3
+        @test primal_status(model; result = i) == MOI.FEASIBLE_POINT
+        @test dual_status(model; result = i) == MOI.NO_SOLUTION
+        @test objective_value(model; result = i) == Y[i]
+        @test value(x; result = i) == X[i][1]
+        @test value(y; result = i) == X[i][2]
+    end
+    @test objective_bound(model) == [1.0, 1.75]
+    # Drop objective
+    @objective(model, Min, [obj1])
+    optimize!(model)
+    @test termination_status(model) == OPTIMAL
+    @test result_count(model) == 1
+    X = [[0.0, 1.0]]
+    Y = [[1.0]]
+    for i in 1:1
+        @test primal_status(model; result = i) == MOI.FEASIBLE_POINT
+        @test dual_status(model; result = i) == MOI.NO_SOLUTION
+        @test objective_value(model; result = i) == Y[i]
+        @test value(x; result = i) == X[i][1]
+        @test value(y; result = i) == X[i][2]
+    end
+    @test objective_bound(model) == [1.0]
+    return
+end
+
 end  # module
