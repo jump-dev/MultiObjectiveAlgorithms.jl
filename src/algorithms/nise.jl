@@ -31,8 +31,8 @@ end
 
 MOI.get(alg::NISE, ::SolutionLimit) = alg.solution_limit
 
-function _solve_weighted_sum(model::Optimizer, ::NISE, weight::Float64)
-    return _solve_weighted_sum(model, [weight, 1 - weight])
+function _solve_weighted_sum(model::Optimizer, alg::NISE, weight::Float64)
+    return _solve_weighted_sum(model, alg, [weight, 1 - weight])
 end
 
 function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
