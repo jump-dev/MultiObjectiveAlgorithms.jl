@@ -1,7 +1,7 @@
-#  Copyright 2019, Oscar Dowson. This Source Code Form is subject to the terms
-#  of the Mozilla Public License, v.2.0. If a copy of the MPL was not
-#  distributed with this file, You can obtain one at
-#  http://mozilla.org/MPL/2.0/.
+#  Copyright 2019, Oscar Dowson and contributors
+#  This Source Code Form is subject to the terms of the Mozilla Public License,
+#  v.2.0. If a copy of the MPL was not distributed with this file, You can
+#  obtain one at http://mozilla.org/MPL/2.0/.
 
 module MOO
 
@@ -40,6 +40,8 @@ end
 
 abstract type AbstractAlgorithm end
 
+MOI.Utilities.map_indices(::Function, x::AbstractAlgorithm) = x
+
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
@@ -60,6 +62,9 @@ end
 
 function MOI.empty!(model::Optimizer)
     MOI.empty!(model.inner)
+    if model.algorithm !== nothing
+        MOI.empty!(model.algorithm)
+    end
     model.f = nothing
     model.solutions = nothing
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
@@ -93,34 +98,73 @@ const _ATTRIBUTES = Union{
     MOI.AbstractVariableAttribute,
 }
 
+### Algorithm
+
+struct Algorithm <: MOI.AbstractOptimizerAttribute end
+
+MOI.supports(::Optimizer, ::Algorithm) = true
+
+MOI.get(model::Optimizer, ::Algorithm) = model.algorithm
+
+function MOI.set(model::Optimizer, ::Algorithm, alg::AbstractAlgorithm)
+    model.algorithm = alg
+    return
+end
+
+### AbstractAlgorithmAttribute
+
+abstract type AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute end
+
+function MOI.supports(model::Optimizer, attr::AbstractAlgorithmAttribute)
+    return MOI.supports(model.algorithm, attr)
+end
+
+function MOI.set(model::Optimizer, attr::AbstractAlgorithmAttribute, value)
+    MOI.set(model.algorithm, attr, value)
+    return
+end
+
+function MOI.get(model::Optimizer, attr::AbstractAlgorithmAttribute)
+    return MOI.get(model.algorithm, attr)
+end
+
+### RawOptimizerAttribute
+
+function MOI.supports(model::Optimizer, attr::MOI.RawOptimizerAttribute)
+    return MOI.supports(model.inner, attr)
+end
+
 function MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value)
-    if attr.name == "algorithm"
-        model.algorithm = value
-    elseif MOI.supports(model.algorithm, attr)
-        MOI.set(model.algorithm, attr, value)
-    else
-        MOI.set(model.inner, attr, value)
-    end
+    MOI.set(model.inner, attr, value)
     return
 end
 
 function MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute)
-    if attr.name == "algorithm"
-        return model.algorithm
-    elseif MOI.supports(model.algorithm, attr)
-        return MOI.get(model.algorithm, attr)
-    else
-        return MOI.get(model.inner, attr)
-    end
+    return MOI.get(model.inner, attr)
 end
+
+### AbstractOptimizerAttribute
+
+function MOI.supports(model::Optimizer, arg::MOI.AbstractOptimizerAttribute)
+    return MOI.supports(model.inner, arg)
+end
+
+function MOI.set(model::Optimizer, attr::MOI.AbstractOptimizerAttribute, value)
+    MOI.set(model.inner, attr, value)
+    return
+end
+
+function MOI.get(model::Optimizer, attr::MOI.AbstractOptimizerAttribute)
+    return MOI.get(model.inner, attr)
+end
+
+### AbstractModelAttribute
 
 function MOI.supports(model::Optimizer, arg::MOI.AbstractModelAttribute)
     return MOI.supports(model.inner, arg)
 end
 
-function MOI.supports(model::Optimizer, arg::MOI.AbstractOptimizerAttribute)
-    return MOI.supports(model.inner, arg)
-end
+### AbstractVariableAttribute
 
 function MOI.supports(
     model::Optimizer,
@@ -129,6 +173,8 @@ function MOI.supports(
 )
     return MOI.supports(model.inner, arg, MOI.VariableIndex)
 end
+
+### AbstractConstraintAttribute
 
 function MOI.supports(
     model::Optimizer,
@@ -179,9 +225,6 @@ function MOI.set(
     ::MOI.ObjectiveFunction{F},
     f::F,
 ) where {F<:MOI.AbstractVectorFunction}
-    if MOI.output_dimension(f) > 2
-        error("Only scalar or bi-objective problems supported.")
-    end
     model.f = f
     return
 end
@@ -189,6 +232,8 @@ end
 MOI.get(model::Optimizer, ::MOI.ObjectiveFunctionType) = typeof(model.f)
 
 MOI.get(model::Optimizer, ::MOI.ObjectiveFunction) = model.f
+
+MOI.delete(model::Optimizer, i::MOI.Index) = MOI.delete(model.inner, i)
 
 function MOI.optimize!(model::Optimizer)
     model.solutions = nothing
