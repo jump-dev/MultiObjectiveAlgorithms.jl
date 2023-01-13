@@ -1,7 +1,7 @@
-#  Copyright 2019, Oscar Dowson. This Source Code Form is subject to the terms
-#  of the Mozilla Public License, v.2.0. If a copy of the MPL was not
-#  distributed with this file, You can obtain one at
-#  http://mozilla.org/MPL/2.0/.
+#  Copyright 2019, Oscar Dowson and contributors
+#  This Source Code Form is subject to the terms of the Mozilla Public License,
+#  v.2.0. If a copy of the MPL was not distributed with this file, You can
+#  obtain one at http://mozilla.org/MPL/2.0/.
 
 """
     NISE()
@@ -18,35 +18,24 @@ mutable struct NISE <: AbstractAlgorithm
     NISE() = new(typemax(Int))
 end
 
-function MOI.supports(alg::NISE, attr::MOI.RawOptimizerAttribute)
-    if attr.name == "solution_limit"
-        return true
-    end
-    return false
-end
+MOI.empty!(::NISE) = nothing
 
-function MOI.set(alg::NISE, attr::MOI.RawOptimizerAttribute, value)
-    if attr.name == "solution_limit"
-        alg.solution_limit = value
-    else
-        throw(MOI.UnsupportedAttribute(attr))
-    end
+struct SolutionLimit <: AbstractAlgorithmAttribute end
+
+MOI.supports(::NISE, ::SolutionLimit) = true
+
+function MOI.set(alg::NISE, ::SolutionLimit, value)
+    alg.solution_limit = value
     return
 end
 
-function MOI.get(alg::NISE, attr::MOI.RawOptimizerAttribute)
-    if attr.name == "solution_limit"
-        return alg.solution_limit
-    else
-        throw(MOI.UnsupportedAttribute(attr))
-    end
-end
+MOI.get(alg::NISE, ::SolutionLimit) = alg.solution_limit
 
-function _solve_weighted_sum(model::Optimizer, weight::Float64)
+function _solve_weighted_sum(model::Optimizer, ::NISE, weight::Float64)
     return _solve_weighted_sum(model, [weight, 1 - weight])
 end
 
-function _solve_weighted_sum(model::Optimizer, weights::Vector{Float64})
+function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
     f = _scalarise(model.f, weights)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model.inner)
@@ -60,13 +49,16 @@ function _solve_weighted_sum(model::Optimizer, weights::Vector{Float64})
 end
 
 function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
+    if MOI.output_dimension(model.f) > 2
+        error("Only scalar or bi-objective problems supported.")
+    end
     if MOI.output_dimension(model.f) == 1
-        status, solution = _solve_weighted_sum(model, [1.0])
+        status, solution = _solve_weighted_sum(model, algorithm, [1.0])
         return status, [solution]
     end
     solutions = Dict{Float64,ParetoSolution}()
     for w in (0.0, 1.0)
-        status, solution = _solve_weighted_sum(model, w)
+        status, solution = _solve_weighted_sum(model, algorithm, w)
         if status != MOI.OPTIMAL
             return status, nothing
         end
@@ -80,7 +72,7 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
-        status, solution = _solve_weighted_sum(model, w)
+        status, solution = _solve_weighted_sum(model, algorithm, w)
         if status != MOI.OPTIMAL
             # Exit the solve with some error.
             return status, nothing

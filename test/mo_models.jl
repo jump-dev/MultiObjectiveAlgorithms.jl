@@ -1,7 +1,7 @@
-#  Copyright 2019, Oscar Dowson. This Source Code Form is subject to the terms
-#  of the Mozilla Public License, v.2.0. If a copy of the MPL was not
-#  distributed with this file, You can obtain one at
-#  http://mozilla.org/MPL/2.0/.
+#  Copyright 2019, Oscar Dowson and contributors
+#  This Source Code Form is subject to the terms of the Mozilla Public License,
+#  v.2.0. If a copy of the MPL was not distributed with this file, You can
+#  obtain one at http://mozilla.org/MPL/2.0/.
 
 module TestModels
 
@@ -56,7 +56,7 @@ c4: y >= 0.25
 end
 
 function example_jump_bolp_1(f)
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x >= 0.0)
     @variable(model, y >= 0.25)
@@ -81,7 +81,7 @@ function example_jump_bolp_1(f)
 end
 
 function example_jump_bolp_1_maximize(f)
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x >= 0.0)
     @variable(model, y >= 0.25)
@@ -105,7 +105,7 @@ function example_jump_bolp_1_maximize(f)
 end
 
 function example_jump_bolp_1_min_min(f)
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x >= 0.0)
     @variable(model, y >= 0.25)
@@ -131,7 +131,7 @@ function example_jump_bolp_1_min_min(f)
 end
 
 function example_jump_bolp_1_min_min_reversed(f)
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x >= 0.0)
     @variable(model, y >= 0.25)
@@ -159,7 +159,7 @@ function example_jump_bolp_1_min_min_reversed(f)
 end
 
 function example_jump_bolp_1_min_max(f)
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x >= 0.0)
     @variable(model, y >= 0.25)
@@ -189,7 +189,7 @@ function example_jump_bolp_1_min_max(f)
 end
 
 function example_jump_bolp_1_min_max_scalar(f)
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x >= 0.0)
     @variable(model, y >= 0.25)
@@ -237,7 +237,7 @@ function example_jump_biobjective_knapsack(f)
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
-    model = Model(f; add_bridges = false)
+    model = Model(f)
     set_silent(model)
     @variable(model, x[1:length(w)], Bin)
     @objective(model, Max, [p1' * x, p2' * x])
