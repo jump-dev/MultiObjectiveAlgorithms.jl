@@ -11,16 +11,16 @@ A solver that implements the Non-Inferior Set Estimation algorithm of:
 Cohon, J. L., Church, R. L., & Sheer, D. P. (1979). Generating multiobjective
 trade‐offs: An algorithm for bicriterion problems. Water Resources Research,
 15(5), 1001-1010.
+
+## Supported optimizer attributes
+
+ * `MOO.SolutionLimit()`
 """
 mutable struct NISE <: AbstractAlgorithm
-    solution_limit::Int
+    solution_limit::Union{Nothing,Int}
 
-    NISE() = new(typemax(Int))
+    NISE() = new(nothing)
 end
-
-MOI.empty!(::NISE) = nothing
-
-struct SolutionLimit <: AbstractAlgorithmAttribute end
 
 MOI.supports(::NISE, ::SolutionLimit) = true
 
@@ -68,7 +68,8 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
     if !(solutions[0.0] ≈ solutions[1.0])
         push!(queue, (0.0, 1.0))
     end
-    while length(queue) > 0 && length(solutions) < algorithm.solution_limit
+    limit = something(algorithm.solution_limit, default(SolutionLimit()))
+    while length(queue) > 0 && length(solutions) < limit
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])

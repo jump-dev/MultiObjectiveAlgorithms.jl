@@ -62,9 +62,6 @@ end
 
 function MOI.empty!(model::Optimizer)
     MOI.empty!(model.inner)
-    if model.algorithm !== nothing
-        MOI.empty!(model.algorithm)
-    end
     model.f = nothing
     model.solutions = nothing
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
@@ -100,6 +97,11 @@ const _ATTRIBUTES = Union{
 
 ### Algorithm
 
+"""
+    Algorithm <: MOI.AbstractOptimizerAttribute
+
+An attribute to control the algorithm used by MOO.
+"""
 struct Algorithm <: MOI.AbstractOptimizerAttribute end
 
 MOI.supports(::Optimizer, ::Algorithm) = true
@@ -113,6 +115,11 @@ end
 
 ### AbstractAlgorithmAttribute
 
+"""
+    AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute
+
+A super-type for MOO-specific optimizer attributes.
+"""
 abstract type AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute end
 
 function MOI.supports(model::Optimizer, attr::AbstractAlgorithmAttribute)
@@ -127,6 +134,61 @@ end
 function MOI.get(model::Optimizer, attr::AbstractAlgorithmAttribute)
     return MOI.get(model.algorithm, attr)
 end
+
+"""
+    SolutionLimit <: AbstractAlgorithmAttribute -> Int
+
+Terminate the algorithm once the set number of solutions have been found.
+
+Defaults to `typemax(Int)`.
+"""
+struct SolutionLimit <: AbstractAlgorithmAttribute end
+
+default(::SolutionLimit) = typemax(Int)
+
+"""
+    ObjectivePriority(index::Int) <: AbstractAlgorithmAttribute -> Int
+
+Assign an `Int` priority to objective number `index`. This is most commonly
+used to group the objectives into sets of equal priorities. Greater numbers
+indicate higher priority.
+
+Defaults to `0`.
+"""
+struct ObjectivePriority <: AbstractAlgorithmAttribute
+    index::Int
+end
+
+default(::ObjectivePriority) = 0
+
+"""
+    ObjectiveWeight(index::Int) <: AbstractAlgorithmAttribute -> Float64
+
+Assign a `Float64` weight to objective number `index`. This is most commonly
+used to scalarize a set of objectives using their weighted sum.
+
+Defaults to `1.0`.
+"""
+struct ObjectiveWeight <: AbstractAlgorithmAttribute
+    index::Int
+end
+
+default(::ObjectiveWeight) = 1.0
+
+"""
+    ObjectiveRelativeTolerance(index::Int) <: AbstractAlgorithmAttribute -> Float64
+
+Assign a `Float64` tolerance to objective number `index`. This is most commonly
+used to constrain an objective to a range relative to the optimal objective
+value of that objective.
+
+Defaults to `0.01` (1%).
+"""
+struct ObjectiveRelativeTolerance <: AbstractAlgorithmAttribute
+    index::Int
+end
+
+default(::ObjectiveRelativeTolerance) = 0.01
 
 ### RawOptimizerAttribute
 
