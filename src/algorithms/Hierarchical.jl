@@ -6,9 +6,24 @@
 """
     Hierarchical()
 
- * `ObjectivePriority`
- * `ObjectiveWeight`
- * `ObjectiveRelativeTolerance`
+`Hierarchical` implements an algorithm that returns a single point via an
+iterative scheme.
+
+First, it partitions the objectives into sets according to
+`MOO.ObjectivePriority`. Then, in order of decreasing priority, it formulates a
+single-objective problem by scalarizing all of the objectives with the same
+priority using `MOO.ObjectiveWeight`. Next, it constrains those objectives such
+that they can be at most `MOO.ObjectiveRelativeTolerance` worse than optimal in
+future solves. Finally, it steps to the next set of prioritized objectives.
+
+The solution is a single point that trades off the various objectives. It does
+not record the partial solutions that were found along the way.
+
+## Supported optimizer attributes
+
+ * `MOO.ObjectivePriority`
+ * `MOO.ObjectiveWeight`
+ * `MOO.ObjectiveRelativeTolerance`
 """
 mutable struct Hierarchical <: AbstractAlgorithm
     priorities::Vector{Int}
@@ -18,56 +33,48 @@ mutable struct Hierarchical <: AbstractAlgorithm
     Hierarchical() = new(Int[], Float64[], Float64[])
 end
 
-function MOI.empty!(alg::Hierarchical)
-    # @show alg
-    # empty!(alg.priorities)
-    # empty!(alg.weights)
-    # empty!(alg.rtol)
-    return
-end
-
-function _append_default(x, N, default)
-    for _ in (1+length(x)):N
-        push!(x, default)
+function _append_default(attr, x)
+    for _ in (1+length(x)):attr.index
+        push!(x, default(attr))
     end
     return
 end
 
-abstract type _AbstractObjectiveAttribute <: AbstractAlgorithmAttribute end
+MOI.supports(::Hierarchical, ::ObjectivePriority) = true
 
-MOI.supports(::Hierarchical, attr::_AbstractObjectiveAttribute) = true
-
-function MOI.get(alg::Hierarchical, attr::_AbstractObjectiveAttribute)
-    return get(_vector(alg, attr), attr.index, _default(attr))
+function MOI.get(alg::Hierarchical, attr::ObjectivePriority)
+    return get(alg.priorities, attr.index, default(attr))
 end
 
-function MOI.set(alg::Hierarchical, attr::_AbstractObjectiveAttribute, value)
-    data = _vector(alg, attr)
-    _append_default(data, attr.index, _default(attr))
-    data[attr.index] = value
+function MOI.set(alg::Hierarchical, attr::ObjectivePriority, value)
+    _append_default(attr, alg.priorities)
+    alg.priorities[attr.index] = value
     return
 end
 
-struct ObjectivePriority <: _AbstractObjectiveAttribute
-    index::Int
+MOI.supports(::Hierarchical, ::ObjectiveWeight) = true
+
+function MOI.get(alg::Hierarchical, attr::ObjectiveWeight)
+    return get(alg.weights, attr.index, default(attr))
 end
 
-_default(::ObjectivePriority) = 0
-_vector(alg::Hierarchical, ::ObjectivePriority) = alg.priorities
-
-struct ObjectiveWeight <: _AbstractObjectiveAttribute
-    index::Int
+function MOI.set(alg::Hierarchical, attr::ObjectiveWeight, value)
+    _append_default(attr, alg.weights)
+    alg.weights[attr.index] = value
+    return
 end
 
-_default(::ObjectiveWeight) = 1.0
-_vector(alg::Hierarchical, ::ObjectiveWeight) = alg.weights
+MOI.supports(::Hierarchical, ::ObjectiveRelativeTolerance) = true
 
-struct ObjectiveRelativeTolerance <: _AbstractObjectiveAttribute
-    index::Int
+function MOI.get(alg::Hierarchical, attr::ObjectiveRelativeTolerance)
+    return get(alg.rtol, attr.index, default(attr))
 end
 
-_default(::ObjectiveRelativeTolerance) = 0.01
-_vector(alg::Hierarchical, ::ObjectiveRelativeTolerance) = alg.rtol
+function MOI.set(alg::Hierarchical, attr::ObjectiveRelativeTolerance, value)
+    _append_default(attr, alg.rtol)
+    alg.rtol[attr.index] = value
+    return
+end
 
 function _sorted_priorities(priorities::Vector{Int})
     unique_priorities = sort(unique(priorities); rev = true)
