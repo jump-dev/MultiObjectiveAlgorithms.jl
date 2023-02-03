@@ -344,15 +344,15 @@ end
 
 function MOI.get(model::Optimizer, attr::MOI.ObjectiveBound)
     objectives = MOI.Utilities.eachscalar(model.f)
-    nadir_point = fill(NaN, length(objectives))
+    utopia = fill(NaN, length(objectives))
     for (i, f) in enumerate(objectives)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
-            nadir_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
+            utopia[i] = MOI.get(model.inner, MOI.ObjectiveValue())
         end
     end
-    return nadir_point
+    return utopia
 end
 
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
