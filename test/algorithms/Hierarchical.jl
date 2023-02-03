@@ -48,6 +48,22 @@ function test_knapsack()
     return
 end
 
+function test_knapsack_min()
+    P = [1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
+    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
+    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Hierarchical())
+    set_optimizer_attribute.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
+    set_optimizer_attribute.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    set_silent(model)
+    @variable(model, 0 <= x[1:4] <= 1)
+    @objective(model, Min, -P * x)
+    @constraint(model, sum(x) <= 2)
+    optimize!(model)
+    @test ≈(value.(x), [0.9, 0, 0.9, 0.2]; atol = 1e-3)
+    return
+end
+
 end
 
 TestHierarchical.run_tests()

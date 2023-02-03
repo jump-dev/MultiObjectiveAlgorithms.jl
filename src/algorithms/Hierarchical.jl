@@ -105,9 +105,9 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         for (i, fi) in enumerate(MOI.Utilities.eachscalar(new_vector_f))
             rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
             set = if sense == MOI.MIN_SENSE
-                MOI.LessThan(Y[i] * (1 + rtol))
+                MOI.LessThan(Y[i] + rtol * abs(Y[i]))
             else
-                MOI.GreaterThan(Y[i] * (1 - rtol))
+                MOI.GreaterThan(Y[i] - rtol * abs(Y[i]))
             end
             push!(constraints, MOI.add_constraint(model, fi, set))
         end

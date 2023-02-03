@@ -50,9 +50,9 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
         sense = MOI.get(model.inner, MOI.ObjectiveSense())
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
         set = if sense == MOI.MIN_SENSE
-            MOI.LessThan(Y * (1 + rtol))
+            MOI.LessThan(Y + rtol * abs(Y))
         else
-            MOI.GreaterThan(Y * (1 - rtol))
+            MOI.GreaterThan(Y - rtol * abs(Y))
         end
         push!(constraints, MOI.add_constraint(model, f, set))
     end
