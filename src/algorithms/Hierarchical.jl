@@ -33,13 +33,6 @@ mutable struct Hierarchical <: AbstractAlgorithm
     Hierarchical() = new(Int[], Float64[], Float64[])
 end
 
-function _append_default(attr, x)
-    for _ in (1+length(x)):attr.index
-        push!(x, default(attr))
-    end
-    return
-end
-
 MOI.supports(::Hierarchical, ::ObjectivePriority) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectivePriority)
@@ -87,7 +80,9 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     # Find list of objectives with same priority
     constraints = Any[]
-    objective_subsets = _sorted_priorities(algorithm.priorities)
+    objective_subsets = _sorted_priorities([
+        MOI.get(algorithm, ObjectivePriority(i)) for i in 1:N
+    ])
     for (round, indices) in enumerate(objective_subsets)
         # Solve weighted sum
         new_vector_f = objectives[indices]
@@ -110,9 +105,9 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         for (i, fi) in enumerate(MOI.Utilities.eachscalar(new_vector_f))
             rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
             set = if sense == MOI.MIN_SENSE
-                MOI.LessThan(Y[i] * (1 + rtol))
+                MOI.LessThan(Y[i] + rtol * abs(Y[i]))
             else
-                MOI.GreaterThan(Y[i] * (1 - rtol))
+                MOI.GreaterThan(Y[i] - rtol * abs(Y[i]))
             end
             push!(constraints, MOI.add_constraint(model, fi, set))
         end

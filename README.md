@@ -7,7 +7,7 @@ MOO is a collection of algorithms for multi-objective optimization.
 This package is currently under development. You can install it as follows:
 
 ```julia
-] add MathOptInterface#od/vector-optimization
+] add MathOptInterface#master
 ] add JuMP#od/vector-optimization
 ] add https://github.com/odow/MOO.jl
 ```
@@ -36,8 +36,9 @@ the choice of solution algorithm.
 
 There are a number of algorithms supported by the algorithms in MOO.
 
- * `MOO.NISE()`
+ * `MOO.Lexicographic()` [default]
  * `MOO.Hierarchical()`
+ * `MOO.NISE()`
 
 Consult their docstrings for details.
 

@@ -3,7 +3,7 @@
 #  v.2.0. If a copy of the MPL was not distributed with this file, You can
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
-module TestHierarchical
+module TestLexicographic
 
 using Test
 using JuMP
@@ -22,48 +22,47 @@ function run_tests()
     return
 end
 
-function test_sorted_priorities()
-    @test MOO._sorted_priorities([0, 0, 0]) == [[1, 2, 3]]
-    @test MOO._sorted_priorities([1, 0, 0]) == [[1], [2, 3]]
-    @test MOO._sorted_priorities([0, 1, 0]) == [[2], [1, 3]]
-    @test MOO._sorted_priorities([0, 0, 1]) == [[3], [1, 2]]
-    @test MOO._sorted_priorities([0, 1, 1]) == [[2, 3], [1]]
-    @test MOO._sorted_priorities([0, 2, 1]) == [[2], [3], [1]]
-    return
-end
-
 function test_knapsack()
-    P = [1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
+    P = [1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Hierarchical())
-    set_optimizer_attribute.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
-    set_optimizer_attribute.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Lexicographic())
     set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
     set_silent(model)
     @variable(model, 0 <= x[1:4] <= 1)
     @objective(model, Max, P * x)
     @constraint(model, sum(x) <= 2)
     optimize!(model)
-    @test ≈(value.(x), [0.9, 0, 0.9, 0.2]; atol = 1e-3)
+    @test ≈(value.(x), [0.9, 1, 0, 0.1]; atol = 1e-3)
     return
 end
 
 function test_knapsack_min()
-    P = [1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
+    P = [1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Hierarchical())
-    set_optimizer_attribute.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
-    set_optimizer_attribute.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Lexicographic())
     set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
     set_silent(model)
     @variable(model, 0 <= x[1:4] <= 1)
     @objective(model, Min, -P * x)
     @constraint(model, sum(x) <= 2)
     optimize!(model)
-    @test ≈(value.(x), [0.9, 0, 0.9, 0.2]; atol = 1e-3)
+    @test ≈(value.(x), [0.9, 1, 0, 0.1]; atol = 1e-3)
+    return
+end
+
+function test_knapsack_default()
+    P = [1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
+    set_silent(model)
+    @variable(model, 0 <= x[1:4] <= 1)
+    @objective(model, Max, P * x)
+    @constraint(model, sum(x) <= 2)
+    optimize!(model)
+    @test raw_status(model) == "Solve complete. Found 1 solution(s)"
+    @test ≈(value.(x), [1, 1, 0, 0]; atol = 1e-3)
     return
 end
 
 end
 
-TestHierarchical.run_tests()
+TestLexicographic.run_tests()
