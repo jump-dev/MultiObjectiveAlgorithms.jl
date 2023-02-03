@@ -44,7 +44,7 @@ function test_knapsack()
     @objective(model, Max, P * x)
     @constraint(model, sum(x) <= 2)
     optimize!(model)
-    @test ≈(value.(x), [81 / 90, 1 / 90, 80 / 90, 18 / 90]; atol = 1e-3)
+    @test ≈(value.(x), [0.9, 0, 0.9, 0.2]; atol = 1e-3)
     return
 end
 

@@ -113,6 +113,8 @@ function MOI.set(model::Optimizer, ::Algorithm, alg::AbstractAlgorithm)
     return
 end
 
+default(::Algorithm) = Lexicographic()
+
 ### AbstractAlgorithmAttribute
 
 """
@@ -182,13 +184,20 @@ Assign a `Float64` tolerance to objective number `index`. This is most commonly
 used to constrain an objective to a range relative to the optimal objective
 value of that objective.
 
-Defaults to `0.01` (1%).
+Defaults to `0.0`.
 """
 struct ObjectiveRelativeTolerance <: AbstractAlgorithmAttribute
     index::Int
 end
 
-default(::ObjectiveRelativeTolerance) = 0.01
+default(::ObjectiveRelativeTolerance) = 0.0
+
+function _append_default(attr::AbstractAlgorithmAttribute, x::Vector)
+    for _ in (1+length(x)):attr.index
+        push!(x, default(attr))
+    end
+    return
+end
 
 ### RawOptimizerAttribute
 
@@ -218,6 +227,12 @@ end
 
 function MOI.get(model::Optimizer, attr::MOI.AbstractOptimizerAttribute)
     return MOI.get(model.inner, attr)
+end
+
+function MOI.get(model::Optimizer, ::MOI.SolverName)
+    alg = typeof(something(model.algorithm, default(Algorithm())))
+    inner = MOI.get(model.inner, MOI.SolverName())
+    return "MOO[algorithm=$alg, optimizer=$inner]"
 end
 
 ### AbstractModelAttribute
@@ -300,13 +315,19 @@ MOI.delete(model::Optimizer, i::MOI.Index) = MOI.delete(model.inner, i)
 function MOI.optimize!(model::Optimizer)
     model.solutions = nothing
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
-    status, solutions = optimize_multiobjective!(model.algorithm, model)
+    algorithm = something(model.algorithm, default(Algorithm()))
+    status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
     model.solutions = solutions
     return
 end
 
 MOI.get(model::Optimizer, ::MOI.ResultCount) = length(model.solutions)
+
+function MOI.get(model::Optimizer, ::MOI.RawStatusString)
+    n = MOI.get(model, MOI.ResultCount())
+    return "Solve complete. Found $n solution(s)"
+end
 
 function MOI.get(
     model::Optimizer,
@@ -322,16 +343,16 @@ function MOI.get(model::Optimizer, attr::MOI.ObjectiveValue)
 end
 
 function MOI.get(model::Optimizer, attr::MOI.ObjectiveBound)
-    bound = zeros(length(model.solutions[1].y))
-    sense = MOI.get(model, MOI.ObjectiveSense())
-    for i in 1:length(bound)
-        if sense == MOI.MIN_SENSE
-            bound[i] = minimum([sol.y[i] for sol in model.solutions])
-        else
-            bound[i] = maximum([sol.y[i] for sol in model.solutions])
+    objectives = MOI.Utilities.eachscalar(model.f)
+    nadir_point = fill(NaN, length(objectives))
+    for (i, f) in enumerate(objectives)
+        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+        MOI.optimize!(model.inner)
+        if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
+            nadir_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
         end
     end
-    return bound
+    return nadir_point
 end
 
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
