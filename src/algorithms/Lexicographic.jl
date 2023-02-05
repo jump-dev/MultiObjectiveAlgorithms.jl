@@ -33,7 +33,6 @@ end
 
 function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    # Find list of objectives with same priority
     constraints = Any[]
     for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
