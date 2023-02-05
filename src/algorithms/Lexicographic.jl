@@ -22,11 +22,13 @@ end
 MOI.supports(::Lexicographic, ::ObjectiveRelativeTolerance) = true
 
 function MOI.get(alg::Lexicographic, attr::ObjectiveRelativeTolerance)
-    return get(alg.rtol, attr.index, default(attr))
+    return get(alg.rtol, attr.index, default(alg, attr))
 end
 
 function MOI.set(alg::Lexicographic, attr::ObjectiveRelativeTolerance, value)
-    _append_default(attr, alg.rtol)
+    for _ in (1+length(alg.rtol)):attr.index
+        push!(alg.rtol, default(alg, attr))
+    end
     alg.rtol[attr.index] = value
     return
 end

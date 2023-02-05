@@ -36,8 +36,9 @@ the choice of solution algorithm.
 
 There are a number of algorithms supported by the algorithms in MOO.
 
- * `MOO.Lexicographic()` [default]
+ * `MOO.EpsilonConstraint()`
  * `MOO.Hierarchical()`
+ * `MOO.Lexicographic()` [default]
  * `MOO.NISE()`
 
 Consult their docstrings for details.
@@ -50,7 +51,7 @@ Each algorithm supports only a subset of the attributes. Consult the algorithm's
 docstring for details on which attributes it supports, and how it uses them in
 the solution process.
 
- * `MOO.SolutionLimit()`
  * `MOO.ObjectivePriority(index::Int)`
- * `MOO.ObjectiveWeight(index::Int)`
  * `MOO.ObjectiveRelativeTolerance(index::Int)`
+ * `MOO.ObjectiveWeight(index::Int)`
+ * `MOO.SolutionLimit()`

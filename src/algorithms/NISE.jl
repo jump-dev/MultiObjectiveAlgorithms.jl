@@ -68,7 +68,7 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
     if !(solutions[0.0] ≈ solutions[1.0])
         push!(queue, (0.0, 1.0))
     end
-    limit = something(algorithm.solution_limit, default(SolutionLimit()))
+    limit = something(algorithm.solution_limit, default(alg, SolutionLimit()))
     while length(queue) > 0 && length(solutions) < limit
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
