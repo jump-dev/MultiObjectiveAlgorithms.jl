@@ -6,10 +6,11 @@
 module TestHierarchical
 
 using Test
-using JuMP
 
 import HiGHS
 import MOO
+
+const MOI = MOO.MOI
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -33,34 +34,44 @@ function test_sorted_priorities()
 end
 
 function test_knapsack()
-    P = [1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
-    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Hierarchical())
-    set_optimizer_attribute.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
-    set_optimizer_attribute.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
-    set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
-    set_silent(model)
-    @variable(model, 0 <= x[1:4] <= 1)
-    @objective(model, Max, P * x)
-    @constraint(model, sum(x) <= 2)
-    optimize!(model)
-    @test ≈(value.(x), [0.9, 0, 0.9, 0.2]; atol = 1e-3)
+    P = Float64[1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOO.Algorithm(), MOO.Hierarchical())
+    MOI.set.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
+    MOI.set.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    x_sol = MOI.get(model, MOI.VariablePrimal(), x)
+    @test ≈(x_sol, [0.9, 0, 0.9, 0.2]; atol = 1e-3)
     return
 end
 
 function test_knapsack_min()
-    P = [1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
-    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Hierarchical())
-    set_optimizer_attribute.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
-    set_optimizer_attribute.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
-    set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
-    set_silent(model)
-    @variable(model, 0 <= x[1:4] <= 1)
-    @objective(model, Min, -P * x)
-    @constraint(model, sum(x) <= 2)
-    optimize!(model)
-    @test ≈(value.(x), [0.9, 0, 0.9, 0.2]; atol = 1e-3)
+    P = Float64[1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOO.Algorithm(), MOO.Hierarchical())
+    MOI.set.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
+    MOI.set.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, -P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    x_sol = MOI.get(model, MOI.VariablePrimal(), x)
+    @test ≈(x_sol, [0.9, 0, 0.9, 0.2]; atol = 1e-3)
     return
 end
 

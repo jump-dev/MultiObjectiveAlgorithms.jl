@@ -269,6 +269,10 @@ function MOI.get(model::Optimizer, attr::_ATTRIBUTES, args...)
     return MOI.get(model.inner, attr, args...)
 end
 
+function MOI.get(model::Optimizer, attr::_ATTRIBUTES, arg::Vector{T}) where {T}
+    return MOI.get.(model, attr, arg)
+end
+
 function MOI.get(model::Optimizer, ::Type{MOI.VariableIndex}, args...)
     return MOI.get(model.inner, MOI.VariableIndex, args...)
 end

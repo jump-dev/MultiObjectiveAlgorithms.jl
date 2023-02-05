@@ -6,10 +6,11 @@
 module TestLexicographic
 
 using Test
-using JuMP
 
 import HiGHS
 import MOO
+
+const MOI = MOO.MOI
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -23,43 +24,59 @@ function run_tests()
 end
 
 function test_knapsack()
-    P = [1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
-    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Lexicographic())
-    set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
-    set_silent(model)
-    @variable(model, 0 <= x[1:4] <= 1)
-    @objective(model, Max, P * x)
-    @constraint(model, sum(x) <= 2)
-    optimize!(model)
-    @test ≈(value.(x), [0.9, 1, 0, 0.1]; atol = 1e-3)
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOO.Algorithm(), MOO.Lexicographic())
+    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    x_sol = MOI.get(model, MOI.VariablePrimal(), x)
+    @test ≈(x_sol, [0.9, 1, 0, 0.1]; atol = 1e-3)
     return
 end
 
 function test_knapsack_min()
-    P = [1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
-    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_optimizer_attribute(model, MOO.Algorithm(), MOO.Lexicographic())
-    set_optimizer_attribute(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
-    set_silent(model)
-    @variable(model, 0 <= x[1:4] <= 1)
-    @objective(model, Min, -P * x)
-    @constraint(model, sum(x) <= 2)
-    optimize!(model)
-    @test ≈(value.(x), [0.9, 1, 0, 0.1]; atol = 1e-3)
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOO.Algorithm(), MOO.Lexicographic())
+    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, -P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    x_sol = MOI.get(model, MOI.VariablePrimal(), x)
+    @test ≈(x_sol, [0.9, 1, 0, 0.1]; atol = 1e-3)
     return
 end
 
 function test_knapsack_default()
-    P = [1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
-    model = Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-    set_silent(model)
-    @variable(model, 0 <= x[1:4] <= 1)
-    @objective(model, Max, P * x)
-    @constraint(model, sum(x) <= 2)
-    optimize!(model)
-    @test raw_status(model) == "Solve complete. Found 1 solution(s)"
-    @test ≈(value.(x), [1, 1, 0, 0]; atol = 1e-3)
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    x_sol = MOI.get(model, MOI.VariablePrimal(), x)
+    @test ≈(x_sol, [1, 1, 0, 0]; atol = 1e-3)
+    @test MOI.get(model, MOI.RawStatusString()) ==
+          "Solve complete. Found 1 solution(s)"
     return
 end
 
