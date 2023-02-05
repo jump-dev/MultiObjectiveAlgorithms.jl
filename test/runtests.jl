@@ -7,7 +7,6 @@ import Pkg
 
 if get(ENV, "CI", "false") == "true"
     Pkg.pkg"add MathOptInterface#master"
-    Pkg.pkg"add JuMP#od/vector-optimization"
 end
 
 using Test
