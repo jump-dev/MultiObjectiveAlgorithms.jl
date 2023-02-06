@@ -29,7 +29,9 @@ function MOI.set(alg::NISE, ::SolutionLimit, value)
     return
 end
 
-MOI.get(alg::NISE, ::SolutionLimit) = alg.solution_limit
+function MOI.get(alg::NISE, attr::SolutionLimit)
+    return something(alg.solution_limit, default(alg, attr))
+end
 
 function _solve_weighted_sum(model::Optimizer, alg::NISE, weight::Float64)
     return _solve_weighted_sum(model, alg, [weight, 1 - weight])
@@ -68,7 +70,7 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
     if !(solutions[0.0] ≈ solutions[1.0])
         push!(queue, (0.0, 1.0))
     end
-    limit = something(algorithm.solution_limit, default(SolutionLimit()))
+    limit = MOI.get(algorithm, SolutionLimit())
     while length(queue) > 0 && length(solutions) < limit
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y

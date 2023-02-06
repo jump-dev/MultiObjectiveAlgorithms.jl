@@ -26,7 +26,8 @@ end
 function test_NISE_SolutionLimit()
     model = MOO.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOO.Algorithm(), MOO.NISE())
-    @test MOI.get(model, MOO.SolutionLimit()) == nothing
+    @test MOI.get(model, MOO.SolutionLimit()) ==
+          MOO.default(MOO.SolutionLimit())
     MOI.set(model, MOO.SolutionLimit(), 1)
     @test MOI.get(model, MOO.SolutionLimit()) == 1
     return

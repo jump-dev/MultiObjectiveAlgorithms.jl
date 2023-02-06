@@ -124,6 +124,8 @@ A super-type for MOO-specific optimizer attributes.
 """
 abstract type AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute end
 
+default(::AbstractAlgorithm, attr::AbstractAlgorithmAttribute) = default(attr)
+
 function MOI.supports(model::Optimizer, attr::AbstractAlgorithmAttribute)
     return MOI.supports(model.algorithm, attr)
 end
@@ -191,13 +193,6 @@ struct ObjectiveRelativeTolerance <: AbstractAlgorithmAttribute
 end
 
 default(::ObjectiveRelativeTolerance) = 0.0
-
-function _append_default(attr::AbstractAlgorithmAttribute, x::Vector)
-    for _ in (1+length(x)):attr.index
-        push!(x, default(attr))
-    end
-    return
-end
 
 ### RawOptimizerAttribute
 

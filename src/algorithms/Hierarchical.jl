@@ -36,11 +36,22 @@ end
 MOI.supports(::Hierarchical, ::ObjectivePriority) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectivePriority)
-    return get(alg.priorities, attr.index, default(attr))
+    return get(alg.priorities, attr.index, default(alg, attr))
+end
+
+function _append_default(
+    alg::Hierarchical,
+    attr::AbstractAlgorithmAttribute,
+    x::Vector,
+)
+    for _ in (1+length(x)):attr.index
+        push!(x, default(alg, attr))
+    end
+    return
 end
 
 function MOI.set(alg::Hierarchical, attr::ObjectivePriority, value)
-    _append_default(attr, alg.priorities)
+    _append_default(alg, attr, alg.priorities)
     alg.priorities[attr.index] = value
     return
 end
@@ -48,11 +59,11 @@ end
 MOI.supports(::Hierarchical, ::ObjectiveWeight) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectiveWeight)
-    return get(alg.weights, attr.index, default(attr))
+    return get(alg.weights, attr.index, default(alg, attr))
 end
 
 function MOI.set(alg::Hierarchical, attr::ObjectiveWeight, value)
-    _append_default(attr, alg.weights)
+    _append_default(alg, attr, alg.weights)
     alg.weights[attr.index] = value
     return
 end
@@ -60,11 +71,11 @@ end
 MOI.supports(::Hierarchical, ::ObjectiveRelativeTolerance) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectiveRelativeTolerance)
-    return get(alg.rtol, attr.index, default(attr))
+    return get(alg.rtol, attr.index, default(alg, attr))
 end
 
 function MOI.set(alg::Hierarchical, attr::ObjectiveRelativeTolerance, value)
-    _append_default(attr, alg.rtol)
+    _append_default(alg, attr, alg.rtol)
     alg.rtol[attr.index] = value
     return
 end
@@ -80,13 +91,13 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     # Find list of objectives with same priority
     constraints = Any[]
-    objective_subsets = _sorted_priorities([
-        MOI.get(algorithm, ObjectivePriority(i)) for i in 1:N
-    ])
+    priorities = [MOI.get(algorithm, ObjectivePriority(i)) for i in 1:N]
+    weights = [MOI.get(algorithm, ObjectiveWeight(i)) for i in 1:N]
+    objective_subsets = _sorted_priorities(priorities)
     for (round, indices) in enumerate(objective_subsets)
         # Solve weighted sum
         new_vector_f = objectives[indices]
-        new_f = _scalarise(new_vector_f, algorithm.weights[indices])
+        new_f = _scalarise(new_vector_f, weights[indices])
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
