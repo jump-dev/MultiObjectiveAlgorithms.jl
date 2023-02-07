@@ -343,15 +343,15 @@ end
 
 function MOI.get(model::Optimizer, attr::MOI.ObjectiveBound)
     objectives = MOI.Utilities.eachscalar(model.f)
-    utopia = fill(NaN, length(objectives))
+    ideal_point = fill(NaN, length(objectives))
     for (i, f) in enumerate(objectives)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
-            utopia[i] = MOI.get(model.inner, MOI.ObjectiveValue())
+            ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
         end
     end
-    return utopia
+    return ideal_point
 end
 
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
