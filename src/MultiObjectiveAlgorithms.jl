@@ -22,7 +22,7 @@ end
 Base.:(==)(a::SolutionPoint, b::SolutionPoint) = a.y == b.y
 
 """
-    dominated(sense, a::SolutionPoint, b::SolutionPoint)
+    dominates(sense, a::SolutionPoint, b::SolutionPoint)
 
 Returns `true` if point `a` dominates point `b`.
 """
