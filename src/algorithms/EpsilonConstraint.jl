@@ -47,7 +47,11 @@ end
 
 MOI.supports(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = true
 
-function MOI.set(alg::EpsilonConstraint, attr::ObjectiveAbsoluteTolerance, value)
+function MOI.set(
+    alg::EpsilonConstraint,
+    attr::ObjectiveAbsoluteTolerance,
+    value,
+)
     if attr.index == 1
         alg.atol = value
     end
