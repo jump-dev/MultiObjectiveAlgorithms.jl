@@ -19,11 +19,14 @@ function Base.isapprox(a::SolutionPoint, b::SolutionPoint; kwargs...)
     return isapprox(a.y, b.y; kwargs...)
 end
 
+Base.:(==)(a::SolutionPoint, b::SolutionPoint) = a.y == b.y
+
 function filter_nondominated(solutions::Vector{SolutionPoint})
-    sort!(solutions; by = x -> x.y)
+    solutions = sort(solutions; by = x -> x.y)
     nondominated_solutions = SolutionPoint[solutions[1]]
     for i in 2:length(solutions)
-        if !(nondominated_solutions[end] ≈ solutions[i])
+        objective_vectors = zip(nondominated_solutions[end].y, solutions[i].y)
+        if !any(x -> x[1] ≈ x[2], objective_vectors)
             push!(nondominated_solutions, solutions[i])
         end
     end

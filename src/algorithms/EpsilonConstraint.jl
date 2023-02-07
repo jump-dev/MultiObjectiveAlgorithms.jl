@@ -115,5 +115,5 @@ function optimize_multiobjective!(
         rhs += ε
     end
     MOI.delete(model, ci)
-    return MOI.OPTIMAL, unique(solutions)
+    return MOI.OPTIMAL, filter_nondominated(solutions)
 end
