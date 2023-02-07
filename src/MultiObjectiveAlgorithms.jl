@@ -5,6 +5,7 @@
 
 module MultiObjectiveAlgorithms
 
+import Combinatorics
 import MathOptInterface
 
 const MOI = MathOptInterface
@@ -16,6 +17,17 @@ end
 
 function Base.isapprox(a::SolutionPoint, b::SolutionPoint; kwargs...)
     return isapprox(a.y, b.y; kwargs...)
+end
+
+function filter_nondominated(solutions::Vector{SolutionPoint})
+    sort!(solutions; by = x -> x.y)
+    nondominated_solutions = SolutionPoint[solutions[1]]
+    for i in 2:length(solutions)
+        if !(nondominated_solutions[end] ≈ solutions[i])
+            push!(nondominated_solutions, solutions[i])
+        end
+    end
+    return nondominated_solutions
 end
 
 function _scalarise(f::MOI.VectorOfVariables, w::Vector{Float64})

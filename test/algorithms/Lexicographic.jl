@@ -43,6 +43,33 @@ function test_knapsack()
     return
 end
 
+function test_knapsack_all_permutations()
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1]
+    model = MOO.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOO.Algorithm(), MOO.Lexicographic(all_permutations = true))
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    results = Dict(
+        [0, 1, 1] => [0, 1, 0, 1],
+        [1, 0, 1] => [1, 0, 0, 1],
+        [1, 1, 0] => [1, 1, 0, 0],
+    )
+    @test MOI.get(model, MOI.ResultCount()) == 3
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        X = round.(Int, MOI.get(model, MOI.VariablePrimal(i), x))
+        Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(i)))
+        @test results[Y] == X
+    end
+    return
+end
+
 function test_knapsack_min()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = MOA.Optimizer(HiGHS.Optimizer)
