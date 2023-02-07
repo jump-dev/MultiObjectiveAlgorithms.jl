@@ -11,7 +11,7 @@ on the frontier, corresponding to solving each objective in order.
 
 ## Supported optimizer attributes
 
- * `MOO.ObjectiveRelativeTolerance`
+ * `MOA.ObjectiveRelativeTolerance`
 """
 mutable struct Lexicographic <: AbstractAlgorithm
     rtol::Vector{Float64}

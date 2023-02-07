@@ -3,7 +3,7 @@
 #  v.2.0. If a copy of the MPL was not distributed with this file, You can
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
-module MOO
+module MultiObjectiveAlgorithms
 
 import MathOptInterface
 
@@ -100,7 +100,7 @@ const _ATTRIBUTES = Union{
 """
     Algorithm <: MOI.AbstractOptimizerAttribute
 
-An attribute to control the algorithm used by MOO.
+An attribute to control the algorithm used by MOA.
 """
 struct Algorithm <: MOI.AbstractOptimizerAttribute end
 

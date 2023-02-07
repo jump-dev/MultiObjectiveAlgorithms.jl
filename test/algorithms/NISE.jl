@@ -8,9 +8,10 @@ module TestNISE
 using Test
 
 import HiGHS
-import MOO
+import MultiObjectiveAlgorithms
 
-const MOI = MOO.MOI
+const MOA = MultiObjectiveAlgorithms
+const MOI = MOA.MOI
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -24,19 +25,19 @@ function run_tests()
 end
 
 function test_NISE_SolutionLimit()
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.NISE())
-    @test MOI.get(model, MOO.SolutionLimit()) ==
-          MOO.default(MOO.SolutionLimit())
-    MOI.set(model, MOO.SolutionLimit(), 1)
-    @test MOI.get(model, MOO.SolutionLimit()) == 1
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.NISE())
+    @test MOI.get(model, MOA.SolutionLimit()) ==
+          MOA.default(MOA.SolutionLimit())
+    MOI.set(model, MOA.SolutionLimit(), 1)
+    @test MOI.get(model, MOA.SolutionLimit()) == 1
     return
 end
 
 function test_moi_bolp_1()
     f = MOI.OptimizerWithAttributes(
-        () -> MOO.Optimizer(HiGHS.Optimizer),
-        MOO.Algorithm() => MOO.NISE(),
+        () -> MOA.Optimizer(HiGHS.Optimizer),
+        MOA.Algorithm() => MOA.NISE(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -71,8 +72,8 @@ end
 
 function test_moi_bolp_1_maximize()
     f = MOI.OptimizerWithAttributes(
-        () -> MOO.Optimizer(HiGHS.Optimizer),
-        MOO.Algorithm() => MOO.NISE(),
+        () -> MOA.Optimizer(HiGHS.Optimizer),
+        MOA.Algorithm() => MOA.NISE(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -107,8 +108,8 @@ end
 
 function test_moi_bolp_1_reversed()
     f = MOI.OptimizerWithAttributes(
-        () -> MOO.Optimizer(HiGHS.Optimizer),
-        MOO.Algorithm() => MOO.NISE(),
+        () -> MOA.Optimizer(HiGHS.Optimizer),
+        MOA.Algorithm() => MOA.NISE(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -143,8 +144,8 @@ end
 
 function test_moi_bolp_1_scalar()
     f = MOI.OptimizerWithAttributes(
-        () -> MOO.Optimizer(HiGHS.Optimizer),
-        MOO.Algorithm() => MOO.NISE(),
+        () -> MOA.Optimizer(HiGHS.Optimizer),
+        MOA.Algorithm() => MOA.NISE(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -197,8 +198,8 @@ function test_biobjective_knapsack()
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
     f = MOI.OptimizerWithAttributes(
-        () -> MOO.Optimizer(HiGHS.Optimizer),
-        MOO.Algorithm() => MOO.NISE(),
+        () -> MOA.Optimizer(HiGHS.Optimizer),
+        MOA.Algorithm() => MOA.NISE(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)

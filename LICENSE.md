@@ -1,4 +1,5 @@
-The MOO.jl package is licensed under the Mozilla Public License, Version 2.0:
+The MultiObjectiveAlgorithms.jl package is licensed under the Mozilla Public
+License, Version 2.0:
 
 Copyright (c) 2019: Oscar Dowson.
 

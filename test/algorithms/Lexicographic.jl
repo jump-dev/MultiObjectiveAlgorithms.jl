@@ -8,9 +8,10 @@ module TestLexicographic
 using Test
 
 import HiGHS
-import MOO
+import MultiObjectiveAlgorithms
 
-const MOI = MOO.MOI
+const MOA = MultiObjectiveAlgorithms
+const MOI = MOA.MOI
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -25,9 +26,9 @@ end
 
 function test_knapsack()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.Lexicographic())
-    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -44,9 +45,9 @@ end
 
 function test_knapsack_min()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.Lexicographic())
-    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -63,7 +64,7 @@ end
 
 function test_knapsack_default()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
-    model = MOO.Optimizer(HiGHS.Optimizer)
+    model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
