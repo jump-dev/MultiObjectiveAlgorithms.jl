@@ -21,13 +21,31 @@ end
 
 Base.:(==)(a::SolutionPoint, b::SolutionPoint) = a.y == b.y
 
-function filter_nondominated(solutions::Vector{SolutionPoint})
+"""
+    is_dominated(sense, a::SolutionPoint, b::SolutionPoint)
+
+Returns `true` if point `a` is dominated by point `b`.
+"""
+function is_dominated(sense, a::SolutionPoint, b::SolutionPoint)
+    if a.y == b.y
+        return false
+    elseif sense == MOI.MIN_SENSE
+        return all(a.y .<= b.y)
+    else
+        return all(a.y .>= b.y)
+    end
+end
+
+function filter_nondominated(sense, solutions::Vector{SolutionPoint})
     solutions = sort(solutions; by = x -> x.y)
-    nondominated_solutions = SolutionPoint[solutions[1]]
-    for i in 2:length(solutions)
-        objective_vectors = zip(nondominated_solutions[end].y, solutions[i].y)
-        if !any(x -> x[1] ≈ x[2], objective_vectors)
-            push!(nondominated_solutions, solutions[i])
+    nondominated_solutions = SolutionPoint[]
+    for candidate in solutions
+        if any(test -> is_dominated(sense, test, candidate), solutions)
+            # Point is dominated. Don't add
+        elseif any(test -> test.y ≈ candidate.y, nondominated_solutions)
+            # Point already added to nondominated solutions. Don't add
+        else
+            push!(nondominated_solutions, candidate)
         end
     end
     return nondominated_solutions

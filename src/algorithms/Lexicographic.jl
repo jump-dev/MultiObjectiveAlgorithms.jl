@@ -53,7 +53,8 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
             push!(solutions, solution[1])
         end
     end
-    return MOI.OPTIMAL, filter_nondominated(solutions)
+    sense = MOI.get(model.inner, MOI.ObjectiveSense())
+    return MOI.OPTIMAL, filter_nondominated(sense, solutions)
 end
 
 function _solve_in_sequence(

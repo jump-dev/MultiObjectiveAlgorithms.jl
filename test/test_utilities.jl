@@ -26,21 +26,26 @@ end
 function test_filter_nondominated()
     x = Dict{MOI.VariableIndex,Float64}()
     solutions = [MOA.SolutionPoint(x, [0, 1]), MOA.SolutionPoint(x, [1, 0])]
-    @test MOA.filter_nondominated(solutions) == solutions
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, solutions) == solutions
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, solutions) == solutions
     return
 end
 
 function test_filter_nondominated_sort_in_order()
     x = Dict{MOI.VariableIndex,Float64}()
     solutions = [MOA.SolutionPoint(x, [0, 1]), MOA.SolutionPoint(x, [1, 0])]
-    @test MOA.filter_nondominated(reverse(solutions)) == solutions
+    r_solutions = reverse(solutions)
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, r_solutions) == solutions
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, r_solutions) == solutions
     return
 end
 
 function test_filter_nondominated_remove_duplicates()
     x = Dict{MOI.VariableIndex,Float64}()
     solutions = [MOA.SolutionPoint(x, [0, 1]), MOA.SolutionPoint(x, [1, 0])]
-    @test MOA.filter_nondominated(solutions[[1, 1]]) == [solutions[1]]
+    trial = solutions[[1, 1]]
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, trial) == [solutions[1]]
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, trial) == [solutions[1]]
     return
 end
 
@@ -51,7 +56,8 @@ function test_filter_nondominated_weakly_dominated()
         MOA.SolutionPoint(x, [0.5, 1]),
         MOA.SolutionPoint(x, [1, 0]),
     ]
-    @test MOA.filter_nondominated(solutions) == solutions[[1, 3]]
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, solutions) == solutions[[1, 3]]
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, solutions) == solutions[[2, 3]]
     solutions = [
         MOA.SolutionPoint(x, [0, 1]),
         MOA.SolutionPoint(x, [0.5, 1]),
@@ -60,7 +66,25 @@ function test_filter_nondominated_weakly_dominated()
         MOA.SolutionPoint(x, [0.9, 0.5]),
         MOA.SolutionPoint(x, [1, 0]),
     ]
-    @test MOA.filter_nondominated(solutions) == solutions[[1, 4, 6]]
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, solutions) ==
+          solutions[[1, 4, 6]]
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, solutions) ==
+          solutions[[3, 5, 6]]
+    return
+end
+
+function test_filter_nondominated_knapsack()
+    x = Dict{MOI.VariableIndex,Float64}()
+    solutions = [
+        MOA.SolutionPoint(x, [0, 1, 1]),
+        MOA.SolutionPoint(x, [0, 1, 1]),
+        MOA.SolutionPoint(x, [1, 0, 1]),
+        MOA.SolutionPoint(x, [1, 1, 0]),
+        MOA.SolutionPoint(x, [1, 1, 0]),
+    ]
+    result = solutions[[1, 3, 4]]
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, solutions) == result
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, solutions) == result
     return
 end
 
