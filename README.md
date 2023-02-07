@@ -51,6 +51,7 @@ Each algorithm supports only a subset of the attributes. Consult the algorithm's
 docstring for details on which attributes it supports, and how it uses them in
 the solution process.
 
+ * `MOO.ObjectiveAbsoluteTolerance(index::Int)`
  * `MOO.ObjectivePriority(index::Int)`
  * `MOO.ObjectiveRelativeTolerance(index::Int)`
  * `MOO.ObjectiveWeight(index::Int)`

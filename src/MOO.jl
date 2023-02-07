@@ -194,6 +194,21 @@ end
 
 default(::ObjectiveRelativeTolerance) = 0.0
 
+"""
+    ObjectiveAbsoluteTolerance(index::Int) <: AbstractAlgorithmAttribute -> Float64
+
+Assign a `Float64` tolerance to objective number `index`. This is most commonly
+used to constrain an objective to a range in absolute terms to the optimal
+objective value of that objective.
+
+Defaults to `0.0`.
+"""
+struct ObjectiveAbsoluteTolerance <: AbstractAlgorithmAttribute
+    index::Int
+end
+
+default(::ObjectiveAbsoluteTolerance) = 0.0
+
 ### RawOptimizerAttribute
 
 function MOI.supports(model::Optimizer, attr::MOI.RawOptimizerAttribute)
