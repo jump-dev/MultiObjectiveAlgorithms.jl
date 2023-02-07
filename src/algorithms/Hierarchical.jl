@@ -131,5 +131,5 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
     for c in constraints
         MOI.delete(model, c)
     end
-    return MOI.OPTIMAL, [ParetoSolution(X, Y)]
+    return MOI.OPTIMAL, [SolutionPoint(X, Y)]
 end
