@@ -10,10 +10,10 @@
 iterative scheme.
 
 First, it partitions the objectives into sets according to
-`MOO.ObjectivePriority`. Then, in order of decreasing priority, it formulates a
+`MOA.ObjectivePriority`. Then, in order of decreasing priority, it formulates a
 single-objective problem by scalarizing all of the objectives with the same
-priority using `MOO.ObjectiveWeight`. Next, it constrains those objectives such
-that they can be at most `MOO.ObjectiveRelativeTolerance` worse than optimal in
+priority using `MOA.ObjectiveWeight`. Next, it constrains those objectives such
+that they can be at most `MOA.ObjectiveRelativeTolerance` worse than optimal in
 future solves. Finally, it steps to the next set of prioritized objectives.
 
 The solution is a single point that trades off the various objectives. It does
@@ -21,9 +21,9 @@ not record the partial solutions that were found along the way.
 
 ## Supported optimizer attributes
 
- * `MOO.ObjectivePriority`
- * `MOO.ObjectiveWeight`
- * `MOO.ObjectiveRelativeTolerance`
+ * `MOA.ObjectivePriority`
+ * `MOA.ObjectiveWeight`
+ * `MOA.ObjectiveRelativeTolerance`
 """
 mutable struct Hierarchical <: AbstractAlgorithm
     priorities::Vector{Int}

@@ -1,6 +1,9 @@
-# MOO: the Multi-Objective Optimizer
+<img src="moa.png" alt="An image of the Moa bird. Licensed into the Public Domain by https://freesvg.org/moa" width="100px"/>
 
-MOO is a collection of algorithms for multi-objective optimization.
+# MultiObjectiveAlgorithms.jl
+
+MultiObjectiveAlgorithms.jl (MOA) is a collection of algorithms for
+multi-objective optimization.
 
 ## Installation
 
@@ -9,50 +12,51 @@ This package is currently under development. You can install it as follows:
 ```julia
 ] add MathOptInterface#master
 ] add JuMP#od/vector-optimization
-] add https://github.com/odow/MOO.jl
+] add https://github.com/odow/MultiObjectiveAlgorithms.jl
 ```
 
 ## Usage with JuMP
 
-Use `MOO` with JuMP as follows:
+Use `MultiObjectiveAlgorithms` with JuMP as follows:
 
 ```julia
 using JuMP
-import HiGHS, MOO
-model = JuMP.Model(() -> MOO.Optimizer(HiGHS.Optimizer))
-set_optimizer_attribute(model, MOO.Algorithm(), MOO.NISE())
-set_optimizer_attribute(model, MOO.SolutionLimit(), 4)
+import HiGHS, MultiObjectiveAlgorithms
+const MOA = MultiObjectiveAlgorithms
+model = JuMP.Model(() -> MOA.Optimizer(HiGHS.Optimizer))
+set_optimizer_attribute(model, MOA.Algorithm(), MOA.NISE())
+set_optimizer_attribute(model, MOA.SolutionLimit(), 4)
 ```
 
 Replace `HiGHS.Optimizer` with an optimizer capable of solving a
 single-objective instance of your optimization problem.
 
-You must set the `MOO.Algorithm` attribute to choose the solution algorithm.
+You must set the `MOA.Algorithm` attribute to choose the solution algorithm.
 
 You may set additional optimizer attributes, the supported attributes depend on
 the choice of solution algorithm.
 
 ## Algorithm
 
-There are a number of algorithms supported by the algorithms in MOO.
+There are a number of algorithms supported by the algorithms in MOA.
 
- * `MOO.EpsilonConstraint()`
- * `MOO.Hierarchical()`
- * `MOO.Lexicographic()` [default]
- * `MOO.NISE()`
+ * `MOA.EpsilonConstraint()`
+ * `MOA.Hierarchical()`
+ * `MOA.Lexicographic()` [default]
+ * `MOA.NISE()`
 
 Consult their docstrings for details.
 
 ## Other optimizer attributes
 
-There are a number of optimizer attributes supported by the algorithms in MOO.
+There are a number of optimizer attributes supported by the algorithms in MOA.
 
 Each algorithm supports only a subset of the attributes. Consult the algorithm's
 docstring for details on which attributes it supports, and how it uses them in
 the solution process.
 
- * `MOO.ObjectiveAbsoluteTolerance(index::Int)`
- * `MOO.ObjectivePriority(index::Int)`
- * `MOO.ObjectiveRelativeTolerance(index::Int)`
- * `MOO.ObjectiveWeight(index::Int)`
- * `MOO.SolutionLimit()`
+ * `MOA.ObjectiveAbsoluteTolerance(index::Int)`
+ * `MOA.ObjectivePriority(index::Int)`
+ * `MOA.ObjectiveRelativeTolerance(index::Int)`
+ * `MOA.ObjectiveWeight(index::Int)`
+ * `MOA.SolutionLimit()`

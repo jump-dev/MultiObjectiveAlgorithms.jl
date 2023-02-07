@@ -8,9 +8,10 @@ module TestEpsilonConstraint
 using Test
 
 import HiGHS
-import MOO
+import MultiObjectiveAlgorithms
 
-const MOI = MOO.MOI
+const MOA = MultiObjectiveAlgorithms
+const MOI = MOA.MOI
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -27,8 +28,8 @@ function test_biobjective_knapsack()
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.EpsilonConstraint())
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
     MOI.add_constraint.(model, x, MOI.ZeroOne())
@@ -70,9 +71,9 @@ function test_biobjective_knapsack_atol()
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.EpsilonConstraint())
-    MOI.set(model, MOO.ObjectiveAbsoluteTolerance(1), 1.0)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOA.ObjectiveAbsoluteTolerance(1), 1.0)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
     MOI.add_constraint.(model, x, MOI.ZeroOne())
@@ -114,9 +115,9 @@ function test_biobjective_knapsack_min()
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.EpsilonConstraint())
-    MOI.set(model, MOO.SolutionLimit(), 100)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOA.SolutionLimit(), 100)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
     MOI.add_constraint.(model, x, MOI.ZeroOne())
@@ -158,9 +159,9 @@ function test_biobjective_knapsack_min_solution_limit()
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.EpsilonConstraint())
-    MOI.set(model, MOO.SolutionLimit(), 3)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOA.SolutionLimit(), 3)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
     MOI.add_constraint.(model, x, MOI.ZeroOne())

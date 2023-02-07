@@ -8,9 +8,10 @@ module TestHierarchical
 using Test
 
 import HiGHS
-import MOO
+import MultiObjectiveAlgorithms
 
-const MOI = MOO.MOI
+const MOA = MultiObjectiveAlgorithms
+const MOI = MOA.MOI
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -24,22 +25,22 @@ function run_tests()
 end
 
 function test_sorted_priorities()
-    @test MOO._sorted_priorities([0, 0, 0]) == [[1, 2, 3]]
-    @test MOO._sorted_priorities([1, 0, 0]) == [[1], [2, 3]]
-    @test MOO._sorted_priorities([0, 1, 0]) == [[2], [1, 3]]
-    @test MOO._sorted_priorities([0, 0, 1]) == [[3], [1, 2]]
-    @test MOO._sorted_priorities([0, 1, 1]) == [[2, 3], [1]]
-    @test MOO._sorted_priorities([0, 2, 1]) == [[2], [3], [1]]
+    @test MOA._sorted_priorities([0, 0, 0]) == [[1, 2, 3]]
+    @test MOA._sorted_priorities([1, 0, 0]) == [[1], [2, 3]]
+    @test MOA._sorted_priorities([0, 1, 0]) == [[2], [1, 3]]
+    @test MOA._sorted_priorities([0, 0, 1]) == [[3], [1, 2]]
+    @test MOA._sorted_priorities([0, 1, 1]) == [[2, 3], [1]]
+    @test MOA._sorted_priorities([0, 2, 1]) == [[2], [3], [1]]
     return
 end
 
 function test_knapsack()
     P = Float64[1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.Hierarchical())
-    MOI.set.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
-    MOI.set.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
-    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Hierarchical())
+    MOI.set.(model, MOA.ObjectivePriority.(1:4), [2, 1, 1, 0])
+    MOI.set.(model, MOA.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -56,11 +57,11 @@ end
 
 function test_knapsack_min()
     P = Float64[1 0 0 0; 0 1 1 0; 0 0 1 1; 0 1 0 0]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.Hierarchical())
-    MOI.set.(model, MOO.ObjectivePriority.(1:4), [2, 1, 1, 0])
-    MOI.set.(model, MOO.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
-    MOI.set(model, MOO.ObjectiveRelativeTolerance(1), 0.1)
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Hierarchical())
+    MOI.set.(model, MOA.ObjectivePriority.(1:4), [2, 1, 1, 0])
+    MOI.set.(model, MOA.ObjectiveWeight.(1:4), [1, 0.5, 0.5, 1])
+    MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))

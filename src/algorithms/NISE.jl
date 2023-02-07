@@ -14,7 +14,7 @@ trade‐offs: An algorithm for bicriterion problems. Water Resources Research,
 
 ## Supported optimizer attributes
 
- * `MOO.SolutionLimit()`
+ * `MOA.SolutionLimit()`
 """
 mutable struct NISE <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
