@@ -47,7 +47,7 @@ function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
         x in MOI.get(model.inner, MOI.ListOfVariableIndices())
     )
     Y = MOI.Utilities.eval_variables(x -> X[x], model.f)
-    return status, ParetoSolution(X, Y)
+    return status, SolutionPoint(X, Y)
 end
 
 function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
@@ -58,7 +58,7 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
         status, solution = _solve_weighted_sum(model, algorithm, [1.0])
         return status, [solution]
     end
-    solutions = Dict{Float64,ParetoSolution}()
+    solutions = Dict{Float64,SolutionPoint}()
     for w in (0.0, 1.0)
         status, solution = _solve_weighted_sum(model, algorithm, w)
         if status != MOI.OPTIMAL

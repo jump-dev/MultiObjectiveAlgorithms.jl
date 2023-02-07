@@ -57,7 +57,7 @@ function optimize_multiobjective!(
     # Compute the epsilon that we will be incrementing by each iteration
     n_points = MOI.get(algorithm, SolutionLimit())
     ε = abs(right - left) / (n_points - 1)
-    solutions = ParetoSolution[]
+    solutions = SolutionPoint[]
     f1, f2 = MOI.Utilities.eachscalar(model.f)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
@@ -81,7 +81,7 @@ function optimize_multiobjective!(
         )
         Y = MOI.Utilities.eval_variables(x -> X[x], model.f)
         if isempty(solutions) || !(Y ≈ solutions[end].y)
-            push!(solutions, ParetoSolution(X, Y))
+            push!(solutions, SolutionPoint(X, Y))
         end
     end
     MOI.delete(model, ci)

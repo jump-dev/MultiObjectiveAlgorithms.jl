@@ -9,12 +9,12 @@ import MathOptInterface
 
 const MOI = MathOptInterface
 
-struct ParetoSolution
+struct SolutionPoint
     x::Dict{MOI.VariableIndex,Float64}
     y::Vector{Float64}
 end
 
-function Base.isapprox(a::ParetoSolution, b::ParetoSolution; kwargs...)
+function Base.isapprox(a::SolutionPoint, b::SolutionPoint; kwargs...)
     return isapprox(a.y, b.y; kwargs...)
 end
 
@@ -46,7 +46,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
     f::Union{Nothing,MOI.AbstractVectorFunction}
-    solutions::Union{Nothing,Vector{ParetoSolution}}
+    solutions::Union{Nothing,Vector{SolutionPoint}}
     termination_status::MOI.TerminationStatusCode
 
     function Optimizer(optimizer_factory)
