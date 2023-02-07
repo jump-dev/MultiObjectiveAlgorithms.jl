@@ -12,11 +12,11 @@ bi-objective programs.
 ## Supported optimizer attributes
 
  * `MOO.ObjectiveAbsoluteTolerance(1)`: if set, `EpsilonConstraint` uses this
-   tolerance as the epsilon by which it partitions the first-objectives space.
+   tolerance as the epsilon by which it partitions the first-objective's space.
    If the objective is a pure integer program, set the tolerance to `1` to
-   enumerate all efficient solutions. Note that you can set only the tolerance
-   for the first objective index; the tolerances for other objective indices are
-   ignored.
+   enumerate all non-dominated solutions. Note that you can set only the
+   tolerance for the first objective index; the tolerances for other objective
+   indices are ignored.
 
  * `MOO.SolutionLimit()`: if `MOO.ObjectiveAbsoluteTolerance(1)` is not set
    then, with a slight abuse of notation, `EpsilonConstraint` divides the width
