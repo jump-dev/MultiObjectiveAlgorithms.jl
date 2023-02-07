@@ -9,12 +9,12 @@ import MathOptInterface
 
 const MOI = MathOptInterface
 
-struct ParetoSolution
+struct SolutionPoint
     x::Dict{MOI.VariableIndex,Float64}
     y::Vector{Float64}
 end
 
-function Base.isapprox(a::ParetoSolution, b::ParetoSolution; kwargs...)
+function Base.isapprox(a::SolutionPoint, b::SolutionPoint; kwargs...)
     return isapprox(a.y, b.y; kwargs...)
 end
 
@@ -46,7 +46,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
     f::Union{Nothing,MOI.AbstractVectorFunction}
-    solutions::Union{Nothing,Vector{ParetoSolution}}
+    solutions::Union{Nothing,Vector{SolutionPoint}}
     termination_status::MOI.TerminationStatusCode
 
     function Optimizer(optimizer_factory)
@@ -358,15 +358,15 @@ end
 
 function MOI.get(model::Optimizer, attr::MOI.ObjectiveBound)
     objectives = MOI.Utilities.eachscalar(model.f)
-    utopia = fill(NaN, length(objectives))
+    ideal_point = fill(NaN, length(objectives))
     for (i, f) in enumerate(objectives)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
-            utopia[i] = MOI.get(model.inner, MOI.ObjectiveValue())
+            ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
         end
     end
-    return utopia
+    return ideal_point
 end
 
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
