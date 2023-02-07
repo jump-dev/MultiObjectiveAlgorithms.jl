@@ -45,8 +45,12 @@ end
 
 function test_knapsack_all_permutations()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1]
-    model = MOO.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOO.Algorithm(), MOO.Lexicographic(all_permutations = true))
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(
+        model,
+        MOA.Algorithm(),
+        MOA.Lexicographic(; all_permutations = true),
+    )
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
