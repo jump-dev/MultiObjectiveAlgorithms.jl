@@ -14,3 +14,9 @@ using Test
 @testset "$file" for file in readdir(joinpath(@__DIR__, "algorithms"))
     include(joinpath(@__DIR__, "algorithms", file))
 end
+
+@testset "$file" for file in readdir(@__DIR__)
+    if startswith(file, "test_") && endswith(file, ".jl")
+        include(joinpath(@__DIR__, file))
+    end
+end

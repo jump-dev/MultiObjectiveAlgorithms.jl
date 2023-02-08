@@ -90,8 +90,9 @@ function optimize_multiobjective!(
     f1, f2 = MOI.Utilities.eachscalar(model.f)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
+    sense = MOI.get(model.inner, MOI.ObjectiveSense())
     SetType = ifelse(
-        MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE,
+        sense == MOI.MIN_SENSE,
         MOI.LessThan{Float64},
         MOI.GreaterThan{Float64},
     )
@@ -115,5 +116,5 @@ function optimize_multiobjective!(
         rhs += ε
     end
     MOI.delete(model, ci)
-    return MOI.OPTIMAL, unique(solutions)
+    return MOI.OPTIMAL, filter_nondominated(sense, solutions)
 end

@@ -19,12 +19,33 @@ function Base.isapprox(a::SolutionPoint, b::SolutionPoint; kwargs...)
     return isapprox(a.y, b.y; kwargs...)
 end
 
-function filter_nondominated(solutions::Vector{SolutionPoint})
-    sort!(solutions; by = x -> x.y)
-    nondominated_solutions = SolutionPoint[solutions[1]]
-    for i in 2:length(solutions)
-        if !(nondominated_solutions[end] ≈ solutions[i])
-            push!(nondominated_solutions, solutions[i])
+Base.:(==)(a::SolutionPoint, b::SolutionPoint) = a.y == b.y
+
+"""
+    dominates(sense, a::SolutionPoint, b::SolutionPoint)
+
+Returns `true` if point `a` dominates point `b`.
+"""
+function dominates(sense, a::SolutionPoint, b::SolutionPoint)
+    if a.y == b.y
+        return false
+    elseif sense == MOI.MIN_SENSE
+        return all(a.y .<= b.y)
+    else
+        return all(a.y .>= b.y)
+    end
+end
+
+function filter_nondominated(sense, solutions::Vector{SolutionPoint})
+    solutions = sort(solutions; by = x -> x.y)
+    nondominated_solutions = SolutionPoint[]
+    for candidate in solutions
+        if any(test -> dominates(sense, test, candidate), solutions)
+            # Point is dominated. Don't add
+        elseif any(test -> test.y ≈ candidate.y, nondominated_solutions)
+            # Point already added to nondominated solutions. Don't add
+        else
+            push!(nondominated_solutions, candidate)
         end
     end
     return nondominated_solutions
