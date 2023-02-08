@@ -88,6 +88,18 @@ function test_filter_nondominated_knapsack()
     return
 end
 
+function test_filter_nondominated_triple()
+    x = Dict{MOI.VariableIndex,Float64}()
+    solutions = [
+        MOA.SolutionPoint(x, [0, 1, 1]),
+        MOA.SolutionPoint(x, [0, 2, 0]),
+        MOA.SolutionPoint(x, [1, 1, 1]),
+    ]
+    @test MOA.filter_nondominated(MOI.MIN_SENSE, solutions) == solutions[1:2]
+    @test MOA.filter_nondominated(MOI.MAX_SENSE, solutions) == solutions[2:3]
+    return
+end
+
 end
 
 TestUtilities.run_tests()
