@@ -61,8 +61,7 @@ end
 
 function _compute_objective(model, variables, f)
     X = Dict{MOI.VariableIndex,Float64}(
-        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for
-        x in variables
+        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for x in variables
     )
     Y = MOI.Utilities.eval_variables(x -> X[x], f)
     return X, Y
@@ -75,7 +74,6 @@ end
 _volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
 
 function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
-    
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     if sense == MOI.MAX_SENSE
         MOI.set(model, MOI.ObjectiveFunction{typeof(model.f)}(), -model.f)
@@ -83,7 +81,8 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         status, solutions = optimize_multiobjective!(algorithm, model)
         MOI.set(model, MOI.ObjectiveFunction{typeof(model.f)}(), -model.f)
         MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        return status, [SolutionPoint(solution.x, -solution.y) for solution in solutions]
+        return status,
+        [SolutionPoint(solution.x, -solution.y) for solution in solutions]
     end
     solutions = SolutionPoint[]
     # Problem with p objectives.
@@ -150,11 +149,8 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         sum_f = sum(scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
         # Constraint to eliminate weak dominance
-        zₖ_constraint = MOI.add_constraint(
-            model.inner,
-            scalars[k],
-            MOI.EqualTo(zₖ),
-        )
+        zₖ_constraint =
+            MOI.add_constraint(model.inner, scalars[k], MOI.EqualTo(zₖ))
         MOI.optimize!(model.inner)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, zₖ_constraint)
