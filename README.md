@@ -10,9 +10,8 @@ multi-objective optimization.
 This package is currently under development. You can install it as follows:
 
 ```julia
-] add MathOptInterface#master
+] add https://github.com/jump-dev/MultiObjectiveAlgorithms.jl
 ] add JuMP#od/vector-optimization
-] add https://github.com/odow/MultiObjectiveAlgorithms.jl
 ```
 
 ## Usage with JuMP
