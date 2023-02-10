@@ -8,13 +8,12 @@ Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
 [compat]
-MathOptInterface = "1"
+MathOptInterface = "1.12"
 julia = "1.6"
 
 [extras]
 HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["HiGHS", "Pkg", "Test"]
+test = ["HiGHS", "Test"]
