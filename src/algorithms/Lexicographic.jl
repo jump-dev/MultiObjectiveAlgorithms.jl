@@ -72,26 +72,16 @@ function _solve_in_sequence(
         if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
             return MOI.OTHER_ERROR, nothing
         end
-        # Add tolerance constraints
-        X = Dict{MOI.VariableIndex,Float64}(
-            x => MOI.get(model.inner, MOI.VariablePrimal(), x) for
-            x in variables
-        )
-        Y = MOI.Utilities.eval_variables(x -> X[x], f)
-        sense = MOI.get(model.inner, MOI.ObjectiveSense())
+        X, Y = _compute_point(model, variables, f)
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
-        set = if sense == MOI.MIN_SENSE
+        set = if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
             MOI.LessThan(Y + rtol * abs(Y))
         else
             MOI.GreaterThan(Y - rtol * abs(Y))
         end
         push!(constraints, MOI.add_constraint(model, f, set))
     end
-    X = Dict{MOI.VariableIndex,Float64}(
-        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for x in variables
-    )
-    Y = MOI.Utilities.eval_variables(x -> X[x], model.f)
-    # Remove tolerance constraints
+    X, Y = _compute_point(model, variables, model.f)
     for c in constraints
         MOI.delete(model, c)
     end
