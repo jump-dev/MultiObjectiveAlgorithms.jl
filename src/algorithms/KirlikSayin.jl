@@ -6,20 +6,17 @@
 """
     KirlikSayin()
 
-`KirlikSayin` implements the algorithm of Kirlik & Sayın (2014).
-    
-An algorithm to generate all nondominated solutions for multi-objective
-discrete optimization problems. The algorithm maintains (p-1) dimensional
-rectangler regions in the solution space and a two-stage optimization problem 
+`KirlikSayin` implements the algorithm of:
+
+Kirlik, G., & Sayın, S. (2014). A new algorithm for generating all nondominated
+solutions of multiobjective discrete optimization problems. European Journal of
+Operational Research, 232(3), 479-488.
+
+This is an algorithm to generate all nondominated solutions for multi-objective
+discrete optimization problems. The algorithm maintains `(p-1)`-dimensional
+rectangle regions in the solution space, and a two-stage optimization problem 
 is solved for each rectangle.
-
-Gokhan Kirlik and Serpil Sayin. A new algorithm for generating all nondominated 
-solutions of multiobjective discrete optimization problems. European Journal of 
-Operational Research, 232:479–488, 2 2014.
-
-`KirlikSayin` implements the algorithm of Kirlik & Sayın (2014).
 """
-
 mutable struct KirlikSayin <: AbstractAlgorithm end
 
 struct _Rectangle
