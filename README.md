@@ -2,6 +2,9 @@
 
 # MultiObjectiveAlgorithms.jl
 
+[![Build Status](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/workflows/CI/badge.svg?branch=master)](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/jump-dev/MultiObjectiveAlgorithms.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jump-dev/MultiObjectiveAlgorithms.jl)
+
 MultiObjectiveAlgorithms.jl (MOA) is a collection of algorithms for
 multi-objective optimization.
 
@@ -10,7 +13,7 @@ multi-objective optimization.
 Install MOA using `Pkg.add`:
 
 ```julia
-] add MultiObjectiveAlgorithms
+import Pkg; Pkg.add("MultiObjectiveAlgorithms")
 ```
 
 ## Usage with JuMP
@@ -36,7 +39,9 @@ the choice of solution algorithm.
 
 ## Algorithm
 
-There are a number of algorithms supported by the algorithms in MOA.
+Set the algorithm using the `MOA.Algorithm()` attribute.
+
+The value must be one of the algorithms supported by MOA:
 
  * `MOA.EpsilonConstraint()`
  * `MOA.Hierarchical()`
