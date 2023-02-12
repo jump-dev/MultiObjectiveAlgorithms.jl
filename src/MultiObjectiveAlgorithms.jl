@@ -500,6 +500,10 @@ function _compute_point(
     return X, Y
 end
 
+function _is_scalar_status_optimal(status::MOI.TerminationStatusCode)
+    return status == MOI.OPTIMAL || status == MOI.LOCALLY_SOLVED
+end
+
 for file in readdir(joinpath(@__DIR__, "algorithms"))
     include(joinpath(@__DIR__, "algorithms", file))
 end
