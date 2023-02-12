@@ -117,6 +117,10 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
+            @warn(
+                "Unable to solve problem using `KirlikSayin()` because " *
+                "objective $i does not have a finite domain.",
+            )
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
