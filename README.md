@@ -42,6 +42,7 @@ There are a number of algorithms supported by the algorithms in MOA.
 
  * `MOA.EpsilonConstraint()`
  * `MOA.Hierarchical()`
+ * `MOA.KirlikSayin()`
  * `MOA.Lexicographic()` [default]
  * `MOA.NISE()`
 
