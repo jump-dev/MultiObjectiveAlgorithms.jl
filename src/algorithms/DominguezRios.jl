@@ -14,11 +14,15 @@ Sciences, 565(7), 210-228.
 """
 mutable struct DominguezRios <: AbstractAlgorithm end
 
-mutable struct _Box
+mutable struct _DominguezRiosBox
     l::Vector{Float64}
     u::Vector{Float64}
     priority::Float64
-    function _Box(l::Vector{Float64}, u::Vector{Float64}, p::Float64 = 0.0)
+    function _DominguezRiosBox(
+        l::Vector{Float64},
+        u::Vector{Float64},
+        p::Float64 = 0.0,
+    )
         @assert length(l) == length(u) "Dimension mismatch between l and u"
         return new(l, u, p)
     end
@@ -40,23 +44,23 @@ function _reduced_scaled_priority(
 end
 
 function _p_partition(
-    B::_Box,
+    B::_DominguezRiosBox,
     z::Vector{Float64},
     yI::Vector{Float64},
     yN::Vector{Float64},
 )
     ẑ = max.(z, B.l)
-    ret = _Box[]
+    ret = _DominguezRiosBox[]
     for i in 1:length(z)
         new_l = vcat(B.l[1:i], ẑ[i+1:end])
         new_u = vcat(B.u[1:i-1], ẑ[i], B.u[i+1:end])
         new_priority = _reduced_scaled_priority(new_l, new_u, i, ẑ, yI, yN)
-        push!(ret, _Box(new_l, new_u, new_priority))
+        push!(ret, _DominguezRiosBox(new_l, new_u, new_priority))
     end
     return ret
 end
 
-function _select_next_box(L::Vector{Vector{_Box}}, k::Int)
+function _select_next_box(L::Vector{Vector{_DominguezRiosBox}}, k::Int)
     p = length(L)
     if any(.!isempty.(L))
         k = k % p + 1
@@ -69,8 +73,8 @@ function _select_next_box(L::Vector{Vector{_Box}}, k::Int)
 end
 
 function _join(
-    A::_Box,
-    B::_Box,
+    A::_DominguezRiosBox,
+    B::_DominguezRiosBox,
     i::Int,
     z::Vector{Float64},
     yI::Vector{Float64},
@@ -80,18 +84,21 @@ function _join(
     @assert all(uᵃ .<= uᵇ) "`join` operation not valid. (uᵃ ≰ uᵇ)"
     lᶜ, uᶜ = min.(lᵃ, lᵇ), uᵇ
     ẑ = max.(z, lᶜ)
-    return _Box(lᶜ, uᶜ, _reduced_scaled_priority(lᶜ, uᶜ, i, ẑ, yI, yN))
+    priority = _reduced_scaled_priority(lᶜ, uᶜ, i, ẑ, yI, yN)
+    return _DominguezRiosBox(lᶜ, uᶜ, priority)
 end
 
-Base.isempty(B::_Box) = prod(B.u[i] - B.l[i] for i in 1:length(B.u)) == 0
+function Base.isempty(B::_DominguezRiosBox)
+    return prod(B.u[i] - B.l[i] for i in 1:length(B.u)) == 0
+end
 
 function _update!(
-    L::Vector{Vector{_Box}},
+    L::Vector{Vector{_DominguezRiosBox}},
     z::Vector{Float64},
     yI::Vector{Float64},
     yN::Vector{Float64},
 )
-    T = [_Box[] for _ in 1:length(L)]
+    T = [_DominguezRiosBox[] for _ in 1:length(L)]
     for j in 1:length(L)
         for B in L[j]
             if all(z .< B.u)
@@ -145,9 +152,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         return status, solutions
     end
     n = MOI.output_dimension(model.f)
-    YN = Vector{Float64}[]
-    L = [_Box[] for i in 1:n]
-    k = 0
+    L = [_DominguezRiosBox[] for i in 1:n]
     scalars = MOI.Utilities.scalarize(model.f)
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     yI, yN = zeros(n), zeros(n)
@@ -180,17 +185,15 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         yN[i] = Y
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), sense)
-    r = maximum(yN - yI)
-    ϵ = 1 / (2 * n * (r - 1))
-    push!(L[1], _Box(yI, yN, 0.0))
-    iter = 1
+    ϵ = 1 / (2 * n * (maximum(yN - yI) - 1))
+    push!(L[1], _DominguezRiosBox(yI, yN, 0.0))
     t_max = MOI.add_variable(model.inner)
     solutions = SolutionPoint[]
+    k = 0
     while any(.!isempty.(L))
         i, k = _select_next_box(L, k)
         B = L[k][i]
-        z = B.u
-        w = 1 ./ max.(1, z - yI)
+        w = 1 ./ max.(1, B.u - yI)
         constraints = [
             MOI.Utilities.normalize_and_add_constraint(
                 model.inner,
@@ -201,19 +204,17 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         new_f = t_max + ϵ * sum(w[i] * (scalars[i] - yI[i]) for i in 1:n)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
-        obj = MOI.get(model.inner, MOI.ObjectiveValue())
-        MOI.delete.(model.inner, constraints)
         if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
             X, Y = _compute_point(model, variables, model.f)
-            if (obj < 1) && all(yI .< z)
-                push!(YN, Y)
+            obj = MOI.get(model.inner, MOI.ObjectiveValue())
+            if (obj < 1) && all(yI .< B.u)
                 push!(solutions, SolutionPoint(X, Y))
                 _update!(L, Y, yI, yN)
             else
                 deleteat!(L[k], i)
             end
         end
-        iter += 1
+        MOI.delete.(model.inner, constraints)
     end
     MOI.delete(model.inner, t_max)
     return MOI.OPTIMAL, solutions
