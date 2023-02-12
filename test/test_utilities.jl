@@ -7,9 +7,8 @@ module TestUtilities
 
 using Test
 
-import MultiObjectiveAlgorithms
+import MultiObjectiveAlgorithms as MOA
 
-const MOA = MultiObjectiveAlgorithms
 const MOI = MOA.MOI
 
 function run_tests()
