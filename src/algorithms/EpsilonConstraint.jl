@@ -11,19 +11,19 @@ bi-objective programs.
 
 ## Supported optimizer attributes
 
- * `MOA.ObjectiveAbsoluteTolerance(1)`: if set, `EpsilonConstraint` uses this
-   tolerance as the epsilon by which it partitions the first-objective's space.
-   If the objective is a pure integer program, set the tolerance to `1` to
+ * `MOA.ObjectiveAbsoluteTolerance(1)`: `EpsilonConstraint` uses this tolerance
+   as the epsilon by which it partitions the first-objective's space. The
+   default is `1`, so that for a pure integer program this algorithm will
    enumerate all non-dominated solutions. Note that you can set only the
    tolerance for the first objective index; the tolerances for other objective
    indices are ignored.
 
- * `MOA.SolutionLimit()`: if `MOA.ObjectiveAbsoluteTolerance(1)` is not set
-   then, with a slight abuse of notation, `EpsilonConstraint` divides the width
-   of the first-objective's domain in objective space by `SolutionLimit` to
-   obtain the epsilon to use when iterating. Thus, there can be at most
-   `SolutionLimit` solutions returned, but there may be fewer. If no value is
-   set, the default is `100`, instead of the typical `default(::SolutionLimit)`.
+ * `MOA.SolutionLimit()`: if this attribute is set then, instead of using the
+   `MOA.ObjectiveAbsoluteTolerancew`, ith a slight abuse of notation,
+   `EpsilonConstraint` divides the width of the first-objective's domain in
+   objective space by `SolutionLimit` to obtain the epsilon to use when
+   iterating. Thus, there can be at most `SolutionLimit` solutions returned, but
+   there may be fewer.
 """
 mutable struct EpsilonConstraint <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
@@ -31,8 +31,6 @@ mutable struct EpsilonConstraint <: AbstractAlgorithm
 
     EpsilonConstraint() = new(nothing, nothing)
 end
-
-default(::EpsilonConstraint, ::SolutionLimit) = 100
 
 MOI.supports(::EpsilonConstraint, ::SolutionLimit) = true
 
@@ -44,6 +42,8 @@ end
 function MOI.get(alg::EpsilonConstraint, attr::SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
+
+default(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = 1.0
 
 MOI.supports(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = true
 
@@ -86,8 +86,8 @@ function optimize_multiobjective!(
     left, right = min(a, b), max(a, b)
     # Compute the epsilon that we will be incrementing by each iteration
     ε = MOI.get(algorithm, ObjectiveAbsoluteTolerance(1))
-    if iszero(ε)
-        n_points = MOI.get(algorithm, SolutionLimit())
+    n_points = MOI.get(algorithm, SolutionLimit())
+    if n_points != default(algorithm, SolutionLimit())
         ε = abs(right - left) / (n_points - 1)
     end
     solutions = SolutionPoint[]
