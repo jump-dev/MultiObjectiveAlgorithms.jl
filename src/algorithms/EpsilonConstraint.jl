@@ -74,10 +74,14 @@ function optimize_multiobjective!(
     alg = Hierarchical()
     MOI.set.(Ref(alg), ObjectivePriority.(1:2), [1, 0])
     status, solution_1 = optimize_multiobjective!(alg, model)
-    @assert status == MOI.OPTIMAL
+    if status != MOI.OPTIMAL
+        return MOI.OTHER_ERROR, nothing
+    end
     MOI.set(alg, ObjectivePriority(2), 2)
     status, solution_2 = optimize_multiobjective!(alg, model)
-    @assert status == MOI.OPTIMAL
+    if status != MOI.OPTIMAL
+        return MOI.OTHER_ERROR, nothing
+    end
     a, b = solution_1[1].y[1], solution_2[1].y[1]
     left, right = min(a, b), max(a, b)
     # Compute the epsilon that we will be incrementing by each iteration

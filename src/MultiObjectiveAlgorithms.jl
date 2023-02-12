@@ -427,7 +427,9 @@ function MOI.optimize!(model::Optimizer)
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
-    model.solutions = solutions
+    if solutions !== nothing
+        model.solutions = solutions
+    end
     return
 end
 
