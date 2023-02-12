@@ -153,7 +153,7 @@ default(::Algorithm) = Lexicographic()
 """
     AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute
 
-A super-type for MOO-specific optimizer attributes.
+A super-type for MOA-specific optimizer attributes.
 """
 abstract type AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute end
 
@@ -275,7 +275,7 @@ end
 function MOI.get(model::Optimizer, ::MOI.SolverName)
     alg = typeof(something(model.algorithm, default(Algorithm())))
     inner = MOI.get(model.inner, MOI.SolverName())
-    return "MOO[algorithm=$alg, optimizer=$inner]"
+    return "MOA[algorithm=$alg, optimizer=$inner]"
 end
 
 ### AbstractModelAttribute
