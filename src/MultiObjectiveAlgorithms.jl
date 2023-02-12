@@ -249,6 +249,17 @@ end
 
 default(::ObjectiveAbsoluteTolerance) = 0.0
 
+"""
+    EpsilonConstraintStep <: AbstractAlgorithmAttribute -> Float64
+
+The step `ε` to use in epsilon-constraint methods.
+
+Defaults to `1.0`.
+"""
+struct EpsilonConstraintStep <: AbstractAlgorithmAttribute end
+
+default(::EpsilonConstraintStep) = 1.0
+
 ### RawOptimizerAttribute
 
 function MOI.supports(model::Optimizer, attr::MOI.RawOptimizerAttribute)

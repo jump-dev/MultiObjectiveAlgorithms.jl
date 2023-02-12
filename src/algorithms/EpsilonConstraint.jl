@@ -11,15 +11,13 @@ bi-objective programs.
 
 ## Supported optimizer attributes
 
- * `MOA.ObjectiveAbsoluteTolerance(1)`: `EpsilonConstraint` uses this tolerance
+ * `MOA.EpsilonConstraintStep()`: `EpsilonConstraint` uses this value
    as the epsilon by which it partitions the first-objective's space. The
    default is `1`, so that for a pure integer program this algorithm will
-   enumerate all non-dominated solutions. Note that you can set only the
-   tolerance for the first objective index; the tolerances for other objective
-   indices are ignored.
+   enumerate all non-dominated solutions.
 
  * `MOA.SolutionLimit()`: if this attribute is set then, instead of using the
-   `MOA.ObjectiveAbsoluteTolerancew`, ith a slight abuse of notation,
+   `MOA.EpsilonConstraintStep`, with a slight abuse of notation,
    `EpsilonConstraint` divides the width of the first-objective's domain in
    objective space by `SolutionLimit` to obtain the epsilon to use when
    iterating. Thus, there can be at most `SolutionLimit` solutions returned, but
@@ -43,24 +41,28 @@ function MOI.get(alg::EpsilonConstraint, attr::SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
-default(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = 1.0
+MOI.supports(::EpsilonConstraint, ::EpsilonConstraintStep) = true
 
-MOI.supports(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = true
-
-function MOI.set(
-    alg::EpsilonConstraint,
-    attr::ObjectiveAbsoluteTolerance,
-    value,
-)
-    if attr.index == 1
-        alg.atol = value
-    end
+function MOI.set(alg::EpsilonConstraint, ::EpsilonConstraintStep, value)
+    alg.atol = value
     return
 end
 
-function MOI.get(alg::EpsilonConstraint, attr::ObjectiveAbsoluteTolerance)
-    @assert attr.index == 1
+function MOI.get(alg::EpsilonConstraint, attr::EpsilonConstraintStep)
     return something(alg.atol, default(alg, attr))
+end
+
+MOI.supports(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = true
+
+function MOI.set(alg::EpsilonConstraint, ::ObjectiveAbsoluteTolerance, value)
+    @warn("This attribute is deprecated. Use `EpsilonConstraintStep` instead.")
+    MOI.set(alg, EpsilonConstraintStep(), value)
+    return
+end
+
+function MOI.get(alg::EpsilonConstraint, ::ObjectiveAbsoluteTolerance)
+    @warn("This attribute is deprecated. Use `EpsilonConstraintStep` instead.")
+    return MOI.get(alg, EpsilonConstraintStep())
 end
 
 function optimize_multiobjective!(
@@ -85,7 +87,7 @@ function optimize_multiobjective!(
     a, b = solution_1[1].y[1], solution_2[1].y[1]
     left, right = min(a, b), max(a, b)
     # Compute the epsilon that we will be incrementing by each iteration
-    ε = MOI.get(algorithm, ObjectiveAbsoluteTolerance(1))
+    ε = MOI.get(algorithm, EpsilonConstraintStep())
     n_points = MOI.get(algorithm, SolutionLimit())
     if n_points != default(algorithm, SolutionLimit())
         ε = abs(right - left) / (n_points - 1)
@@ -95,19 +97,18 @@ function optimize_multiobjective!(
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    SetType = ifelse(
-        sense == MOI.MIN_SENSE,
-        MOI.LessThan{Float64},
-        MOI.GreaterThan{Float64},
-    )
-    ci = MOI.add_constraint(model, f1, SetType(left))
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    rhs = left
-    while rhs <= right + ε / 2
-        MOI.set(model, MOI.ConstraintSet(), ci, SetType(rhs))
+    SetType, bound, direction = if sense == MOI.MIN_SENSE
+        MOI.LessThan{Float64}, right, -1.0
+    else
+        MOI.GreaterThan{Float64}, left, 1.0
+    end
+    ci = MOI.add_constraint(model, f1, SetType(bound))
+    while true
+        MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
-            return MOI.OTHER_ERROR, nothing
+            break
         end
         X = Dict{MOI.VariableIndex,Float64}(
             x => MOI.get(model.inner, MOI.VariablePrimal(), x) for
@@ -117,7 +118,7 @@ function optimize_multiobjective!(
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end
-        rhs += ε
+        bound = Y[1] + direction * ε
     end
     MOI.delete(model, ci)
     return MOI.OPTIMAL, filter_nondominated(sense, solutions)
