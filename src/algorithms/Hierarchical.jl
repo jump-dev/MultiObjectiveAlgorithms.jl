@@ -107,11 +107,7 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
             break
         end
         # Add tolerance constraints
-        X = Dict{MOI.VariableIndex,Float64}(
-            x => MOI.get(model.inner, MOI.VariablePrimal(), x) for
-            x in variables
-        )
-        Y = MOI.Utilities.eval_variables(x -> X[x], new_vector_f)
+        X, Y = _compute_point(model, variables, new_vector_f)
         sense = MOI.get(model.inner, MOI.ObjectiveSense())
         for (i, fi) in enumerate(MOI.Utilities.eachscalar(new_vector_f))
             rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
@@ -123,10 +119,7 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
             push!(constraints, MOI.add_constraint(model, fi, set))
         end
     end
-    X = Dict{MOI.VariableIndex,Float64}(
-        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for x in variables
-    )
-    Y = MOI.Utilities.eval_variables(x -> X[x], model.f)
+    X, Y = _compute_point(model, variables, model.f)
     # Remove tolerance constraints
     for c in constraints
         MOI.delete(model, c)

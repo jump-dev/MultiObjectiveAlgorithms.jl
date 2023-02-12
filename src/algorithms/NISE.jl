@@ -45,11 +45,8 @@ function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
     if status != MOI.OPTIMAL
         return status, nothing
     end
-    X = Dict{MOI.VariableIndex,Float64}(
-        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for
-        x in MOI.get(model.inner, MOI.ListOfVariableIndices())
-    )
-    Y = MOI.Utilities.eval_variables(x -> X[x], model.f)
+    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
+    X, Y = _compute_point(model, variables, model.f)
     return status, SolutionPoint(X, Y)
 end
 

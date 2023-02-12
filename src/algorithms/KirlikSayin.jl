@@ -67,14 +67,6 @@ function _update_list(L::Vector{_Rectangle}, f::Vector{Float64})
     return L_new
 end
 
-function _compute_objective(model, variables, f)
-    X = Dict{MOI.VariableIndex,Float64}(
-        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for x in variables
-    )
-    Y = MOI.Utilities.eval_variables(x -> X[x], f)
-    return X, Y
-end
-
 function _project(x::Vector{Float64}, axis::Int)
     return [x[i] for i in 1:length(x) if i != axis]
 end
@@ -114,7 +106,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
             return MOI.OTHER_ERROR, nothing
         end
-        _, Y = _compute_objective(model, variables, f_i)
+        _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y
         MOI.set(
             model.inner,
@@ -125,7 +117,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
             return MOI.OTHER_ERROR, nothing
         end
-        _, Y = _compute_objective(model, variables, f_i)
+        _, Y = _compute_point(model, variables, f_i)
         yN[i] = Y
     end
     # Reset the sense after modifying it.
@@ -175,7 +167,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
             continue
         end
-        X, Y = _compute_objective(model, variables, model.f)
+        X, Y = _compute_point(model, variables, model.f)
         Y_proj = _project(Y, k)
         if !(Y in YN)
             push!(solutions, SolutionPoint(X, Y))

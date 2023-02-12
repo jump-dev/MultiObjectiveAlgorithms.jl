@@ -488,6 +488,18 @@ end
 
 MOI.get(::Optimizer, ::MOI.DualStatus) = MOI.NO_SOLUTION
 
+function _compute_point(
+    model::Optimizer,
+    variables::Vector{MOI.VariableIndex},
+    f,
+)
+    X = Dict{MOI.VariableIndex,Float64}(
+        x => MOI.get(model.inner, MOI.VariablePrimal(), x) for x in variables
+    )
+    Y = MOI.Utilities.eval_variables(x -> X[x], f)
+    return X, Y
+end
+
 for file in readdir(joinpath(@__DIR__, "algorithms"))
     include(joinpath(@__DIR__, "algorithms", file))
 end
