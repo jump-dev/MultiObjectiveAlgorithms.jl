@@ -54,6 +54,7 @@ Each algorithm supports only a subset of the attributes. Consult the algorithm's
 docstring for details on which attributes it supports, and how it uses them in
 the solution process.
 
+ * `MOA.EpsilonConstraintStep()`
  * `MOA.ObjectiveAbsoluteTolerance(index::Int)`
  * `MOA.ObjectivePriority(index::Int)`
  * `MOA.ObjectiveRelativeTolerance(index::Int)`
