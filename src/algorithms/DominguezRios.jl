@@ -12,7 +12,6 @@ Dominguez-Rios, M.A. & Chicano, F., & Alba, E. (2021). Effective anytime
 algorithm for multiobjective combinatorial optimization problems. Information
 Sciences, 565(7), 210-228.
 """
-
 mutable struct DominguezRios <: AbstractAlgorithm end
 
 mutable struct _Box
