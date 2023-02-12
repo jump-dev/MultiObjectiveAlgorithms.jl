@@ -14,7 +14,7 @@ Operational Research, 232(3), 479-488.
 
 This is an algorithm to generate all nondominated solutions for multi-objective
 discrete optimization problems. The algorithm maintains `(p-1)`-dimensional
-rectangle regions in the solution space, and a two-stage optimization problem 
+rectangle regions in the solution space, and a two-stage optimization problem
 is solved for each rectangle.
 """
 mutable struct KirlikSayin <: AbstractAlgorithm end
@@ -84,13 +84,16 @@ _volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
 function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     if sense == MOI.MAX_SENSE
-        MOI.set(model, MOI.ObjectiveFunction{typeof(model.f)}(), -model.f)
+        old_obj, neg_obj = copy(model.f), -model.f
+        MOI.set(model, MOI.ObjectiveFunction{typeof(neg_obj)}(), neg_obj)
         MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         status, solutions = optimize_multiobjective!(algorithm, model)
-        MOI.set(model, MOI.ObjectiveFunction{typeof(model.f)}(), -model.f)
+        MOI.set(model, MOI.ObjectiveFunction{typeof(old_obj)}(), old_obj)
         MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        return status,
-        [SolutionPoint(solution.x, -solution.y) for solution in solutions]
+        if solutions !== nothing
+            solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
+        end
+        return status, solutions
     end
     solutions = SolutionPoint[]
     # Problem with p objectives.
@@ -108,6 +111,9 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         MOI.set(model.inner, MOI.ObjectiveSense(), sense)
         MOI.optimize!(model.inner)
+        if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
+            return MOI.OTHER_ERROR, nothing
+        end
         _, Y = _compute_objective(model, variables, f_i)
         yI[i] = Y
         MOI.set(
@@ -116,6 +122,9 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE,
         )
         MOI.optimize!(model.inner)
+        if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
+            return MOI.OTHER_ERROR, nothing
+        end
         _, Y = _compute_objective(model, variables, f_i)
         yN[i] = Y
     end

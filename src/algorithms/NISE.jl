@@ -42,6 +42,9 @@ function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model.inner)
     status = MOI.get(model.inner, MOI.TerminationStatus())
+    if status != MOI.OPTIMAL
+        return status, nothing
+    end
     X = Dict{MOI.VariableIndex,Float64}(
         x => MOI.get(model.inner, MOI.VariablePrimal(), x) for
         x in MOI.get(model.inner, MOI.ListOfVariableIndices())
@@ -56,13 +59,13 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
     end
     if MOI.output_dimension(model.f) == 1
         status, solution = _solve_weighted_sum(model, algorithm, [1.0])
-        return status, [solution]
+        return MOI.OPTIMAL, [solution]
     end
     solutions = Dict{Float64,SolutionPoint}()
     for w in (0.0, 1.0)
         status, solution = _solve_weighted_sum(model, algorithm, w)
         if status != MOI.OPTIMAL
-            return status, nothing
+            return MOI.OTHER_ERROR, nothing
         end
         solutions[w] = solution
     end
@@ -78,7 +81,7 @@ function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
         status, solution = _solve_weighted_sum(model, algorithm, w)
         if status != MOI.OPTIMAL
             # Exit the solve with some error.
-            return status, nothing
+            return MOI.OTHER_ERROR, nothing
         elseif solution ≈ solutions[a] || solution ≈ solutions[b]
             # We have found an existing solution. We're free to prune (a, b)
             # from the search space.

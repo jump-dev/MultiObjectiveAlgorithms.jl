@@ -79,7 +79,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
     f::Union{Nothing,MOI.AbstractVectorFunction}
-    solutions::Union{Nothing,Vector{SolutionPoint}}
+    solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
 
     function Optimizer(optimizer_factory)
@@ -87,7 +87,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             MOI.instantiate(optimizer_factory),
             nothing,
             nothing,
-            nothing,
+            SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
         )
     end
@@ -96,7 +96,7 @@ end
 function MOI.empty!(model::Optimizer)
     MOI.empty!(model.inner)
     model.f = nothing
-    model.solutions = nothing
+    model.solutions = SolutionPoint[]
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     return
 end
@@ -104,7 +104,7 @@ end
 function MOI.is_empty(model::Optimizer)
     return MOI.is_empty(model.inner) &&
            model.f === nothing &&
-           model.solutions === nothing &&
+           isempty(model.solutions) &&
            model.termination_status == MOI.OPTIMIZE_NOT_CALLED
 end
 
@@ -112,6 +112,13 @@ MOI.supports_incremental_interface(::Optimizer) = true
 
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     return MOI.Utilities.default_copy_to(dest, src)
+end
+
+function MOI.supports(
+    ::Optimizer,
+    ::MOI.ObjectiveFunction{<:MOI.AbstractScalarFunction},
+)
+    return false
 end
 
 function MOI.supports(
@@ -286,6 +293,10 @@ end
 
 ### AbstractVariableAttribute
 
+function MOI.is_valid(model::Optimizer, x::MOI.VariableIndex)
+    return MOI.is_valid(model.inner, x)
+end
+
 function MOI.supports(
     model::Optimizer,
     arg::MOI.AbstractVariableAttribute,
@@ -294,7 +305,21 @@ function MOI.supports(
     return MOI.supports(model.inner, arg, MOI.VariableIndex)
 end
 
+function MOI.set(
+    model::Optimizer,
+    attr::MOI.AbstractVariableAttribute,
+    indices::Vector{<:MOI.VariableIndex},
+    args::Vector{T},
+) where {S,T}
+    MOI.set.(model, attr, indices, args)
+    return
+end
+
 ### AbstractConstraintAttribute
+
+function MOI.is_valid(model::Optimizer, ci::MOI.ConstraintIndex)
+    return MOI.is_valid(model.inner, ci)
+end
 
 function MOI.supports(
     model::Optimizer,
@@ -302,6 +327,16 @@ function MOI.supports(
     ::Type{MOI.ConstraintIndex{F,S}},
 ) where {F<:MOI.AbstractFunction,S<:MOI.AbstractSet}
     return MOI.supports(model.inner, arg, MOI.ConstraintIndex{F,S})
+end
+
+function MOI.set(
+    model::Optimizer,
+    attr::MOI.AbstractConstraintAttribute,
+    indices::Vector{<:MOI.ConstraintIndex},
+    args::Vector{T},
+) where {S,T}
+    MOI.set.(model, attr, indices, args)
+    return
 end
 
 function MOI.set(model::Optimizer, attr::_ATTRIBUTES, args...)
@@ -357,15 +392,44 @@ MOI.get(model::Optimizer, ::MOI.ObjectiveFunctionType) = typeof(model.f)
 
 MOI.get(model::Optimizer, ::MOI.ObjectiveFunction) = model.f
 
-MOI.delete(model::Optimizer, i::MOI.Index) = MOI.delete(model.inner, i)
+function MOI.get(model::Optimizer, attr::MOI.ListOfModelAttributesSet)
+    ret = MOI.get(model.inner, attr)
+    if model.f !== nothing
+        F = MOI.get(model, MOI.ObjectiveFunctionType())
+        push!(ret, MOI.ObjectiveFunction{F}())
+    end
+    return ret
+end
+
+function MOI.delete(model::Optimizer, x::MOI.VariableIndex)
+    MOI.delete(model.inner, x)
+    if model.f !== nothing
+        model.f = MOI.Utilities.remove_variable(model.f, x)
+        if MOI.output_dimension(model.f) == 0
+            model.f = nothing
+        end
+    end
+    return
+end
+
+function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
+    MOI.delete(model.inner, ci)
+    return
+end
 
 function MOI.optimize!(model::Optimizer)
-    model.solutions = nothing
+    empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
+    if model.f === nothing
+        model.termination_status = MOI.INVALID_MODEL
+        return
+    end
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
-    model.solutions = solutions
+    if solutions !== nothing
+        model.solutions = solutions
+    end
     return
 end
 
