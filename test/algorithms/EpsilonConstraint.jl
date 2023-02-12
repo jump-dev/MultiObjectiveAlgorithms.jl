@@ -116,6 +116,7 @@ function test_biobjective_knapsack_atol_large()
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    @test MOI.supports(model, MOA.EpsilonConstraintStep())
     MOI.set(model, MOA.EpsilonConstraintStep(), 10.0)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
@@ -198,6 +199,7 @@ function test_biobjective_knapsack_min_solution_limit()
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    @test MOI.supports(model, MOA.SolutionLimit())
     MOI.set(model, MOA.SolutionLimit(), 3)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
@@ -264,6 +266,7 @@ end
 function test_deprecated()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    @test MOI.supports(model, MOA.ObjectiveAbsoluteTolerance(1))
     @test_logs (:warn,) MOI.set(model, MOA.ObjectiveAbsoluteTolerance(1), 1.0)
     @test_logs (:warn,) MOI.get(model, MOA.ObjectiveAbsoluteTolerance(1))
     return
