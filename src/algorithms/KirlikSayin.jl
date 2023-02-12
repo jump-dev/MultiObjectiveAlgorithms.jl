@@ -103,8 +103,9 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         MOI.set(model.inner, MOI.ObjectiveSense(), sense)
         MOI.optimize!(model.inner)
-        if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
-            return MOI.OTHER_ERROR, nothing
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if !_is_scalar_status_optimal(status)
+            return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y
@@ -114,8 +115,9 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE,
         )
         MOI.optimize!(model.inner)
-        if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
-            return MOI.OTHER_ERROR, nothing
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if !_is_scalar_status_optimal(status)
+            return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
         yN[i] = Y

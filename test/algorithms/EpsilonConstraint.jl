@@ -241,7 +241,7 @@ function test_infeasible()
     f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
-    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.INFEASIBLE
     @test MOI.get(model, MOI.PrimalStatus()) == MOI.NO_SOLUTION
     @test MOI.get(model, MOI.DualStatus()) == MOI.NO_SOLUTION
     return
@@ -257,7 +257,7 @@ function test_unbounded()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.optimize!(model)
-    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.DUAL_INFEASIBLE
     @test MOI.get(model, MOI.PrimalStatus()) == MOI.NO_SOLUTION
     @test MOI.get(model, MOI.DualStatus()) == MOI.NO_SOLUTION
     return

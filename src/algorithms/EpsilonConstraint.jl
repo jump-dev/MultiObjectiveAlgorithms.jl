@@ -76,13 +76,13 @@ function optimize_multiobjective!(
     alg = Hierarchical()
     MOI.set.(Ref(alg), ObjectivePriority.(1:2), [1, 0])
     status, solution_1 = optimize_multiobjective!(alg, model)
-    if status != MOI.OPTIMAL
-        return MOI.OTHER_ERROR, nothing
+    if !_is_scalar_status_optimal(status)
+        return status, nothing
     end
     MOI.set(alg, ObjectivePriority(2), 2)
     status, solution_2 = optimize_multiobjective!(alg, model)
-    if status != MOI.OPTIMAL
-        return MOI.OTHER_ERROR, nothing
+    if !_is_scalar_status_optimal(status)
+        return status, nothing
     end
     a, b = solution_1[1].y[1], solution_2[1].y[1]
     left, right = min(a, b), max(a, b)

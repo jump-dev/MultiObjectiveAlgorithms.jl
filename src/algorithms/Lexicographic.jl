@@ -49,9 +49,10 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     solutions = SolutionPoint[]
     for sequence in Combinatorics.permutations(sequence)
         status, solution = _solve_in_sequence(algorithm, model, sequence)
-        if solution !== nothing
-            push!(solutions, solution[1])
+        if !_is_scalar_status_optimal(status)
+            return status, nothing
         end
+        push!(solutions, solution[1])
     end
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     return MOI.OPTIMAL, filter_nondominated(sense, solutions)
@@ -69,8 +70,9 @@ function _solve_in_sequence(
         f = scalars[i]
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
-        if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
-            return MOI.OTHER_ERROR, nothing
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if !_is_scalar_status_optimal(status)
+            return status, nothing
         end
         X, Y = _compute_point(model, variables, f)
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
