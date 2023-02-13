@@ -43,14 +43,18 @@ Set the algorithm using the `MOA.Algorithm()` attribute.
 
 The value must be one of the algorithms supported by MOA:
 
- * `MOA.EpsilonConstraint()`
- * `MOA.DominguezRios()`
- * `MOA.Hierarchical()`
- * `MOA.KirlikSayin()`
- * `MOA.Lexicographic()` [default]
- * `MOA.NISE()`
+| Algorithm                 | # Objectives | All nondominated? |
+| ------------------------- | ------------ | ----------------- |
+| `MOA.DominguezRios()`     | Any          | Yes               |
+| `MOA.EpsilonConstraint()` | 2            | Yes               |
+| `MOA.Hierarchical()`      | Any          | No                |
+| `MOA.KirlikSayin()`       | Any          | Yes               |
+| `MOA.Lexicographic()`     | Any          | No                |
+| `MOA.NISE()`              | 2            | Yes               |
 
 Consult their docstrings for details.
+
+If not set, the default is `MOA.Lexicographic()`.
 
 ## Other optimizer attributes
 
