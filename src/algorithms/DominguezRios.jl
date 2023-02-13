@@ -190,7 +190,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     t_max = MOI.add_variable(model.inner)
     solutions = SolutionPoint[]
     k = 0
-    while any(.!isempty.(L))
+    while any(!isempty(l) for l in L)
         i, k = _select_next_box(L, k)
         B = L[k][i]
         w = 1 ./ max.(1, B.u - yI)
@@ -206,7 +206,9 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
             X, Y = _compute_point(model, variables, model.f)
+            @show X, Y
             obj = MOI.get(model.inner, MOI.ObjectiveValue())
+            @show obj, yI, B.u
             if (obj < 1) && all(yI .< B.u)
                 push!(solutions, SolutionPoint(X, Y))
                 _update!(L, Y, yI, yN)
