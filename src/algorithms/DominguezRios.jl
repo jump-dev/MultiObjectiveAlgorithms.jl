@@ -167,11 +167,8 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         end
         _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y
-        MOI.set(
-            model.inner,
-            MOI.ObjectiveSense(),
-            sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE,
-        )
+        rev_sense = sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE
+        MOI.set(model.inner, MOI.ObjectiveSense(), rev_sense)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
@@ -206,9 +203,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         MOI.optimize!(model.inner)
         if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
             X, Y = _compute_point(model, variables, model.f)
-            @show X, Y
             obj = MOI.get(model.inner, MOI.ObjectiveValue())
-            @show obj, yI, B.u
             if (obj < 1) && all(yI .< B.u)
                 push!(solutions, SolutionPoint(X, Y))
                 _update!(L, Y, yI, yN)
