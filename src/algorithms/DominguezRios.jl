@@ -89,7 +89,7 @@ function _join(
 end
 
 function Base.isempty(B::_DominguezRiosBox)
-    return prod(B.u[i] - B.l[i] for i in 1:length(B.u)) == 0
+    return any(isapprox(B.l[i], B.u[i]) for i in 1:length(B.u))
 end
 
 function _update!(
