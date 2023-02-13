@@ -44,6 +44,7 @@ Set the algorithm using the `MOA.Algorithm()` attribute.
 The value must be one of the algorithms supported by MOA:
 
  * `MOA.EpsilonConstraint()`
+ * `MOA.DominguezRios()`
  * `MOA.Hierarchical()`
  * `MOA.KirlikSayin()`
  * `MOA.Lexicographic()` [default]
