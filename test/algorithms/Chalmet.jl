@@ -13,9 +13,6 @@ import MultiObjectiveAlgorithms as MOA
 const MOI = MOA.MOI
 
 function run_tests()
-    if Sys.WORD_SIZE == 32
-        return  # Skip on 32-bit because HiGHS fails
-    end
     for name in names(@__MODULE__; all = true)
         if startswith("$name", "test_")
             @testset "$name" begin

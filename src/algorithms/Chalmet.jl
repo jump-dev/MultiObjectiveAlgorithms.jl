@@ -5,8 +5,13 @@
 
 """
     Chalmet()
+
+
 `Chalmet` implements the algorithm of:
-...
+
+Chalmet, L.G., and Lemonidis, L., and Elzinga, D.J. (1986). An algorithm for the
+bi-criterion integer programming problem. European Journal of Operational
+Research. 25(2), 292-300
 """
 mutable struct Chalmet <: AbstractAlgorithm end
 
@@ -35,8 +40,6 @@ end
 function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     if MOI.output_dimension(model.f) != 2
         error("Chalmet requires exactly two objectives")
-    end
-    if MOI.output_dimension(model.f) == 1
     end
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     if sense == MOI.MAX_SENSE
