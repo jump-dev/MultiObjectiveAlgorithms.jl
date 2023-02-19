@@ -6,7 +6,7 @@
 """
     Dichotomy()
 
-A solver that implements the Non-Inferior Set Estimation algorithm of:
+A solver that implements the algorithm of:
 
 Y. P. Aneja, K. P. K. Nair, (1979) Bicriteria Transportation Problem. Management
 Science 25(1), 73-78.
