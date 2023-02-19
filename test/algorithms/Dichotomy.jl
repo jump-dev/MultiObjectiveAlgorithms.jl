@@ -306,7 +306,10 @@ function test_bicriteria_transportation_nise()
 end
 
 function test_deprecated()
-    @test MOA.Dichotomy() == MOA.NISE()
+    nise = MOA.NISE()
+    dichotomy = MOA.Dichotomy()
+    @test nise isa typeof(dichotomy)
+    @test nise.solution_limit === dichotomy.solution_limit
     return
 end
 

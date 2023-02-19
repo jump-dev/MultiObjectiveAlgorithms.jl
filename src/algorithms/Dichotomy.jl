@@ -55,7 +55,11 @@ function _solve_weighted_sum(model::Optimizer, alg::Dichotomy, weight::Float64)
     return _solve_weighted_sum(model, alg, [weight, 1 - weight])
 end
 
-function _solve_weighted_sum(model::Optimizer, ::Dichotomy, weights::Vector{Float64})
+function _solve_weighted_sum(
+    model::Optimizer,
+    ::Dichotomy,
+    weights::Vector{Float64},
+)
     f = _scalarise(model.f, weights)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model.inner)
