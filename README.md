@@ -27,7 +27,7 @@ using JuMP
 import HiGHS
 import MultiObjectiveAlgorithms as MOA
 model = JuMP.Model(() -> MOA.Optimizer(HiGHS.Optimizer))
-set_optimizer_attribute(model, MOA.Algorithm(), MOA.NISE())
+set_optimizer_attribute(model, MOA.Algorithm(), MOA.Dichotomy())
 set_optimizer_attribute(model, MOA.SolutionLimit(), 4)
 ```
 
@@ -44,11 +44,11 @@ Set the algorithm using the `MOA.Algorithm()` attribute.
 The value must be one of the algorithms supported by MOA:
 
  * `MOA.EpsilonConstraint()`
+ * `MOA.Dichotomy()`
  * `MOA.DominguezRios()`
  * `MOA.Hierarchical()`
  * `MOA.KirlikSayin()`
  * `MOA.Lexicographic()` [default]
- * `MOA.NISE()`
 
 Consult their docstrings for details.
 
