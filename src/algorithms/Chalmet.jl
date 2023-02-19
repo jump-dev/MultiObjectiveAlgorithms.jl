@@ -6,7 +6,6 @@
 """
     Chalmet()
 
-
 `Chalmet` implements the algorithm of:
 
 Chalmet, L.G., and Lemonidis, L., and Elzinga, D.J. (1986). An algorithm for the
