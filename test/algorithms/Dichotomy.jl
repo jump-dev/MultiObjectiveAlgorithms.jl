@@ -26,8 +26,8 @@ end
 function test_Dichotomy_SolutionLimit()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
-    @test MOI.supports(MOA.Dichotomy(), MOI.SolutionLimit())
-    @test MOI.supports(model, MOI.SolutionLimit())
+    @test MOI.supports(MOA.Dichotomy(), MOA.SolutionLimit())
+    @test MOI.supports(model, MOA.SolutionLimit())
     @test MOI.get(model, MOA.SolutionLimit()) ==
           MOA.default(MOA.SolutionLimit())
     MOI.set(model, MOA.SolutionLimit(), 1)
@@ -327,7 +327,7 @@ maxobjective: [1.0 * x, -1.0 * x, 2.0 * x + 2.0]
 """,
     )
     @test_throws(
-        ErrorException("Only scalar of bi-objective problems supported."),
+        ErrorException("Only scalar or bi-objective problems supported."),
         MOI.optimize!(model),
     )
     return
