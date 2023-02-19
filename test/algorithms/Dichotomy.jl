@@ -3,7 +3,7 @@
 #  v.2.0. If a copy of the MPL was not distributed with this file, You can
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
-module TestNISE
+module TestDichotomy
 
 using Test
 
@@ -23,9 +23,11 @@ function run_tests()
     return
 end
 
-function test_NISE_SolutionLimit()
+function test_Dichotomy_SolutionLimit()
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.NISE())
+    MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
+    @test MOI.supports(MOA.Dichotomy(), MOA.SolutionLimit())
+    @test MOI.supports(model, MOA.SolutionLimit())
     @test MOI.get(model, MOA.SolutionLimit()) ==
           MOA.default(MOA.SolutionLimit())
     MOI.set(model, MOA.SolutionLimit(), 1)
@@ -36,7 +38,7 @@ end
 function test_moi_bolp_1()
     f = MOI.OptimizerWithAttributes(
         () -> MOA.Optimizer(HiGHS.Optimizer),
-        MOA.Algorithm() => MOA.NISE(),
+        MOA.Algorithm() => MOA.Dichotomy(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -72,7 +74,7 @@ end
 function test_moi_bolp_1_maximize()
     f = MOI.OptimizerWithAttributes(
         () -> MOA.Optimizer(HiGHS.Optimizer),
-        MOA.Algorithm() => MOA.NISE(),
+        MOA.Algorithm() => MOA.Dichotomy(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -108,7 +110,7 @@ end
 function test_moi_bolp_1_reversed()
     f = MOI.OptimizerWithAttributes(
         () -> MOA.Optimizer(HiGHS.Optimizer),
-        MOA.Algorithm() => MOA.NISE(),
+        MOA.Algorithm() => MOA.Dichotomy(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -144,7 +146,7 @@ end
 function test_moi_bolp_1_scalar()
     f = MOI.OptimizerWithAttributes(
         () -> MOA.Optimizer(HiGHS.Optimizer),
-        MOA.Algorithm() => MOA.NISE(),
+        MOA.Algorithm() => MOA.Dichotomy(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -198,7 +200,7 @@ function test_biobjective_knapsack()
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
     f = MOI.OptimizerWithAttributes(
         () -> MOA.Optimizer(HiGHS.Optimizer),
-        MOA.Algorithm() => MOA.NISE(),
+        MOA.Algorithm() => MOA.Dichotomy(),
     )
     model = MOI.instantiate(f)
     MOI.set(model, MOI.Silent(), true)
@@ -234,7 +236,7 @@ end
 
 function test_infeasible()
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.NISE())
+    MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 2)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -250,7 +252,7 @@ end
 
 function test_unbounded()
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.NISE())
+    MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 2)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -264,6 +266,73 @@ function test_unbounded()
     return
 end
 
+function test_bicriteria_transportation_nise()
+    m, n = 3, 4
+    c = Float64[1 2 7 7; 1 9 3 4; 8 9 4 6]
+    d = Float64[4 4 3 4; 5 8 9 10; 6 2 5 1]
+    a = Float64[11, 3, 14, 16]
+    b = Float64[8, 19, 17]
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
+    MOI.set(model, MOI.Silent(), true)
+    x = [MOI.add_variable(model) for i in 1:m, j in 1:n]
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    for j in 1:n
+        terms = [MOI.ScalarAffineTerm(1.0, x[i, j]) for i in 1:m]
+        MOI.add_constraint(
+            model,
+            MOI.ScalarAffineFunction(terms, 0.0),
+            MOI.EqualTo(a[j]),
+        )
+    end
+    for i in 1:m
+        terms = [MOI.ScalarAffineTerm(1.0, x[i, j]) for j in 1:n]
+        MOI.add_constraint(
+            model,
+            MOI.ScalarAffineFunction(terms, 0.0),
+            MOI.EqualTo(b[i]),
+        )
+    end
+    f = MOI.Utilities.vectorize([
+        sum(c[i, j] * x[i, j] for i in 1:m, j in 1:n),
+        sum(d[i, j] * x[i, j] for i in 1:m, j in 1:n),
+    ])
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    N = MOI.get(model, MOI.ResultCount())
+    y_sol = hcat(MOI.get.(model, MOI.ObjectiveValue.(1:N))...)
+    Y_N = Float64[143 156 176 186 208; 265 200 175 171 167]
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
+    return
 end
 
-TestNISE.run_tests()
+function test_deprecated()
+    nise = MOA.NISE()
+    dichotomy = MOA.Dichotomy()
+    @test nise isa typeof(dichotomy)
+    @test nise.solution_limit === dichotomy.solution_limit
+    return
+end
+
+function test_three_objective()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
+    MOI.set(model, MOI.Silent(), true)
+    MOI.Utilities.loadfromstring!(
+        model,
+        """
+variables: x
+maxobjective: [1.0 * x, -1.0 * x, 2.0 * x + 2.0]
+""",
+    )
+    @test_throws(
+        ErrorException("Only scalar or bi-objective problems supported."),
+        MOI.optimize!(model),
+    )
+    return
+end
+
+end
+
+TestDichotomy.run_tests()

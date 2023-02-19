@@ -4,6 +4,24 @@
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
 """
+    Dichotomy()
+
+A solver that implements the algorithm of:
+
+Y. P. Aneja, K. P. K. Nair, (1979) Bicriteria Transportation Problem. Management
+Science 25(1), 73-78.
+
+## Supported optimizer attributes
+
+ * `MOA.SolutionLimit()`
+"""
+mutable struct Dichotomy <: AbstractAlgorithm
+    solution_limit::Union{Nothing,Int}
+
+    Dichotomy() = new(nothing)
+end
+
+"""
     NISE()
 
 A solver that implements the Non-Inferior Set Estimation algorithm of:
@@ -12,32 +30,36 @@ Cohon, J. L., Church, R. L., & Sheer, D. P. (1979). Generating multiobjective
 trade‐offs: An algorithm for bicriterion problems. Water Resources Research,
 15(5), 1001-1010.
 
+!!! note
+    This algorithm is identical to `Dichotomy()`, and it may be removed in a
+    future release.
+
 ## Supported optimizer attributes
 
  * `MOA.SolutionLimit()`
 """
-mutable struct NISE <: AbstractAlgorithm
-    solution_limit::Union{Nothing,Int}
+NISE() = Dichotomy()
 
-    NISE() = new(nothing)
-end
+MOI.supports(::Dichotomy, ::SolutionLimit) = true
 
-MOI.supports(::NISE, ::SolutionLimit) = true
-
-function MOI.set(alg::NISE, ::SolutionLimit, value)
+function MOI.set(alg::Dichotomy, ::SolutionLimit, value)
     alg.solution_limit = value
     return
 end
 
-function MOI.get(alg::NISE, attr::SolutionLimit)
+function MOI.get(alg::Dichotomy, attr::SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
-function _solve_weighted_sum(model::Optimizer, alg::NISE, weight::Float64)
+function _solve_weighted_sum(model::Optimizer, alg::Dichotomy, weight::Float64)
     return _solve_weighted_sum(model, alg, [weight, 1 - weight])
 end
 
-function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
+function _solve_weighted_sum(
+    model::Optimizer,
+    ::Dichotomy,
+    weights::Vector{Float64},
+)
     f = _scalarise(model.f, weights)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model.inner)
@@ -51,7 +73,7 @@ function _solve_weighted_sum(model::Optimizer, ::NISE, weights::Vector{Float64})
     return status, SolutionPoint(X, Y)
 end
 
-function optimize_multiobjective!(algorithm::NISE, model::Optimizer)
+function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     if MOI.output_dimension(model.f) > 2
         error("Only scalar or bi-objective problems supported.")
     end
