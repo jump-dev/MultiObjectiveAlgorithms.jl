@@ -107,7 +107,7 @@ function optimize_multiobjective!(
     while true
         MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
         MOI.optimize!(model.inner)
-        if MOI.get(model.inner, MOI.TerminationStatus()) != MOI.OPTIMAL
+        if !_is_scalar_status_optimal(model)
             break
         end
         X, Y = _compute_point(model, variables, model.f)

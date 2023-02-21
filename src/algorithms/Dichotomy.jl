@@ -64,7 +64,6 @@ function _solve_weighted_sum(
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model.inner)
     status = MOI.get(model.inner, MOI.TerminationStatus())
-    status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
     end
