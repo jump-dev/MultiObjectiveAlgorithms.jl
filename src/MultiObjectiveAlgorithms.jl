@@ -71,6 +71,25 @@ function _scalarise(f::MOI.VectorAffineFunction, w::Vector{Float64})
     return MOI.ScalarAffineFunction(terms, constant)
 end
 
+function _scalarise(f::MOI.VectorQuadraticFunction, w::Vector{Float64})
+    @assert MOI.output_dimension(f) == length(w)
+    quad_terms = MOI.ScalarQuadraticTerm{Float64}[
+        MOI.ScalarQuadraticTerm(
+            w[term.output_index] * term.scalar_term.coefficient,
+            term.scalar_term.variable_1,
+            term.scalar_term.variable_2,
+        ) for term in f.quadratic_terms
+    ]
+    affine_terms = MOI.ScalarAffineTerm{Float64}[
+        MOI.ScalarAffineTerm(
+            w[term.output_index] * term.scalar_term.coefficient,
+            term.scalar_term.variable,
+        ) for term in f.affine_terms
+    ]
+    constant = sum(w[i] * f.constants[i] for i in 1:length(w))
+    return MOI.ScalarQuadraticFunction(quad_terms, affine_terms, constant)
+end
+
 abstract type AbstractAlgorithm end
 
 MOI.Utilities.map_indices(::Function, x::AbstractAlgorithm) = x
