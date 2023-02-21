@@ -36,6 +36,7 @@ function test_moi_runtests()
         exclude = String[
             # Skipped beause of UniversalFallback in _mock_optimizer
             "test_attribute_Silent",
+            "test_attribute_after_empty",
             "test_model_copy_to_UnsupportedAttribute",
             "test_model_copy_to_UnsupportedConstraint",
             "test_model_supports_constraint_ScalarAffineFunction_EqualTo",
