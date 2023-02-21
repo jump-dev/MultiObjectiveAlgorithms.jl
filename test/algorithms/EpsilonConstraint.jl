@@ -289,6 +289,34 @@ function test_deprecated()
     return
 end
 
+function test_quadratic()
+    μ = [0.05470748600000001, 0.18257110599999998]
+    Q = [0.00076204 0.00051972; 0.00051972 0.00546173]
+    N = 2
+    model = MOA.Optimizer(Ipopt.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOA.SolutionLimit(), 10)
+    MOI.set(model, MOI.Silent(), true)
+    w = MOI.add_variables(model, N)
+    MOI.add_constraint.(model, w, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, w, MOI.LessThan(1.0))
+    MOI.add_constraint(model, sum(1.0 * w[i] for i in 1:N), MOI.EqualTo(1.0))
+    var = sum(Q[i, j] * w[i] * w[j] for i in 1:N, j in 1:N)
+    mean = sum(-μ[i] * w[i] for i in 1:N)
+    f = MOI.Utilities.operate(vcat, Float64, var, mean)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 10
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        w_sol = MOI.get(model, MOI.VariablePrimal(i), w)
+        y = MOI.get(model, MOI.ObjectiveValue(i))
+        @test y ≈ [w_sol' * Q * w_sol, -μ' * w_sol]
+    end
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    return
+end
+
 end
 
 TestEpsilonConstraint.run_tests()

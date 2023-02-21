@@ -201,7 +201,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         new_f = t_max + ϵ * sum(w[i] * (scalars[i] - yI[i]) for i in 1:n)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
-        if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
+        if _is_scalar_status_optimal(model)
             X, Y = _compute_point(model, variables, model.f)
             obj = MOI.get(model.inner, MOI.ObjectiveValue())
             if (obj < 1) && all(yI .< B.u)

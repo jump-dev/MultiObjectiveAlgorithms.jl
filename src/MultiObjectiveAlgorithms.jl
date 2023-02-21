@@ -94,6 +94,16 @@ abstract type AbstractAlgorithm end
 
 MOI.Utilities.map_indices(::Function, x::AbstractAlgorithm) = x
 
+function _instantiate_with_cache(optimizer_factory)
+    model = MOI.instantiate(optimizer_factory)
+    if !MOI.supports_incremental_interface(model)
+        # A cache will already have been added
+        return model
+    end
+    cache = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
+    return MOI.Utilities.CachingOptimizer(cache, model)
+end
+
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
@@ -103,7 +113,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
     function Optimizer(optimizer_factory)
         return new(
-            MOI.instantiate(optimizer_factory),
+            _instantiate_with_cache(optimizer_factory),
             nothing,
             nothing,
             SolutionPoint[],
@@ -489,7 +499,8 @@ function MOI.get(model::Optimizer, attr::MOI.ObjectiveBound)
     for (i, f) in enumerate(objectives)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
-        if MOI.get(model.inner, MOI.TerminationStatus()) == MOI.OPTIMAL
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if _is_scalar_status_optimal(status)
             ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
         end
     end
@@ -521,6 +532,11 @@ end
 
 function _is_scalar_status_optimal(status::MOI.TerminationStatusCode)
     return status == MOI.OPTIMAL || status == MOI.LOCALLY_SOLVED
+end
+
+function _is_scalar_status_optimal(model::Optimizer)
+    status = MOI.get(model.inner, MOI.TerminationStatus())
+    return _is_scalar_status_optimal(status)
 end
 
 for file in readdir(joinpath(@__DIR__, "algorithms"))
