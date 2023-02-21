@@ -8,6 +8,7 @@ module TestEpsilonConstraint
 using Test
 
 import HiGHS
+import Ipopt
 import MultiObjectiveAlgorithms as MOA
 
 const MOI = MOA.MOI
