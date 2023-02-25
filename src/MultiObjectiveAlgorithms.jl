@@ -350,7 +350,7 @@ function MOI.set(
     attr::MOI.AbstractVariableAttribute,
     indices::Vector{<:MOI.VariableIndex},
     args::Vector{T},
-) where {S,T}
+) where {T}
     MOI.set.(model, attr, indices, args)
     return
 end
@@ -374,7 +374,7 @@ function MOI.set(
     attr::MOI.AbstractConstraintAttribute,
     indices::Vector{<:MOI.ConstraintIndex},
     args::Vector{T},
-) where {S,T}
+) where {T}
     MOI.set.(model, attr, indices, args)
     return
 end
