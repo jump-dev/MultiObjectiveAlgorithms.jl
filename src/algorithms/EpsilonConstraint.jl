@@ -104,7 +104,9 @@ function optimize_multiobjective!(
         MOI.GreaterThan{Float64}, left, 1.0
     end
     ci = MOI.add_constraint(model, f1, SetType(bound))
-    while true
+    # Set a finite upper bound on the number of iterations so that we don't loop
+    # forever.
+    for i in 1:ceil(Int, abs(right - left) / ε + 3)
         MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
