@@ -318,6 +318,50 @@ function test_quadratic()
     return
 end
 
+function test_poor_numerics()
+    μ = [0.006898463772627643, -0.02972609131603086]
+    Q = [0.030446 0.00393731; 0.00393731 0.00713285]
+    N = 2
+    model = MOA.Optimizer(Ipopt.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOA.SolutionLimit(), 10)
+    MOI.set(model, MOI.Silent(), true)
+    w = MOI.add_variables(model, N)
+    sharpe = MOI.add_variable(model)
+    MOI.add_constraint.(model, w, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, w, MOI.LessThan(1.0))
+    MOI.add_constraint(model, sum(1.0 * w[i] for i in 1:N), MOI.EqualTo(1.0))
+    variance = Expr(:call, :+)
+    for i in 1:N, j in 1:N
+        push!(variance.args, Expr(:call, :*, Q[i, j], w[i], w[j]))
+    end
+    nlp = MOI.Nonlinear.Model()
+    MOI.Nonlinear.add_constraint(
+        nlp,
+        :(($(μ[1]) * $(w[1]) + $(μ[2]) * $(w[2])) / sqrt($variance) - $sharpe),
+        MOI.EqualTo(0.0),
+    )
+    evaluator = MOI.Nonlinear.Evaluator(
+        nlp,
+        MOI.Nonlinear.SparseReverseMode(),
+        [w; sharpe],
+    )
+    MOI.set(model, MOI.NLPBlock(), MOI.NLPBlockData(evaluator))
+    f = MOI.Utilities.operate(vcat, Float64, μ' * w, sharpe)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 1
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        w_sol = MOI.get(model, MOI.VariablePrimal(i), w)
+        sharpe_sol = MOI.get(model, MOI.VariablePrimal(i), sharpe)
+        y = MOI.get(model, MOI.ObjectiveValue(i))
+        @test y ≈ [μ' * w_sol, sharpe_sol]
+    end
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    return
+end
+
 end
 
 TestEpsilonConstraint.run_tests()
