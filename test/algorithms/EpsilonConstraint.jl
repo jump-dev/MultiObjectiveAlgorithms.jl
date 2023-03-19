@@ -320,7 +320,7 @@ end
 
 function test_poor_numerics()
     μ = [0.006898463772627643, -0.02972609131603086]
-    Q = [0.030446 0.00393731; 0.00393731  0.00713285]
+    Q = [0.030446 0.00393731; 0.00393731 0.00713285]
     N = 2
     model = MOA.Optimizer(Ipopt.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
@@ -339,7 +339,7 @@ function test_poor_numerics()
     MOI.Nonlinear.add_constraint(
         nlp,
         :(($(μ[1]) * $(w[1]) + $(μ[2]) * $(w[2])) / sqrt($variance) - $sharpe),
-        MOI.EqualTo(0.0)
+        MOI.EqualTo(0.0),
     )
     evaluator = MOI.Nonlinear.Evaluator(
         nlp,
