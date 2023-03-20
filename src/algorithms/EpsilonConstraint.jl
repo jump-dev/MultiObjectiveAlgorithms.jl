@@ -115,9 +115,9 @@ function optimize_multiobjective!(
             push!(solutions, SolutionPoint(X, Y))
         end
         if sense == MOI.MIN_SENSE
-            bound = max(Y[1] + direction * ε, bound + direction * ε)
-        else
             bound = min(Y[1] + direction * ε, bound + direction * ε)
+        else
+            bound = max(Y[1] + direction * ε, bound + direction * ε)
         end
     end
     MOI.delete(model, ci)
