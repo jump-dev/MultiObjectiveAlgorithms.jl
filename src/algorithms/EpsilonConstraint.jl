@@ -98,10 +98,10 @@ function optimize_multiobjective!(
     # Add epsilon constraint
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    SetType, bound, direction = if sense == MOI.MIN_SENSE
-        MOI.LessThan{Float64}, right, -1.0
+    SetType, bound = if sense == MOI.MIN_SENSE
+        MOI.LessThan{Float64}, right
     else
-        MOI.GreaterThan{Float64}, left, 1.0
+        MOI.GreaterThan{Float64}, left
     end
     ci = MOI.add_constraint(model, f1, SetType(bound))
     while true
