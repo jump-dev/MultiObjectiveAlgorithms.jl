@@ -100,6 +100,7 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         new_f = _scalarise(new_vector_f, weights[indices])
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
