@@ -103,6 +103,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         MOI.set(model.inner, MOI.ObjectiveSense(), sense)
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
@@ -115,6 +116,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE,
         )
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             @warn(
@@ -153,6 +155,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             end
         end
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         if !_is_scalar_status_optimal(model)
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
             MOI.delete.(model, ε_constraints)
@@ -167,6 +170,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         zₖ_constraint =
             MOI.add_constraint(model.inner, scalars[k], MOI.EqualTo(zₖ))
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, zₖ_constraint)
         if !_is_scalar_status_optimal(model)
