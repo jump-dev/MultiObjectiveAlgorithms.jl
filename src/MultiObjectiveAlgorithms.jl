@@ -539,6 +539,10 @@ function _is_scalar_status_optimal(model::Optimizer)
     return _is_scalar_status_optimal(status)
 end
 
+function _update_time_limit(model::Optimizer)
+    return set_time_limit_sec(time_limit_sec(model)-solve_time(model))
+end
+
 for file in readdir(joinpath(@__DIR__, "algorithms"))
     include(joinpath(@__DIR__, "algorithms", file))
 end
