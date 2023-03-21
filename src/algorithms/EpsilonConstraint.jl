@@ -109,6 +109,7 @@ function optimize_multiobjective!(
     for i in 1:ceil(Int, abs(right - left) / ε + 3)
         MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         if !_is_scalar_status_optimal(model)
             break
         end
