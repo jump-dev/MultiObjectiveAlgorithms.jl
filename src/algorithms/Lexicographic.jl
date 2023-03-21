@@ -70,6 +70,7 @@ function _solve_in_sequence(
         f = scalars[i]
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
+        _update_time_limit(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
