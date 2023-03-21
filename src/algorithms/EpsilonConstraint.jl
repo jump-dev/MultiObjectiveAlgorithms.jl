@@ -98,15 +98,13 @@ function optimize_multiobjective!(
     # Add epsilon constraint
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    SetType, bound, direction = if sense == MOI.MIN_SENSE
-        MOI.LessThan{Float64}, right, -1.0
+    SetType, bound = if sense == MOI.MIN_SENSE
+        MOI.LessThan{Float64}, right
     else
-        MOI.GreaterThan{Float64}, left, 1.0
+        MOI.GreaterThan{Float64}, left
     end
     ci = MOI.add_constraint(model, f1, SetType(bound))
-    # Set a finite upper bound on the number of iterations so that we don't loop
-    # forever.
-    for i in 1:ceil(Int, abs(right - left) / ε + 3)
+    while true
         MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
@@ -116,7 +114,11 @@ function optimize_multiobjective!(
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end
-        bound = Y[1] + direction * ε
+        if sense == MOI.MIN_SENSE
+            bound = min(Y[1] - ε, bound - ε)
+        else
+            bound = max(Y[1] + ε, bound + ε)
+        end
     end
     MOI.delete(model, ci)
     return MOI.OPTIMAL, filter_nondominated(sense, solutions)
