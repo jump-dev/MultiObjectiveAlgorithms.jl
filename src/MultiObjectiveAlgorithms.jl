@@ -166,7 +166,7 @@ function _time_limit_exceeded(model::Optimizer, start_time::Float64)
     if time_limit === nothing
         return false
     end
-    return time() - start_time > time_limit
+    return time() - start_time >= time_limit
 end
 
 ### ObjectiveFunction
