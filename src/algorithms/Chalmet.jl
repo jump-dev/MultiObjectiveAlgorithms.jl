@@ -11,6 +11,11 @@
 Chalmet, L.G., and Lemonidis, L., and Elzinga, D.J. (1986). An algorithm for the
 bi-criterion integer programming problem. European Journal of Operational
 Research. 25(2), 292-300
+
+## Supported optimizer attributes
+
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+   list of current solutions.
 """
 mutable struct Chalmet <: AbstractAlgorithm end
 
@@ -37,6 +42,7 @@ function _solve_constrained_model(
 end
 
 function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
+    start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("Chalmet requires exactly two objectives")
     end
@@ -91,6 +97,9 @@ function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     push!(Q, (1, 2))
     t = 3
     while !isempty(Q)
+        if _time_limit_exceeded(model, start_time)
+            return MOI.TIME_LIMIT, solutions
+        end
         r, s = pop!(Q)
         yr, ys = solutions[r].y, solutions[s].y
         rhs = [max(yr[1], ys[1]), max(yr[2], ys[2])]

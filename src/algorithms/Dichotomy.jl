@@ -13,7 +13,10 @@ Science 25(1), 73-78.
 
 ## Supported optimizer attributes
 
- * `MOA.SolutionLimit()`
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+   list of current solutions.
+
+ * `MOA.SolutionLimit()`: terminate once this many solutions have been found.
 """
 mutable struct Dichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
@@ -73,6 +76,7 @@ function _solve_weighted_sum(
 end
 
 function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
+    start_time = time()
     if MOI.output_dimension(model.f) > 2
         error("Only scalar or bi-objective problems supported.")
     end
@@ -93,7 +97,12 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         push!(queue, (0.0, 1.0))
     end
     limit = MOI.get(algorithm, SolutionLimit())
+    status = MOI.OPTIMAL
     while length(queue) > 0 && length(solutions) < limit
+        if _time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
@@ -114,5 +123,5 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     end
     solution_list =
         [solutions[w] for w in sort(collect(keys(solutions)); rev = true)]
-    return MOI.OPTIMAL, solution_list
+    return status, solution_list
 end

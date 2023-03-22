@@ -121,6 +121,43 @@ function test_knapsack_max()
     return
 end
 
+function test_time_limit()
+    n = 10
+    W = 2137.0
+    C = Float64[
+        566 611 506 180 817 184 585 423 26 317
+        62 84 977 979 874 54 269 93 881 563
+    ]
+    w = Float64[557, 898, 148, 63, 78, 964, 246, 662, 386, 272]
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Chalmet())
+    MOI.set(model, MOI.Silent(), true)
+    MOI.set(model, MOI.TimeLimitSec(), 0.0)
+    x = MOI.add_variables(model, n)
+    MOI.add_constraint.(model, x, MOI.ZeroOne())
+    MOI.add_constraint(
+        model,
+        MOI.ScalarAffineFunction(
+            [MOI.ScalarAffineTerm(w[j], x[j]) for j in 1:n],
+            0.0,
+        ),
+        MOI.LessThan(W),
+    )
+    f = MOI.VectorAffineFunction(
+        [
+            MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(C[i, j], x[j])) for
+            i in 1:2 for j in 1:n
+        ],
+        [0.0, 0.0],
+    )
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.TIME_LIMIT
+    @test MOI.get(model, MOI.ResultCount()) > 0
+    return
+end
+
 function test_unbounded()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Chalmet())

@@ -11,6 +11,11 @@
 Dominguez-Rios, M.A. & Chicano, F., & Alba, E. (2021). Effective anytime
 algorithm for multiobjective combinatorial optimization problems. Information
 Sciences, 565(7), 210-228.
+
+## Supported optimizer attributes
+
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+   list of current solutions.
 """
 mutable struct DominguezRios <: AbstractAlgorithm end
 
@@ -138,6 +143,7 @@ function _update!(
 end
 
 function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
+    start_time = time()
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     if sense == MOI.MAX_SENSE
         old_obj, neg_obj = copy(model.f), -model.f
@@ -187,7 +193,12 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     t_max = MOI.add_variable(model.inner)
     solutions = SolutionPoint[]
     k = 0
+    status = MOI.OPTIMAL
     while any(!isempty(l) for l in L)
+        if _time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         i, k = _select_next_box(L, k)
         B = L[k][i]
         w = 1 ./ max.(1, B.u - yI)
@@ -214,5 +225,5 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         MOI.delete.(model.inner, constraints)
     end
     MOI.delete(model.inner, t_max)
-    return MOI.OPTIMAL, solutions
+    return status, solutions
 end

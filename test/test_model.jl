@@ -77,6 +77,17 @@ function test_unbounded()
     return
 end
 
+function test_time_limit()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    @test MOI.supports(model, MOI.TimeLimitSec())
+    @test MOI.get(model, MOI.TimeLimitSec()) === nothing
+    MOI.set(model, MOI.TimeLimitSec(), 2)
+    @test MOI.get(model, MOI.TimeLimitSec()) === 2.0
+    MOI.set(model, MOI.TimeLimitSec(), nothing)
+    @test MOI.get(model, MOI.TimeLimitSec()) === nothing
+    return
+end
+
 end
 
 TestModel.run_tests()

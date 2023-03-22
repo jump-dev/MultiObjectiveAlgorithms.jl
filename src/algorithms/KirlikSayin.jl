@@ -16,6 +16,11 @@ This is an algorithm to generate all nondominated solutions for multi-objective
 discrete optimization problems. The algorithm maintains `(p-1)`-dimensional
 rectangle regions in the solution space, and a two-stage optimization problem
 is solved for each rectangle.
+
+## Supported optimizer attributes
+
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+    list of current solutions.
 """
 mutable struct KirlikSayin <: AbstractAlgorithm end
 
@@ -74,6 +79,7 @@ end
 _volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
 
 function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
+    start_time = time()
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
     if sense == MOI.MAX_SENSE
         old_obj, neg_obj = copy(model.f), -model.f
@@ -134,7 +140,12 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.LessThan{Float64},
         MOI.GreaterThan{Float64},
     )
+    status = MOI.OPTIMAL
     while !isempty(L)
+        if _time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         Rᵢ = L[argmax([_volume(Rᵢ, _project(yI, k)) for Rᵢ in L])]
         lᵢ, uᵢ = Rᵢ.l, Rᵢ.u
         # Solving the first stage model: P_k(ε)
@@ -182,5 +193,5 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         end
         _remove_rectangle(L, _Rectangle(Y_proj, uᵢ))
     end
-    return MOI.OPTIMAL, solutions
+    return status, solutions
 end
