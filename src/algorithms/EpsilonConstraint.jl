@@ -69,6 +69,7 @@ function optimize_multiobjective!(
     algorithm::EpsilonConstraint,
     model::Optimizer,
 )
+    start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
@@ -104,7 +105,12 @@ function optimize_multiobjective!(
         MOI.GreaterThan{Float64}, left
     end
     ci = MOI.add_constraint(model, f1, SetType(bound))
+    status = MOI.OPTIMAL
     while true
+        if _time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
@@ -121,5 +127,5 @@ function optimize_multiobjective!(
         end
     end
     MOI.delete(model, ci)
-    return MOI.OPTIMAL, filter_nondominated(sense, solutions)
+    return status, filter_nondominated(sense, solutions)
 end

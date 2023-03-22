@@ -6,9 +6,7 @@
 module MultiObjectiveAlgorithms
 
 import Combinatorics
-import MathOptInterface
-
-const MOI = MathOptInterface
+import MathOptInterface as MOI
 
 struct SolutionPoint
     x::Dict{MOI.VariableIndex,Float64}
@@ -110,6 +108,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     f::Union{Nothing,MOI.AbstractVectorFunction}
     solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
+    time_limit_sec::Union{Nothing,Float64}
 
     function Optimizer(optimizer_factory)
         return new(
@@ -118,6 +117,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             nothing,
             SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
+            nothing,
         )
     end
 end
@@ -142,6 +142,34 @@ MOI.supports_incremental_interface(::Optimizer) = true
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     return MOI.Utilities.default_copy_to(dest, src)
 end
+
+### TimeLimitSec
+
+function MOI.supports(model::Optimizer, attr::MOI.TimeLimitSec)
+    return MOI.supports(model.inner, attr)
+end
+
+MOI.get(model::Optimizer, ::MOI.TimeLimitSec) = model.time_limit_sec
+
+function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, value::Real)
+    model.time_limit_sec = Float64(value)
+    return
+end
+
+function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, ::Nothing)
+    model.time_limit_sec = nothing
+    return
+end
+
+function _time_limit_exceeded(model::Optimizer, start_time::Float64)
+    time_limit = MOI.get(model, MOI.TimeLimitSec())
+    if time_limit === nothing
+        return false
+    end
+    return time() - start_time > time_limit
+end
+
+### ObjectiveFunction
 
 function MOI.supports(
     ::Optimizer,
