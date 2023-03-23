@@ -166,7 +166,14 @@ function _time_limit_exceeded(model::Optimizer, start_time::Float64)
     if time_limit === nothing
         return false
     end
-    return time() - start_time >= time_limit
+    time_remaining = time_limit - (time() - start_time)
+    if time_remaining <= 0
+        return true
+    end
+    if MOI.supports(model.inner, MOI.TimeLimitSec())
+        MOI.set(model.inner, MOI.TimeLimitSec(), time_remaining)
+    end
+    return false
 end
 
 ### ObjectiveFunction
@@ -497,6 +504,9 @@ function MOI.optimize!(model::Optimizer)
     model.termination_status = status
     if solutions !== nothing
         model.solutions = solutions
+    end
+    if MOI.supports(model.inner, MOI.TimeLimitSec())
+        MOI.set(model.inner, MOI.TimeLimitSec(), nothing)
     end
     return
 end
