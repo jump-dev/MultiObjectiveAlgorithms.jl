@@ -88,6 +88,20 @@ function test_time_limit()
     return
 end
 
+function test_solve_time()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    @test MOI.get(model, MOI.SolveTimeSec()) === nothing
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.SolveTimeSec()) >= 0
+    return
+end
+
 end
 
 TestModel.run_tests()
