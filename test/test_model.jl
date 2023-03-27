@@ -96,7 +96,7 @@ function test_solve_time()
     f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-    @test MOI.get(model, MOI.SolveTimeSec()) === nothing
+    @test isnan(MOI.get(model, MOI.SolveTimeSec()))
     MOI.optimize!(model)
     @test MOI.get(model, MOI.SolveTimeSec()) >= 0
     return

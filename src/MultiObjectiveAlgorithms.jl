@@ -109,7 +109,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
     time_limit_sec::Union{Nothing,Float64}
-    solve_time::Union{Nothing,Float64}
+    solve_time::Float64
 
     function Optimizer(optimizer_factory)
         return new(
@@ -119,7 +119,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
             nothing,
-            nothing,
+            NaN,
         )
     end
 end
@@ -129,7 +129,7 @@ function MOI.empty!(model::Optimizer)
     model.f = nothing
     model.solutions = SolutionPoint[]
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
-    model.solve_time = nothing
+    model.solve_time = NaN
     return
 end
 
@@ -138,7 +138,7 @@ function MOI.is_empty(model::Optimizer)
            model.f === nothing &&
            isempty(model.solutions) &&
            model.termination_status == MOI.OPTIMIZE_NOT_CALLED &&
-           model.solve_time === nothing
+           isnan(model.solve_time)
 end
 
 MOI.supports_incremental_interface(::Optimizer) = true
@@ -182,7 +182,7 @@ end
 
 ### SolveTimeSec
 
-function MOI.get(model::Optimizer, attr::MOI.SolveTimeSec)
+function MOI.get(model::Optimizer, ::MOI.SolveTimeSec)
     return model.solve_time
 end
 
