@@ -109,6 +109,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
     time_limit_sec::Union{Nothing,Float64}
+    solve_time::Union{Nothing,Float64}
 
     function Optimizer(optimizer_factory)
         return new(
@@ -117,6 +118,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             nothing,
             SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
+            nothing,
             nothing,
         )
     end
@@ -127,6 +129,7 @@ function MOI.empty!(model::Optimizer)
     model.f = nothing
     model.solutions = SolutionPoint[]
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
+    model.solve_time = nothing
     return
 end
 
@@ -134,7 +137,8 @@ function MOI.is_empty(model::Optimizer)
     return MOI.is_empty(model.inner) &&
            model.f === nothing &&
            isempty(model.solutions) &&
-           model.termination_status == MOI.OPTIMIZE_NOT_CALLED
+           model.termination_status == MOI.OPTIMIZE_NOT_CALLED &&
+           model.solve_time === nothing
 end
 
 MOI.supports_incremental_interface(::Optimizer) = true
@@ -174,6 +178,12 @@ function _time_limit_exceeded(model::Optimizer, start_time::Float64)
         MOI.set(model.inner, MOI.TimeLimitSec(), time_remaining)
     end
     return false
+end
+
+### SolveTimeSec
+
+function MOI.get(model::Optimizer, attr::MOI.SolveTimeSec)
+    return model.solve_time
 end
 
 ### ObjectiveFunction
@@ -493,6 +503,7 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
 end
 
 function MOI.optimize!(model::Optimizer)
+    start_time = time()
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     if model.f === nothing
@@ -508,6 +519,7 @@ function MOI.optimize!(model::Optimizer)
     if MOI.supports(model.inner, MOI.TimeLimitSec())
         MOI.set(model.inner, MOI.TimeLimitSec(), nothing)
     end
+    model.solve_time = time() - start_time
     return
 end
 
