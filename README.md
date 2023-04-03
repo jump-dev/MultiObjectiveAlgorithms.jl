@@ -23,8 +23,6 @@ Pkg.add("MultiObjectiveAlgorithms")
 
 ## Use with JuMP
 
-**Compat: this package requires at least JuMP v1.8.0**
-
 Use `MultiObjectiveAlgorithms` with JuMP as follows:
 
 ```julia
