@@ -1,24 +1,27 @@
-<img src="moa.png" alt="An image of the Moa bird. Licensed into the Public Domain by https://freesvg.org/moa" width="100px"/>
+<img src="https://raw.githubusercontent.com/jump-dev/MultiObjectiveAlgorithms.jl/master/moa.png" alt="An image of the Moa bird. Licensed into the Public Domain by https://freesvg.org/moa" width="100px"/>
 
 # MultiObjectiveAlgorithms.jl
 
 [![Build Status](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/workflows/CI/badge.svg?branch=master)](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/jump-dev/MultiObjectiveAlgorithms.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jump-dev/MultiObjectiveAlgorithms.jl)
 
-MultiObjectiveAlgorithms.jl (MOA) is a collection of algorithms for
-multi-objective optimization.
+[MultiObjectiveAlgorithms.jl](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl)
+(MOA) is a collection of algorithms for multi-objective optimization.
+
+## License
+
+`MultiObjectiveAlgorithms.jl` is licensed under the [MPL 2.0 License](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/blob/master/LICENSE.md).
 
 ## Installation
 
 Install MOA using `Pkg.add`:
 
 ```julia
-import Pkg; Pkg.add("MultiObjectiveAlgorithms")
+import Pkg
+Pkg.add("MultiObjectiveAlgorithms")
 ```
 
-## Usage with JuMP
-
-**Compat: this requires at least JuMP v1.8.0**
+## Use with JuMP
 
 Use `MultiObjectiveAlgorithms` with JuMP as follows:
 
@@ -27,8 +30,8 @@ using JuMP
 import HiGHS
 import MultiObjectiveAlgorithms as MOA
 model = JuMP.Model(() -> MOA.Optimizer(HiGHS.Optimizer))
-set_optimizer_attribute(model, MOA.Algorithm(), MOA.Dichotomy())
-set_optimizer_attribute(model, MOA.SolutionLimit(), 4)
+set_attribute(model, MOA.Algorithm(), MOA.Dichotomy())
+set_attribute(model, MOA.SolutionLimit(), 4)
 ```
 
 Replace `HiGHS.Optimizer` with an optimizer capable of solving a
