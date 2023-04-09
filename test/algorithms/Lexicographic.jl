@@ -27,6 +27,7 @@ function test_knapsack()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    @test MOI.supports(model, MOA.LexicographicAllPermutations())
     MOI.set(model, MOA.LexicographicAllPermutations(), false)
     MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
