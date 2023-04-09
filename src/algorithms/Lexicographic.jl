@@ -4,15 +4,17 @@
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
 """
-    Lexicographic(; all_permutations::Bool = false)
+    Lexicographic()
 
 `Lexicographic()` implements a lexigographic algorithm that returns a single
 point on the frontier, corresponding to solving each objective in order.
 
-`Lexicographic(all_permutations = true)` repeats the lexicographic algorithm for
-all permutations of the scalar objectives, returning at most `n!` objectives.
-
 ## Supported optimizer attributes
+
+ * `MOA.LexicographicAllPermutations()`: Controls whether to return the
+   lexicographic solution for all permutations of the scalar objectives (when
+   `true`), or only the solution corresponding to the lexicographic solution of
+   the original objective function (when `false`).
 
  * `MOA.ObjectiveRelativeTolerance(index)`: after solving objective `index`, a
    constraint is added such that the relative degradation in the objective value
@@ -22,7 +24,7 @@ mutable struct Lexicographic <: AbstractAlgorithm
     rtol::Vector{Float64}
     all_permutations::Bool
 
-    function Lexicographic(; all_permutations::Bool = false)
+    function Lexicographic(; all_permutations::Bool = true)
         return new(Float64[], all_permutations)
     end
 end
@@ -41,9 +43,20 @@ function MOI.set(alg::Lexicographic, attr::ObjectiveRelativeTolerance, value)
     return
 end
 
+MOI.supports(::Lexicographic, ::LexicographicAllPermutations) = true
+
+function MOI.get(alg::Lexicographic, ::LexicographicAllPermutations)
+    return alg.all_permutations
+end
+
+function MOI.set(alg::Lexicographic, ::LexicographicAllPermutations, val::Bool)
+    alg.all_permutations = val
+    return
+end
+
 function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     sequence = 1:MOI.output_dimension(model.f)
-    if !algorithm.all_permutations
+    if !MOI.get(algorithm, LexicographicAllPermutations())
         return _solve_in_sequence(algorithm, model, sequence)
     end
     solutions = SolutionPoint[]

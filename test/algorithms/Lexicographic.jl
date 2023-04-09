@@ -27,6 +27,7 @@ function test_knapsack()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOA.LexicographicAllPermutations(), false)
     MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
@@ -42,14 +43,10 @@ function test_knapsack()
     return
 end
 
-function test_knapsack_all_permutations()
+function test_knapsack_default()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1]
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(
-        model,
-        MOA.Algorithm(),
-        MOA.Lexicographic(; all_permutations = true),
-    )
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -77,6 +74,7 @@ function test_knapsack_min()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOA.LexicographicAllPermutations(), false)
     MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
@@ -92,9 +90,11 @@ function test_knapsack_min()
     return
 end
 
-function test_knapsack_default()
+function test_knapsack_one_solution()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
     model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOA.LexicographicAllPermutations(), false)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -114,11 +114,8 @@ end
 function test_infeasible()
     for flag in (true, false)
         model = MOA.Optimizer(HiGHS.Optimizer)
-        MOI.set(
-            model,
-            MOA.Algorithm(),
-            MOA.Lexicographic(; all_permutations = flag),
-        )
+        MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+        MOI.set(model, MOA.LexicographicAllPermutations(), flag)
         MOI.set(model, MOI.Silent(), true)
         x = MOI.add_variables(model, 2)
         MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -136,11 +133,8 @@ end
 function test_unbounded()
     for flag in (true, false)
         model = MOA.Optimizer(HiGHS.Optimizer)
-        MOI.set(
-            model,
-            MOA.Algorithm(),
-            MOA.Lexicographic(; all_permutations = flag),
-        )
+        MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+        MOI.set(model, MOA.LexicographicAllPermutations(), flag)
         MOI.set(model, MOI.Silent(), true)
         x = MOI.add_variables(model, 2)
         MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))

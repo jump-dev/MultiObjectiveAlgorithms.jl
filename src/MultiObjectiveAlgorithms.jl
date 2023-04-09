@@ -334,6 +334,19 @@ struct EpsilonConstraintStep <: AbstractAlgorithmAttribute end
 
 default(::EpsilonConstraintStep) = 1.0
 
+"""
+    LexicographicAllPermutations <: AbstractAlgorithmAttribute -> Bool
+
+Controls whether to return the lexicographic solution for all permutations of
+the scalar objectives (when `true`), or only the solution corresponding to the
+lexicographic solution of the original objective function (when `false`).
+
+Defaults to true`.
+"""
+struct LexicographicAllPermutations <: AbstractAlgorithmAttribute end
+
+default(::LexicographicAllPermutations) = true
+
 ### RawOptimizerAttribute
 
 function MOI.supports(model::Optimizer, attr::MOI.RawOptimizerAttribute)
