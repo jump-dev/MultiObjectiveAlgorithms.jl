@@ -24,8 +24,8 @@ mutable struct Lexicographic <: AbstractAlgorithm
     rtol::Vector{Float64}
     all_permutations::Bool
 
-    function Lexicographic(; all_permutations::Bool = true)
-        return new(Float64[], all_permutations)
+    function Lexicographic()
+        return new(Float64[], default(LexicographicAllPermutations()))
     end
 end
 
