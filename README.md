@@ -47,9 +47,9 @@ Set the algorithm using the `MOA.Algorithm()` attribute.
 The value must be one of the algorithms supported by MOA:
 
  * `MOA.Chalmet()`
- * `MOA.EpsilonConstraint()`
  * `MOA.Dichotomy()`
  * `MOA.DominguezRios()`
+ * `MOA.EpsilonConstraint()`
  * `MOA.Hierarchical()`
  * `MOA.KirlikSayin()`
  * `MOA.Lexicographic()` [default]
@@ -65,6 +65,7 @@ docstring for details on which attributes it supports, and how it uses them in
 the solution process.
 
  * `MOA.EpsilonConstraintStep()`
+ * `MOA.LexicographicAllPermutations()`
  * `MOA.ObjectiveAbsoluteTolerance(index::Int)`
  * `MOA.ObjectivePriority(index::Int)`
  * `MOA.ObjectiveRelativeTolerance(index::Int)`
