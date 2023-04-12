@@ -25,7 +25,8 @@ function _solve_constrained_model(
     rhs::Vector{Float64},
 )
     f = MOI.Utilities.scalarize(model.f)
-    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum(f))}(), sum(f))
+    g = sum(1.0 * fi for fi in f)
+    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(g)}(), g)
     constraints = [
         MOI.add_constraint(model.inner, f[1], MOI.LessThan(rhs[1] - 1))
         MOI.add_constraint(model.inner, f[2], MOI.LessThan(rhs[2] - 1))

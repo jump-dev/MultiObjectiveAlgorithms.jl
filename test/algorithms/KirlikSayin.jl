@@ -586,6 +586,21 @@ function test_time_limit()
     return
 end
 
+function test_vector_of_variables_objective()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.KirlikSayin())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint.(model, x, MOI.ZeroOne())
+    f = MOI.VectorOfVariables(x)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * xi for xi in x), MOI.GreaterThan(1.0))
+    MOI.optimize!(model)
+    MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    return
+end
+
 end
 
 TestKirlikSayin.run_tests()

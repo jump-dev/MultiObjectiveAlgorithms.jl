@@ -172,7 +172,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         zₖ = MOI.get(model.inner, MOI.ObjectiveValue())
         # Solving the second stage model: Q_k(ε, zₖ)
         # Set objective sum(model.f)
-        sum_f = sum(scalars)
+        sum_f = sum(1.0 * s for s in scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
         # Constraint to eliminate weak dominance
         zₖ_constraint =

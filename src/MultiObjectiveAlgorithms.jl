@@ -92,16 +92,6 @@ abstract type AbstractAlgorithm end
 
 MOI.Utilities.map_indices(::Function, x::AbstractAlgorithm) = x
 
-function _instantiate_with_cache(optimizer_factory)
-    model = MOI.instantiate(optimizer_factory)
-    if !MOI.supports_incremental_interface(model)
-        # A cache will already have been added
-        return model
-    end
-    cache = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
-    return MOI.Utilities.CachingOptimizer(cache, model)
-end
-
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
@@ -112,8 +102,13 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solve_time::Float64
 
     function Optimizer(optimizer_factory)
+        inner = MOI.instantiate(
+            optimizer_factory;
+            with_bridge_type = Float64,
+            with_cache_type = Float64,
+        )
         return new(
-            _instantiate_with_cache(optimizer_factory),
+            inner,
             nothing,
             nothing,
             SolutionPoint[],
