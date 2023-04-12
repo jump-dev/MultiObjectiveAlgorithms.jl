@@ -597,6 +597,21 @@ function _is_scalar_status_optimal(model::Optimizer)
     return _is_scalar_status_optimal(status)
 end
 
+function _warn_on_nonfinite_nadir(algorithm, sense, index)
+    alg = string(typeof(algorithm))
+    direction = sense == MOI.MIN_SENSE ? "above" : "below"
+    bound = sense == MOI.MIN_SENSE ? "upper" : "lower"
+    @warn(
+        "Unable to solve the model using the `$alg` algorithm because the " *
+        "nadir point of objective $index is not bounded $direction, and the " *
+        "algorithm requires a finitely bounded objective domain. The easiest " *
+        "way to fix this is to add objective $index as a constraint with a " *
+        "finite $bound. Alteratively, ensure that all of your decision " *
+        "have finite lower and upper bounds."
+    )
+    return
+end
+
 for file in readdir(joinpath(@__DIR__, "algorithms"))
     include(joinpath(@__DIR__, "algorithms", file))
 end
