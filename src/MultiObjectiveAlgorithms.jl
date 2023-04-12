@@ -597,7 +597,7 @@ function _is_scalar_status_optimal(model::Optimizer)
     return _is_scalar_status_optimal(status)
 end
 
-function _warn_on_nonfinite_nadir(algorithm, sense, index)
+function _warn_on_nonfinite_anti_ideal(algorithm, sense, index)
     alg = string(typeof(algorithm))
     direction = sense == MOI.MIN_SENSE ? "above" : "below"
     bound = sense == MOI.MIN_SENSE ? "upper" : "lower"

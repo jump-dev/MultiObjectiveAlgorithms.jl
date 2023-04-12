@@ -178,7 +178,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
-            _warn_on_nonfinite_nadir(algorithm, sense, i)
+            _warn_on_nonfinite_anti_ideal(algorithm, sense, i)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
