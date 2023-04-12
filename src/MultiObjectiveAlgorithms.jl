@@ -607,7 +607,7 @@ function _warn_on_nonfinite_anti_ideal(algorithm, sense, index)
         "algorithm requires a finitely bounded objective domain. The easiest " *
         "way to fix this is to add objective $index as a constraint with a " *
         "finite $bound. Alteratively, ensure that all of your decision " *
-        "have finite lower and upper bounds."
+        "variables have finite lower and upper bounds."
     )
     return
 end
