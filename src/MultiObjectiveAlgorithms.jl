@@ -102,13 +102,8 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solve_time::Float64
 
     function Optimizer(optimizer_factory)
-        inner = MOI.instantiate(
-            optimizer_factory;
-            with_bridge_type = Float64,
-            with_cache_type = Float64,
-        )
         return new(
-            inner,
+            MOI.instantiate(optimizer_factory; with_cache_type = Float64),
             nothing,
             nothing,
             SolutionPoint[],
@@ -191,10 +186,13 @@ function MOI.supports(
 end
 
 function MOI.supports(
-    ::Optimizer,
-    ::MOI.ObjectiveFunction{<:MOI.AbstractVectorFunction},
-)
-    return true
+    model::Optimizer,
+    ::MOI.ObjectiveFunction{F},
+) where {F<:MOI.AbstractVectorFunction}
+    G = MOI.Utilities.scalar_type(F)
+    H = MOI.Utilities.promote_operation(+, Float64, G, G)
+    return MOI.supports(model.inner, MOI.ObjectiveFunction{G}()) &&
+           MOI.supports(model.inner, MOI.ObjectiveFunction{H}())
 end
 
 const _ATTRIBUTES = Union{
