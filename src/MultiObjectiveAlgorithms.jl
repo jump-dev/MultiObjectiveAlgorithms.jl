@@ -603,7 +603,7 @@ function _warn_on_nonfinite_nadir(algorithm, sense, index)
     bound = sense == MOI.MIN_SENSE ? "upper" : "lower"
     @warn(
         "Unable to solve the model using the `$alg` algorithm because the " *
-        "nadir point of objective $index is not bounded $direction, and the " *
+        "anti-ideal point of objective $index is not bounded $direction, and the " *
         "algorithm requires a finitely bounded objective domain. The easiest " *
         "way to fix this is to add objective $index as a constraint with a " *
         "finite $bound. Alteratively, ensure that all of your decision " *
