@@ -191,7 +191,9 @@ function test_infeasible()
 end
 
 function test_vector_of_variables_objective()
-    model = MOA.Optimizer(HiGHS.Optimizer)
+    model = MOI.instantiate(; with_bridge_type = Float64) do
+        return MOA.Optimizer(HiGHS.Optimizer)
+    end
     MOI.set(model, MOA.Algorithm(), MOA.Chalmet())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 2)
