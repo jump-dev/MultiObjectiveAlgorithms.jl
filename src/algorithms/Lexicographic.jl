@@ -24,7 +24,14 @@ mutable struct Lexicographic <: AbstractAlgorithm
     rtol::Vector{Float64}
     all_permutations::Bool
 
-    function Lexicographic()
+    function Lexicographic(; all_permutations::Union{Nothing,Bool} = nothing)
+        if all_permutations !== nothing
+            @warn(
+                "The `all_permutations` argument to `Lexicographic` was " *
+                "removed in v1.0. Set the `MOA.LexicographicAllPermutations()` " *
+                "option to `$all_permutations` instead.",
+            )
+        end
         return new(Float64[], default(LexicographicAllPermutations()))
     end
 end

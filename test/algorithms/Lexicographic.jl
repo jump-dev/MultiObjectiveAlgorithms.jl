@@ -167,6 +167,13 @@ function test_vector_of_variables_objective()
     return
 end
 
+function test_warn_all_permutations()
+    @test_logs (:warn,) MOA.Lexicographic(; all_permutations = true)
+    @test_logs (:warn,) MOA.Lexicographic(; all_permutations = false)
+    @test_logs MOA.Lexicographic()
+    return
+end
+
 end
 
 TestLexicographic.run_tests()
