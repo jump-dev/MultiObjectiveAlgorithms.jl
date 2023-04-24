@@ -164,7 +164,7 @@ function optimize_multiobjective!(
         end
         if u[k] ≠ yN[k]
             if warm_start_supported
-                variables_start = solutions[rand(U_N[u][k])]
+                variables_start = solutions[first(U_N[u][k])]
                 for x_i in variables
                     MOI.set(
                         model.inner,
