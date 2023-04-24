@@ -274,9 +274,6 @@ function test_knapsack_max_p4()
 end
 
 function test_assignment_min_p3()
-    if Sys.WORD_SIZE == 32
-        return  # Skip on 32-bit because HiGHS fails
-    end
     p = 3
     n = 5
     C = Float64[
@@ -387,9 +384,6 @@ function test_assignment_min_p3()
 end
 
 function test_assignment_max_p3()
-    if Sys.WORD_SIZE == 32
-        return  # Skip on 32-bit because HiGHS fails
-    end
     p = 3
     n = 5
     C = Float64[

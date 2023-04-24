@@ -44,7 +44,7 @@ function _update_search_region(
             for l in 1:p
                 u_l = _get_child(u, y, l)
                 N = [
-                    k ≠ l ? [yᵢ for yᵢ in U_N[u][k] if yᵢ[l] < y[l]] : [y]
+                    k != l ? [yi for yi in U_N[u][k] if yi[l] < y[l]] : [y]
                     for k in 1:p
                 ]
                 if all(!isempty(N[k]) for k in 1:p if u_l[k] ≠ yN[k])
@@ -102,12 +102,6 @@ function optimize_multiobjective!(
     warm_start_supported = false
     if MOI.supports(model, MOI.VariablePrimalStart(), MOI.VariableIndex)
         warm_start_supported = true
-    else
-        solver_name = MOI.get(model.inner, MOI.SolverName())
-        @warn """
-        Solver $solver_name does not support MOI.VariablePrimalStart(). 
-        It may take longer to generate the pareto set.
-        """
     end
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     YN = Vector{Float64}[]
@@ -194,7 +188,6 @@ function optimize_multiobjective!(
         push!(V[k], (u, Y))
         if Y ∉ U_N[u][k]
             _update_search_region(U_N, Y, yN)
-            # push!(solutions, SolutionPoint(X, Y))
             solutions[Y] = X
         end
         bounds_to_remove = Vector{Float64}[]
