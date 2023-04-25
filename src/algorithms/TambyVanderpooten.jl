@@ -213,6 +213,5 @@ function optimize_multiobjective!(
         end
     end
     solutions = [SolutionPoint(X, Y) for (Y, X) in solutions]
-    sort!(solutions, by = s -> s.y)
     return status, solutions
 end

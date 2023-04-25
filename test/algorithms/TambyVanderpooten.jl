@@ -58,27 +58,31 @@ function test_knapsack_min_p3()
     MOI.optimize!(model)
     X_E = Float64[
         1 0 1 1 1 0 1 1 0 1
-        0 0 1 1 1 0 1 1 1 1
+        0 1 1 1 1 0 1 0 1 1
         1 1 1 1 1 0 0 0 0 1
-        1 0 1 1 1 0 0 1 1 0
         0 1 1 1 1 0 0 1 0 1
         1 1 1 1 1 0 0 0 1 0
-        0 1 1 1 1 0 1 0 1 1
+        1 0 1 1 1 0 0 1 1 0
+        0 0 1 1 1 0 1 1 1 1
     ]
     Y_N = Float64[
         -3394 -3817 -3408
-        -2854 -4636 -3076
+        -3042 -4627 -3189
         -2997 -3539 -3509
-        -2518 -3866 -3191
         -2854 -3570 -3714
         -2706 -3857 -3304
-        -3042 -4627 -3189
+        -2518 -3866 -3191
+        -2854 -4636 -3076
     ]
     N = MOI.get(model, MOI.ResultCount())
-    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)'
+    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)'
+    y_sol, x_sol = y_sol[sortperm(collect(eachrow(y_sol))), :],
+    x_sol[sortperm(collect(eachrow(y_sol))), :]
+    Y_N, X_E = Y_N[sortperm(collect(eachrow(Y_N))), :],
+    X_E[sortperm(collect(eachrow(Y_N))), :]
+    @test isapprox(x_sol, X_E; atol = 1e-6)
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
     return
 end
 
@@ -117,27 +121,31 @@ function test_knapsack_max_p3()
     MOI.optimize!(model)
     X_E = Float64[
         1 0 1 1 1 0 1 1 0 1
-        0 0 1 1 1 0 1 1 1 1
+        0 1 1 1 1 0 1 0 1 1
         1 1 1 1 1 0 0 0 0 1
-        1 0 1 1 1 0 0 1 1 0
         0 1 1 1 1 0 0 1 0 1
         1 1 1 1 1 0 0 0 1 0
-        0 1 1 1 1 0 1 0 1 1
+        1 0 1 1 1 0 0 1 1 0
+        0 0 1 1 1 0 1 1 1 1
     ]
     Y_N = Float64[
         3394 3817 3408
-        2854 4636 3076
+        3042 4627 3189
         2997 3539 3509
-        2518 3866 3191
         2854 3570 3714
         2706 3857 3304
-        3042 4627 3189
+        2518 3866 3191
+        2854 4636 3076
     ]
     N = MOI.get(model, MOI.ResultCount())
-    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)'
+    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)'
+    y_sol, x_sol = y_sol[sortperm(collect(eachrow(y_sol))), :],
+    x_sol[sortperm(collect(eachrow(y_sol))), :]
+    Y_N, X_E = Y_N[sortperm(collect(eachrow(Y_N))), :],
+    X_E[sortperm(collect(eachrow(Y_N))), :]
+    @test isapprox(x_sol, X_E; atol = 1e-6)
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
     return
 end
 
@@ -176,34 +184,38 @@ function test_knapsack_min_p4()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     X_E = Float64[
-        0 1 1 0 1 0 1 0 1 1
-        0 1 1 0 1 1 1 1 1 0
-        0 0 1 0 1 1 1 0 1 1
-        0 1 1 1 1 0 1 0 1 0
         1 1 1 0 1 1 1 0 0 0
-        0 1 0 0 0 1 1 1 1 1
+        0 1 1 0 1 1 1 1 1 0
+        0 1 1 1 1 1 1 0 0 0
+        0 1 1 0 1 0 1 0 1 1
+        0 1 1 1 1 0 1 0 1 0
+        0 0 1 0 1 1 1 0 1 1
         0 1 1 1 0 1 1 0 1 0
         0 0 1 1 0 1 1 1 1 0
         0 0 1 1 1 1 1 0 1 0
-        0 1 1 1 1 1 1 0 0 0
+        0 1 0 0 0 1 1 1 1 1
     ]
     Y_N = Float64[
-        -2862 -3648 -3049 -2028
-        -3152 -3232 -3596 -3382
-        -2435 -3618 -2282 -2094
-        -2725 -4064 -2652 -1819
         -3269 -2320 -3059 -2891
-        -2146 -1944 -2947 -3428
+        -3152 -3232 -3596 -3382
+        -2883 -3237 -2535 -2397
+        -2862 -3648 -3049 -2028
+        -2725 -4064 -2652 -1819
+        -2435 -3618 -2282 -2094
         -2092 -3244 -2643 -2705
         -1904 -3253 -2530 -2469
         -2298 -4034 -1885 -1885
-        -2883 -3237 -2535 -2397
+        -2146 -1944 -2947 -3428
     ]
     N = MOI.get(model, MOI.ResultCount())
-    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)'
+    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)'
+    y_sol, x_sol = y_sol[sortperm(collect(eachrow(y_sol))), :],
+    x_sol[sortperm(collect(eachrow(y_sol))), :]
+    Y_N, X_E = Y_N[sortperm(collect(eachrow(Y_N))), :],
+    X_E[sortperm(collect(eachrow(Y_N))), :]
+    @test isapprox(x_sol, X_E; atol = 1e-6)
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
     return
 end
 
@@ -242,34 +254,38 @@ function test_knapsack_max_p4()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     X_E = Float64[
-        0 1 1 0 1 0 1 0 1 1
-        0 1 1 0 1 1 1 1 1 0
-        0 0 1 0 1 1 1 0 1 1
-        0 1 1 1 1 0 1 0 1 0
         1 1 1 0 1 1 1 0 0 0
-        0 1 0 0 0 1 1 1 1 1
+        0 1 1 0 1 1 1 1 1 0
+        0 1 1 1 1 1 1 0 0 0
+        0 1 1 0 1 0 1 0 1 1
+        0 1 1 1 1 0 1 0 1 0
+        0 0 1 0 1 1 1 0 1 1
         0 1 1 1 0 1 1 0 1 0
         0 0 1 1 0 1 1 1 1 0
         0 0 1 1 1 1 1 0 1 0
-        0 1 1 1 1 1 1 0 0 0
+        0 1 0 0 0 1 1 1 1 1
     ]
     Y_N = Float64[
-        2862 3648 3049 2028
-        3152 3232 3596 3382
-        2435 3618 2282 2094
-        2725 4064 2652 1819
         3269 2320 3059 2891
-        2146 1944 2947 3428
+        3152 3232 3596 3382
+        2883 3237 2535 2397
+        2862 3648 3049 2028
+        2725 4064 2652 1819
+        2435 3618 2282 2094
         2092 3244 2643 2705
         1904 3253 2530 2469
         2298 4034 1885 1885
-        2883 3237 2535 2397
+        2146 1944 2947 3428
     ]
     N = MOI.get(model, MOI.ResultCount())
-    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)'
+    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)'
+    y_sol, x_sol = y_sol[sortperm(collect(eachrow(y_sol))), :],
+    x_sol[sortperm(collect(eachrow(y_sol))), :]
+    Y_N, X_E = Y_N[sortperm(collect(eachrow(Y_N))), :],
+    X_E[sortperm(collect(eachrow(Y_N))), :]
+    @test isapprox(x_sol, X_E; atol = 1e-6)
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
     return
 end
 
@@ -329,57 +345,61 @@ function test_assignment_min_p3()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     X_E = Float64[
-        0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0 0 1 0
-        0 1 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
-        0 0 1 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
-        0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 0
-        0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 0 0 0 1 0 0
-        0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1
-        0 0 0 0 1 1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0
-        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0
         0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 1
+        0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
+        0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
+        0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1
+        0 0 1 0 0 0 0 0 1 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1
+        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0
+        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1
+        0 0 0 0 1 1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0
+        0 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1
+        0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 1 0 0
         0 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0
         0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1
-        0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 1 0 0
-        0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
-        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1
-        1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0
-        0 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1
-        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0
-        0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
-        0 0 1 0 0 0 0 0 1 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1
-        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0
+        0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0 0 1 0
         0 0 0 0 1 0 0 0 1 0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 0
+        0 0 1 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
+        1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0
+        0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 0
+        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0
+        0 1 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
+        0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 0 0 0 1 0 0
+        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0
     ]
     Y_N = Float64[
-        28 33 58
-        40 47 37
-        39 43 41
-        45 33 34
-        29 29 59
-        20 52 54
-        28 66 39
-        50 40 32
         16 61 47
+        17 43 71
+        18 47 67
+        20 52 54
+        22 37 63
+        23 43 44
+        22 54 47
+        28 66 39
+        34 60 42
+        24 39 45
         35 49 39
         37 55 36
-        24 39 45
-        18 47 67
-        22 54 47
-        38 33 53
-        34 60 42
-        23 43 44
-        17 43 71
-        22 37 63
-        43 51 31
+        28 33 58
         35 38 56
+        39 43 41
+        38 33 53
+        45 33 34
+        43 51 31
+        40 47 37
+        29 29 59
+        50 40 32
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol =
-        hcat([MOI.get(model, MOI.VariablePrimal(i), vec(x)) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+        hcat([MOI.get(model, MOI.VariablePrimal(i), vec(x)) for i in 1:N]...)'
+    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)'
+    y_sol, x_sol = y_sol[sortperm(collect(eachrow(y_sol))), :],
+    x_sol[sortperm(collect(eachrow(y_sol))), :]
+    Y_N, X_E = Y_N[sortperm(collect(eachrow(Y_N))), :],
+    X_E[sortperm(collect(eachrow(Y_N))), :]
+    @test isapprox(x_sol, X_E; atol = 1e-6)
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
     return
 end
 
@@ -439,57 +459,61 @@ function test_assignment_max_p3()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     X_E = Float64[
-        0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0 0 1 0
-        0 1 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
-        0 0 1 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
-        0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 0
-        0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 0 0 0 1 0 0
-        0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1
-        0 0 0 0 1 1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0
-        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0
         0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 1
+        0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
+        0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
+        0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1
+        0 0 1 0 0 0 0 0 1 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1
+        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0
+        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1
+        0 0 0 0 1 1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0
+        0 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1
+        0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 1 0 0
         0 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0
         0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1
-        0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 1 0 0
-        0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
-        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1
-        1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0
-        0 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1
-        0 0 1 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0
-        0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1
-        0 0 1 0 0 0 0 0 1 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1
-        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0
+        0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 1 0 0 0 0 0 0 0 1 0
         0 0 0 0 1 0 0 0 1 0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 0
+        0 0 1 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
+        1 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 1 0 0 1 0 0
+        0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 0
+        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0
+        0 1 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 1 0
+        0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 1 0 0 0 0 0 0 1 0 0
+        0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0
     ]
     Y_N = Float64[
-        -28 -33 -58
-        -40 -47 -37
-        -39 -43 -41
-        -45 -33 -34
-        -29 -29 -59
-        -20 -52 -54
-        -28 -66 -39
-        -50 -40 -32
         -16 -61 -47
+        -17 -43 -71
+        -18 -47 -67
+        -20 -52 -54
+        -22 -37 -63
+        -23 -43 -44
+        -22 -54 -47
+        -28 -66 -39
+        -34 -60 -42
+        -24 -39 -45
         -35 -49 -39
         -37 -55 -36
-        -24 -39 -45
-        -18 -47 -67
-        -22 -54 -47
-        -38 -33 -53
-        -34 -60 -42
-        -23 -43 -44
-        -17 -43 -71
-        -22 -37 -63
-        -43 -51 -31
+        -28 -33 -58
         -35 -38 -56
+        -39 -43 -41
+        -38 -33 -53
+        -45 -33 -34
+        -43 -51 -31
+        -40 -47 -37
+        -29 -29 -59
+        -50 -40 -32
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol =
-        hcat([MOI.get(model, MOI.VariablePrimal(i), vec(x)) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+        hcat([MOI.get(model, MOI.VariablePrimal(i), vec(x)) for i in 1:N]...)'
+    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)'
+    y_sol, x_sol = y_sol[sortperm(collect(eachrow(y_sol))), :],
+    x_sol[sortperm(collect(eachrow(y_sol))), :]
+    Y_N, X_E = Y_N[sortperm(collect(eachrow(Y_N))), :],
+    X_E[sortperm(collect(eachrow(Y_N))), :]
+    @test isapprox(x_sol, X_E; atol = 1e-6)
+    @test isapprox(y_sol, Y_N; atol = 1e-6)
     return
 end
 
