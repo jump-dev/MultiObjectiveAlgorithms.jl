@@ -62,6 +62,7 @@ function _update_search_region(
     for bound_to_remove in bounds_to_remove
         delete!(U_N, bound_to_remove)
     end
+    return
 end
 
 function _get_child(u::Vector{Float64}, y::Vector{Float64}, k::Int)
@@ -212,5 +213,6 @@ function optimize_multiobjective!(
         end
     end
     solutions = [SolutionPoint(X, Y) for (Y, X) in solutions]
+    sort!(solutions, by = s -> s.y)
     return status, solutions
 end
