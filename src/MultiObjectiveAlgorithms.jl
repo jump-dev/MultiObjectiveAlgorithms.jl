@@ -88,6 +88,13 @@ function _scalarise(f::MOI.VectorQuadraticFunction, w::Vector{Float64})
     return MOI.ScalarQuadraticFunction(quad_terms, affine_terms, constant)
 end
 
+function _scalarise(f::MOI.VectorNonlinearFunction, w::Vector{Float64})
+    scalars = map(zip(w, f.rows)) do (wi, fi)
+        return MOI.ScalarNonlinearFunction(:*, Any[wi, fi])
+    end
+    return MOI.ScalarNonlinearFunction(:+, scalars)
+end
+
 abstract type AbstractAlgorithm end
 
 MOI.Utilities.map_indices(::Function, x::AbstractAlgorithm) = x
@@ -493,6 +500,9 @@ function MOI.get(model::Optimizer, attr::MOI.ListOfModelAttributesSet)
 end
 
 function MOI.delete(model::Optimizer, x::MOI.VariableIndex)
+    if model.f isa MOI.VectorNonlinearFunction
+        throw(MOI.DeleteNotAllowed(x))
+    end
     MOI.delete(model.inner, x)
     if model.f !== nothing
         model.f = MOI.Utilities.remove_variable(model.f, x)
@@ -582,7 +592,7 @@ function _compute_point(
     X = Dict{MOI.VariableIndex,Float64}(
         x => MOI.get(model.inner, MOI.VariablePrimal(), x) for x in variables
     )
-    Y = MOI.Utilities.eval_variables(x -> X[x], f)
+    Y = MOI.Utilities.eval_variables(Base.Fix1(getindex, X), model, f)
     return X, Y
 end
 

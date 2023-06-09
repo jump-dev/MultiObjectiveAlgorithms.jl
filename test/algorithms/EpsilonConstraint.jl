@@ -362,6 +362,38 @@ function test_poor_numerics()
     return
 end
 
+function test_vectornonlinearfunction()
+    μ = [0.006898463772627643, -0.02972609131603086]
+    Q = [0.030446 0.00393731; 0.00393731 0.00713285]
+    N = 2
+    model = MOA.Optimizer(Ipopt.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOA.SolutionLimit(), 10)
+    MOI.set(model, MOI.Silent(), true)
+    w = MOI.add_variables(model, N)
+    MOI.add_constraint.(model, w, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, w, MOI.LessThan(1.0))
+    MOI.add_constraint(model, sum(1.0 * w[i] for i in 1:N), MOI.EqualTo(1.0))
+    f = MOI.VectorNonlinearFunction([
+        μ' * w,
+        MOI.ScalarNonlinearFunction(
+            :/,
+            Any[μ'*w, MOI.ScalarNonlinearFunction(:sqrt, Any[w'*Q*w])],
+        ),
+    ])
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) >= 1
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        w_sol = MOI.get(model, MOI.VariablePrimal(i), w)
+        y = MOI.get(model, MOI.ObjectiveValue(i))
+        @test y ≈ [μ' * w_sol, (μ' * w_sol) / sqrt(w_sol' * Q * w_sol)]
+    end
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    return
+end
+
 function test_time_limit()
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]

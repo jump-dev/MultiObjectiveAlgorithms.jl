@@ -106,7 +106,7 @@ function optimize_multiobjective!(
     end
     ci = MOI.add_constraint(model, f1, SetType(bound))
     status = MOI.OPTIMAL
-    while true
+    for _ in 1:n_points
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break
