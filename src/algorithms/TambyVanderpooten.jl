@@ -8,14 +8,14 @@
 
 `TambyVanderpooten` implements the algorithm of:
 
-Satya Tamby, Daniel Vanderpooten (2021) Enumeration of the Nondominated Set 
-of Multiobjective Discrete Optimization Problems. INFORMS Journal on 
+Satya Tamby, Daniel Vanderpooten (2021) Enumeration of the Nondominated Set
+of Multiobjective Discrete Optimization Problems. INFORMS Journal on
 Computing 33(1):72-85.
 
 This is an algorithm to generate all nondominated solutions for multi-objective
-discrete optimization problems. The algorithm maintains upper bounds (for 
-minimization problems) and their associated defining points. At each iteration, 
-one of the objectives and an upper bound is picked and the single objective 
+discrete optimization problems. The algorithm maintains upper bounds (for
+minimization problems) and their associated defining points. At each iteration,
+one of the objectives and an upper bound is picked and the single objective
 reformulation is solved using one of the defining points as a starting solution.
 
 ## Supported optimizer attributes
@@ -24,12 +24,6 @@ reformulation is solved using one of the defining points as a starting solution.
     list of current solutions.
 """
 mutable struct TambyVanderpooten <: AbstractAlgorithm end
-
-function _project(x::Vector{Float64}, axis::Int)
-    return [x[i] for i in 1:length(x) if i != axis]
-end
-
-_volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
 
 function _update_search_region(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
