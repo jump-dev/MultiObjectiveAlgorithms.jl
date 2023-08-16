@@ -34,6 +34,8 @@ struct _Rectangle
     end
 end
 
+_volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
+
 function Base.issubset(x::_Rectangle, y::_Rectangle)
     @assert length(x.l) == length(y.l) "Dimension mismatch"
     return all(x.l .>= y.l) && all(x.u .<= y.u)
@@ -71,12 +73,6 @@ function _update_list(L::Vector{_Rectangle}, f::Vector{Float64})
     end
     return L_new
 end
-
-function _project(x::Vector{Float64}, axis::Int)
-    return [x[i] for i in 1:length(x) if i != axis]
-end
-
-_volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
 
 function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     start_time = time()

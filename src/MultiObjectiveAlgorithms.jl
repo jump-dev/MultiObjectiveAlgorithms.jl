@@ -610,6 +610,10 @@ function _warn_on_nonfinite_anti_ideal(algorithm, sense, index)
     return
 end
 
+function _project(x::Vector{Float64}, axis::Int)
+    return [x[i] for i in 1:length(x) if i != axis]
+end
+
 for file in readdir(joinpath(@__DIR__, "algorithms"))
     include(joinpath(@__DIR__, "algorithms", file))
 end
