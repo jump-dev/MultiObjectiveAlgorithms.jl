@@ -73,7 +73,8 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     solutions = SolutionPoint[]
     status = MOI.OPTIMAL
     for sequence in Combinatorics.permutations(sequence)
-        status, solution = _solve_in_sequence(algorithm, model, sequence, start_time)
+        status, solution =
+            _solve_in_sequence(algorithm, model, sequence, start_time)
         if !isempty(solution)
             push!(solutions, solution[1])
         end
