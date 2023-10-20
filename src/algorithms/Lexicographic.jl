@@ -11,6 +11,9 @@ point on the frontier, corresponding to solving each objective in order.
 
 ## Supported optimizer attributes
 
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+   current best solutions.
+
  * `MOA.LexicographicAllPermutations()`: Controls whether to return the
    lexicographic solution for all permutations of the scalar objectives (when
    `true`), or only the solution corresponding to the lexicographic solution of
@@ -62,37 +65,53 @@ function MOI.set(alg::Lexicographic, ::LexicographicAllPermutations, val::Bool)
 end
 
 function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
+    start_time = time()
     sequence = 1:MOI.output_dimension(model.f)
     if !MOI.get(algorithm, LexicographicAllPermutations())
-        return _solve_in_sequence(algorithm, model, sequence)
+        return _solve_in_sequence(algorithm, model, sequence, start_time)
     end
     solutions = SolutionPoint[]
+    status = MOI.OPTIMAL
     for sequence in Combinatorics.permutations(sequence)
-        status, solution = _solve_in_sequence(algorithm, model, sequence)
-        if !_is_scalar_status_optimal(status)
-            return status, nothing
+        status, solution = _solve_in_sequence(algorithm, model, sequence, start_time)
+        if !isempty(solution)
+            push!(solutions, solution[1])
         end
-        push!(solutions, solution[1])
+        if !_is_scalar_status_optimal(status)
+            break
+        end
     end
     sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    return MOI.OPTIMAL, filter_nondominated(sense, solutions)
+    return status, filter_nondominated(sense, solutions)
 end
 
 function _solve_in_sequence(
     algorithm::Lexicographic,
     model::Optimizer,
     sequence::AbstractVector{Int},
+    start_time::Float64,
 )
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     constraints = Any[]
     scalars = MOI.Utilities.eachscalar(model.f)
+    solution = SolutionPoint[]
+    status = MOI.OPTIMAL
     for i in sequence
+        if _time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         f = scalars[i]
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
+        primal_status = MOI.get(model.inner, MOI.PrimalStatus())
+        if _is_scalar_status_feasible_point(primal_status)
+            X, Y = _compute_point(model, variables, model.f)
+            solution = [SolutionPoint(X, Y)]
+        end
         if !_is_scalar_status_optimal(status)
-            return status, nothing
+            break
         end
         X, Y = _compute_point(model, variables, f)
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
@@ -103,9 +122,8 @@ function _solve_in_sequence(
         end
         push!(constraints, MOI.add_constraint(model, f, set))
     end
-    X, Y = _compute_point(model, variables, model.f)
     for c in constraints
         MOI.delete(model, c)
     end
-    return MOI.OPTIMAL, [SolutionPoint(X, Y)]
+    return status, solution
 end
