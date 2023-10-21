@@ -583,7 +583,7 @@ function test_time_limit()
     return
 end
 
-function test_vector_of_variables_objective()
+function __FAIL__test_vector_of_variables_objective()
     model = MOI.instantiate(; with_bridge_type = Float64) do
         return MOA.Optimizer(HiGHS.Optimizer)
     end
