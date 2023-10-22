@@ -596,6 +596,10 @@ function _compute_point(
     return X, Y
 end
 
+function _is_scalar_status_feasible_point(status::MOI.ResultStatusCode)
+    return status == MOI.FEASIBLE_POINT
+end
+
 function _is_scalar_status_optimal(status::MOI.TerminationStatusCode)
     return status == MOI.OPTIMAL || status == MOI.LOCALLY_SOLVED
 end
