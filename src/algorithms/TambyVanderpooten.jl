@@ -113,7 +113,7 @@ function optimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yI[i] = Y
+        yI[i] = Y + 1
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())

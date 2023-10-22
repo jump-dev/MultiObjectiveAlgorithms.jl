@@ -79,9 +79,9 @@ function test_knapsack_min_p3()
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
+    y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
+    @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
     return
 end
 
@@ -138,9 +138,9 @@ function test_knapsack_max_p3()
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
+    y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
+    @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
     return
 end
 
@@ -204,9 +204,9 @@ function test_knapsack_min_p4()
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
+    y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
+    @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
     return
 end
 
@@ -270,9 +270,9 @@ function test_knapsack_max_p4()
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
+    y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
+    @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
     return
 end
 
@@ -380,9 +380,9 @@ function test_assignment_min_p3()
     N = MOI.get(model, MOI.ResultCount())
     x_sol =
         hcat([MOI.get(model, MOI.VariablePrimal(i), vec(x)) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
+    y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
+    @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
     return
 end
 
@@ -490,9 +490,9 @@ function test_assignment_max_p3()
     N = MOI.get(model, MOI.ResultCount())
     x_sol =
         hcat([MOI.get(model, MOI.VariablePrimal(i), vec(x)) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
+    y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
+    @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
     return
 end
 
@@ -583,7 +583,7 @@ function test_time_limit()
     return
 end
 
-function __FAIL__test_vector_of_variables_objective()
+function test_vector_of_variables_objective()
     model = MOI.instantiate(; with_bridge_type = Float64) do
         return MOA.Optimizer(HiGHS.Optimizer)
     end

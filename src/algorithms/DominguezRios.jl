@@ -182,7 +182,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yN[i] = Y
+        yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), sense)
     ϵ = 1 / (2 * n * (maximum(yN - yI) - 1))
