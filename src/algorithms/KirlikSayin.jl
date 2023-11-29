@@ -152,7 +152,11 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         )
         for (i, f_i) in enumerate(scalars)
             if i != k
-                ci = MOI.add_constraint(model.inner, f_i, SetType(ε[i] + δ))
+                ci = MOI.Utilities.normalize_and_add_constraint(
+                    model.inner,
+                    f_i,
+                    SetType(ε[i] + δ),
+                )
                 push!(ε_constraints, ci)
             end
         end
@@ -168,8 +172,11 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         sum_f = sum(1.0 * s for s in scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
         # Constraint to eliminate weak dominance
-        zₖ_constraint =
-            MOI.add_constraint(model.inner, scalars[k], MOI.EqualTo(zₖ))
+        zₖ_constraint = MOI.Utilities.normalize_and_add_constraint(
+            model.inner,
+            scalars[k],
+            MOI.EqualTo(zₖ),
+        )
         MOI.optimize!(model.inner)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, zₖ_constraint)

@@ -54,7 +54,7 @@ function test_knapsack_min_p3()
             MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(-C[i, j], x[j]))
             for i in 1:p for j in 1:n
         ],
-        fill(0.0, p),
+        ones(p),
     )
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
@@ -77,6 +77,7 @@ function test_knapsack_min_p3()
         -2997 -3539 -3509
         -2518 -3866 -3191
     ]
+    Y_N .+= 1
     N = MOI.get(model, MOI.ResultCount())
     x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
     @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
