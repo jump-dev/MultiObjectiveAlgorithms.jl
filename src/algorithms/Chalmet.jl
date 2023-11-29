@@ -27,13 +27,10 @@ function _solve_constrained_model(
     f = MOI.Utilities.scalarize(model.f)
     g = sum(1.0 * fi for fi in f)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(g)}(), g)
-    constraints = MOI.Utilities.normalize_and_add_constraint.(
-        model.inner,
-        f,
-        MOI.LessThan.(rhs .- 1)
-    )
+    sets = MOI.LessThan.(rhs .- 1)
+    c = MOI.Utilities.normalize_and_add_constraint.(model.inner, f, sets)
     MOI.optimize!(model.inner)
-    MOI.delete.(model, constraints)
+    MOI.delete.(model, c)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
