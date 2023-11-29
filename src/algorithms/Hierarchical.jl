@@ -117,7 +117,8 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
             else
                 MOI.GreaterThan(Y[i] - rtol * abs(Y[i]))
             end
-            push!(constraints, MOI.add_constraint(model, fi, set))
+            ci = MOI.Utilities.normalize_and_add_constraint(model, fi, set)
+            push!(constraints, ci)
         end
     end
     X, Y = _compute_point(model, variables, model.f)

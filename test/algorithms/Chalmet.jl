@@ -98,7 +98,7 @@ function test_knapsack_max()
             MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(C[i, j], x[j])) for
             i in 1:2 for j in 1:n
         ],
-        [0.0, 0.0],
+        [1.0, 0.0],
     )
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
@@ -109,9 +109,9 @@ function test_knapsack_max()
         0 1 1 1 1 0 1 0 1 1
     ]
     Y_N = Float64[
-        2854 4636
-        3394 3817
-        3042 4627
+        2855 4636
+        3395 3817
+        3043 4627
     ]
     N = MOI.get(model, MOI.ResultCount())
     x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)

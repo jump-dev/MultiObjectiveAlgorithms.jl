@@ -46,11 +46,15 @@ function test_knapsack()
     MOI.add_constraint.(model, x, MOI.LessThan(1.0))
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    f.constants[4] = 1_000.0
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
     MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 1
     x_sol = MOI.get(model, MOI.VariablePrimal(), x)
     @test ≈(x_sol, [0.9, 0, 0.9, 0.2]; atol = 1e-3)
+    y_sol = MOI.get(model, MOI.ObjectiveValue())
+    @test ≈(y_sol, P * x_sol .+ [0.0, 0.0, 0.0, 1_000.0]; atol = 1e-4)
     return
 end
 

@@ -121,7 +121,8 @@ function _solve_in_sequence(
         else
             MOI.GreaterThan(Y - rtol * abs(Y))
         end
-        push!(constraints, MOI.add_constraint(model, f, set))
+        ci = MOI.Utilities.normalize_and_add_constraint(model, f, set)
+        push!(constraints, ci)
     end
     for c in constraints
         MOI.delete(model, c)

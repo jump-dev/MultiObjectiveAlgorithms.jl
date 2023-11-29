@@ -27,12 +27,10 @@ function _solve_constrained_model(
     f = MOI.Utilities.scalarize(model.f)
     g = sum(1.0 * fi for fi in f)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(g)}(), g)
-    constraints = [
-        MOI.add_constraint(model.inner, f[1], MOI.LessThan(rhs[1] - 1))
-        MOI.add_constraint(model.inner, f[2], MOI.LessThan(rhs[2] - 1))
-    ]
+    sets = MOI.LessThan.(rhs .- 1)
+    c = MOI.Utilities.normalize_and_add_constraint.(model.inner, f, sets)
     MOI.optimize!(model.inner)
-    MOI.delete.(model, constraints)
+    MOI.delete.(model, c)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
@@ -74,7 +72,11 @@ function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     end
     _, y1[2] = _compute_point(model, variables, f2)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
-    y1_constraint = MOI.add_constraint(model.inner, f2, MOI.LessThan(y1[2]))
+    y1_constraint = MOI.Utilities.normalize_and_add_constraint(
+        model.inner,
+        f2,
+        MOI.LessThan(y1[2]),
+    )
     MOI.optimize!(model.inner)
     x1, y1[1] = _compute_point(model, variables, f1)
     MOI.delete(model.inner, y1_constraint)
@@ -90,7 +92,11 @@ function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         return MOI.OPTIMAL, [solutions]
     end
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
-    y2_constraint = MOI.add_constraint(model.inner, f1, MOI.LessThan(y2[1]))
+    y2_constraint = MOI.Utilities.normalize_and_add_constraint(
+        model.inner,
+        f1,
+        MOI.LessThan(y2[1]),
+    )
     MOI.optimize!(model.inner)
     x2, y2[2] = _compute_point(model, variables, f2)
     MOI.delete(model.inner, y2_constraint)

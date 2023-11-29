@@ -143,7 +143,7 @@ function optimize_multiobjective!(
         ε_constraints = Any[]
         for (i, f_i) in enumerate(scalars)
             if i != k
-                ci = MOI.add_constraint(
+                ci = MOI.Utilities.normalize_and_add_constraint(
                     model.inner,
                     f_i,
                     MOI.LessThan{Float64}(u[i] - 1),
@@ -171,8 +171,11 @@ function optimize_multiobjective!(
         y_k = MOI.get(model.inner, MOI.ObjectiveValue())
         sum_f = sum(1.0 * s for s in scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
-        y_k_constraint =
-            MOI.add_constraint(model.inner, scalars[k], MOI.EqualTo(y_k))
+        y_k_constraint = MOI.Utilities.normalize_and_add_constraint(
+            model.inner,
+            scalars[k],
+            MOI.EqualTo(y_k),
+        )
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
             return status, nothing

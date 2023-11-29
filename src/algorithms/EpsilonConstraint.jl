@@ -104,7 +104,14 @@ function optimize_multiobjective!(
     else
         MOI.GreaterThan{Float64}, left
     end
-    ci = MOI.add_constraint(model, f1, SetType(bound))
+    constant = MOI.constant(f1, Float64)
+    ci = MOI.Utilities.normalize_and_add_constraint(
+        model,
+        f1,
+        SetType(bound);
+        allow_modify_function = true,
+    )
+    bound -= constant
     status = MOI.OPTIMAL
     for _ in 1:n_points
         if _time_limit_exceeded(model, start_time)
@@ -121,9 +128,9 @@ function optimize_multiobjective!(
             push!(solutions, SolutionPoint(X, Y))
         end
         if sense == MOI.MIN_SENSE
-            bound = min(Y[1] - ε, bound - ε)
+            bound = min(Y[1] - constant - ε, bound - ε)
         else
-            bound = max(Y[1] + ε, bound + ε)
+            bound = max(Y[1] - constant + ε, bound + ε)
         end
     end
     MOI.delete(model, ci)
