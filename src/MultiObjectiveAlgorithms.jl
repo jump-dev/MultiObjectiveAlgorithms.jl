@@ -107,6 +107,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     termination_status::MOI.TerminationStatusCode
     time_limit_sec::Union{Nothing,Float64}
     solve_time::Float64
+    ideal_point::Vector{Float64}
 
     function Optimizer(optimizer_factory)
         return new(
@@ -117,6 +118,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             MOI.OPTIMIZE_NOT_CALLED,
             nothing,
             NaN,
+            Float64[],
         )
     end
 end
@@ -124,9 +126,10 @@ end
 function MOI.empty!(model::Optimizer)
     MOI.empty!(model.inner)
     model.f = nothing
-    model.solutions = SolutionPoint[]
+    empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.solve_time = NaN
+    empty!(model.ideal_point)
     return
 end
 
@@ -135,7 +138,8 @@ function MOI.is_empty(model::Optimizer)
            model.f === nothing &&
            isempty(model.solutions) &&
            model.termination_status == MOI.OPTIMIZE_NOT_CALLED &&
-           isnan(model.solve_time)
+           isnan(model.solve_time) &&
+           isempty(model.ideal_point)
 end
 
 MOI.supports_incremental_interface(::Optimizer) = true
@@ -526,6 +530,16 @@ function MOI.optimize!(model::Optimizer)
         model.termination_status = MOI.INVALID_MODEL
         return
     end
+    objectives = MOI.Utilities.eachscalar(model.f)
+    model.ideal_point = fill(NaN, length(objectives))
+    for (i, f) in enumerate(objectives)
+        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+        MOI.optimize!(model.inner)
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if _is_scalar_status_optimal(status)
+            model.ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
+        end
+    end
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
@@ -559,19 +573,7 @@ function MOI.get(model::Optimizer, attr::MOI.ObjectiveValue)
     return model.solutions[attr.result_index].y
 end
 
-function MOI.get(model::Optimizer, attr::MOI.ObjectiveBound)
-    objectives = MOI.Utilities.eachscalar(model.f)
-    ideal_point = fill(NaN, length(objectives))
-    for (i, f) in enumerate(objectives)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
-        MOI.optimize!(model.inner)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
-        if _is_scalar_status_optimal(status)
-            ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
-        end
-    end
-    return ideal_point
-end
+MOI.get(model::Optimizer, ::MOI.ObjectiveBound) = model.ideal_point
 
 MOI.get(model::Optimizer, ::MOI.TerminationStatus) = model.termination_status
 
