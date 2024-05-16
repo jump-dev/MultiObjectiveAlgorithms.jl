@@ -12,6 +12,12 @@
 
 `MultiObjectiveAlgorithms.jl` is licensed under the [MPL 2.0 License](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/blob/master/LICENSE.md).
 
+## Getting help
+
+If you need help, please ask a question on the [JuMP community forum](https://jump.dev/forum).
+
+If you have a reproducible example of a bug, please [open a GitHub issue](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/issues/new).
+
 ## Installation
 
 Install MOA using `Pkg.add`:
