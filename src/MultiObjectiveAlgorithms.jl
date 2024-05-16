@@ -631,7 +631,11 @@ function _project(x::Vector{Float64}, axis::Int)
 end
 
 for file in readdir(joinpath(@__DIR__, "algorithms"))
-    include(joinpath(@__DIR__, "algorithms", file))
+    # The check for .jl is necessary because some users may have other files
+    # like .cov from running code coverage. See JuMP.jl#3746.
+    if endswith(file, ".jl")
+        include(joinpath(@__DIR__, "algorithms", file))
+    end
 end
 
 end
