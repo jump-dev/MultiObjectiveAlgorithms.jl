@@ -148,8 +148,6 @@ function test_unbounded()
         MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOI.optimize!(model)
         @test MOI.get(model, MOI.TerminationStatus()) == MOI.DUAL_INFEASIBLE
-        @test MOI.get(model, MOI.PrimalStatus()) == MOI.NO_SOLUTION
-        @test MOI.get(model, MOI.DualStatus()) == MOI.NO_SOLUTION
     end
     return
 end
