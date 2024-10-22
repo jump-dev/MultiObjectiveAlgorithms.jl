@@ -27,6 +27,7 @@ function test_knapsack()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
     @test MOI.supports(model, MOA.LexicographicAllPermutations())
+    @test MOI.supports(model, MOA.ObjectiveRelativeTolerance(1))
     MOI.set(model, MOA.LexicographicAllPermutations(), false)
     MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
     MOI.set(model, MOI.Silent(), true)
@@ -172,6 +173,27 @@ function test_warn_all_permutations()
     @test_logs (:warn,) MOA.Lexicographic(; all_permutations = true)
     @test_logs (:warn,) MOA.Lexicographic(; all_permutations = false)
     @test_logs MOA.Lexicographic()
+    return
+end
+
+function test_knapsack_time_limit()
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOA.LexicographicAllPermutations(), false)
+    MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    f.constants[4] = 1_000.0
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.set(model, MOI.TimeLimitSec(), 0.0)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.TIME_LIMIT
     return
 end
 
