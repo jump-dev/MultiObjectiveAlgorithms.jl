@@ -580,7 +580,7 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.VariablePrimal,
-    x::Vector{MOI.VariableIndex}
+    x::Vector{MOI.VariableIndex},
 )
     return MOI.get.(model, attr, x)
 end
