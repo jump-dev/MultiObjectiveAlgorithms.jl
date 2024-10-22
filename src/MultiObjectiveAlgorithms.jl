@@ -446,10 +446,18 @@ function MOI.set(model::Optimizer, attr::_ATTRIBUTES, args...)
 end
 
 function MOI.get(model::Optimizer, attr::_ATTRIBUTES, args...)
+    if MOI.is_set_by_optimize(attr)
+        msg = "MOA does not support querying this attribute."
+        throw(MOI.GetAttributeNotAllowed(attr, msg))
+    end
     return MOI.get(model.inner, attr, args...)
 end
 
 function MOI.get(model::Optimizer, attr::_ATTRIBUTES, arg::Vector{T}) where {T}
+    if MOI.is_set_by_optimize(attr)
+        msg = "MOA does not support querying this attribute."
+        throw(MOI.GetAttributeNotAllowed(attr, msg))
+    end
     return MOI.get.(model, attr, arg)
 end
 

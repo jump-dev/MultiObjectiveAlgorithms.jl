@@ -100,6 +100,30 @@ function test_solve_time()
     return
 end
 
+function test_unnsupported_attributes()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 2)
+    c = MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.optimize!(model)
+    @test_throws(
+        MOI.GetAttributeNotAllowed{MOI.RelativeGap},
+        MOI.get(model, MOI.RelativeGap()),
+    )
+    @test_throws(
+        MOI.GetAttributeNotAllowed{MOI.DualObjectiveValue},
+        MOI.get(model, MOI.DualObjectiveValue()),
+    )
+    @test_throws(
+        MOI.GetAttributeNotAllowed{MOI.ConstraintDual},
+        MOI.get(model, MOI.ConstraintDual(), c),
+    )
+    return
+end
+
 end
 
 TestModel.run_tests()
