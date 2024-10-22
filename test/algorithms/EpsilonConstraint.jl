@@ -467,6 +467,23 @@ function test_vector_of_variables_objective()
     return
 end
 
+function test_too_many_objectives()
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    @test_throws(
+        ErrorException("EpsilonConstraint requires exactly two objectives"),
+        MOI.optimize!(model),
+    )
+    return
+end
+
 end
 
 TestEpsilonConstraint.run_tests()
