@@ -23,7 +23,7 @@ reformulation is solved using one of the defining points as a starting solution.
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
     list of current solutions.
 """
-mutable struct TambyVanderpooten <: AbstractAlgorithm end
+struct TambyVanderpooten <: AbstractAlgorithm end
 
 function _update_search_region(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
