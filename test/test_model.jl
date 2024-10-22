@@ -123,6 +123,56 @@ function test_unnsupported_attributes()
     return
 end
 
+function test_invalid_model()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.INVALID_MODEL
+    return
+end
+
+function test_raw_optimizer_attribuute()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    attr = MOI.RawOptimizerAttribute("presolve")
+    @test MOI.supports(model, attr)
+    @test MOI.get(model, attr) == "choose"
+    MOI.set(model, attr, "off")
+    @test MOI.get(model, attr) == "off"
+    return
+end
+
+function test_algorithm()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    @test MOI.supports(model, MOA.Algorithm())
+    @test MOI.get(model, MOA.Algorithm()) == nothing
+    MOI.set(model, MOA.Algorithm(), MOA.Chalmet())
+    @test MOI.get(model, MOA.Algorithm()) == MOA.Chalmet()
+    return
+end
+
+function test_copy_to()
+    src = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
+    MOI.set(src, MOA.Algorithm(), MOA.Chalmet())
+    x = MOI.add_variables(src, 2)
+    MOI.add_constraint.(src, x, MOI.GreaterThan(0.0))
+    f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(src, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(src, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    dest = MOA.Optimizer(HiGHS.Optimizer)
+    index_map = MOI.copy_to(dest, src)
+    MOI.set(dest, MOI.Silent(), true)
+    MOI.optimize!(dest)
+    @test MOI.get(dest, MOI.NumberOfVariables()) == 2
+    return
+end
+
+function test_scalarise()
+    x = MOI.VariableIndex.(1:2)
+    f = MOI.VectorOfVariables(x)
+    g = MOA._scalarise(f, [0.2, 0.8])
+    @test isapprox(g, 0.2 * x[1] + 0.8 * x[2])
+    return
+end
+
 end
 
 TestModel.run_tests()

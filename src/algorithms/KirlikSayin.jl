@@ -22,7 +22,7 @@ is solved for each rectangle.
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
     list of current solutions.
 """
-mutable struct KirlikSayin <: AbstractAlgorithm end
+struct KirlikSayin <: AbstractAlgorithm end
 
 struct _Rectangle
     l::Vector{Float64}

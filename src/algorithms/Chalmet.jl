@@ -17,7 +17,7 @@ Research. 25(2), 292-300
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
    list of current solutions.
 """
-mutable struct Chalmet <: AbstractAlgorithm end
+struct Chalmet <: AbstractAlgorithm end
 
 function _solve_constrained_model(
     model::Optimizer,

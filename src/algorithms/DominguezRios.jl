@@ -17,7 +17,7 @@ Sciences, 565(7), 210-228.
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
    list of current solutions.
 """
-mutable struct DominguezRios <: AbstractAlgorithm end
+struct DominguezRios <: AbstractAlgorithm end
 
 mutable struct _DominguezRiosBox
     l::Vector{Float64}
