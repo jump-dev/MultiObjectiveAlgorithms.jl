@@ -582,8 +582,7 @@ function MOI.get(
     attr::MOI.VariablePrimal,
     x::Vector{MOI.VariableIndex}
 )
-    sol = model.solutions[attr.result_index]
-    return sol.x[x]
+    return MOI.get.(model, attr, x)
 end
 
 function MOI.get(model::Optimizer, attr::MOI.ObjectiveValue)
