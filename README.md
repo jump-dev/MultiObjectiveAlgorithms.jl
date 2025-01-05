@@ -2,7 +2,7 @@
 
 # MultiObjectiveAlgorithms.jl
 
-[![Build Status](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/workflows/CI/badge.svg?branch=master)](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/actions?query=workflow%3ACI)
+[![Build Status](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/jump-dev/MultiObjectiveAlgorithms.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jump-dev/MultiObjectiveAlgorithms.jl)
 
 [MultiObjectiveAlgorithms.jl](https://github.com/jump-dev/MultiObjectiveAlgorithms.jl)
