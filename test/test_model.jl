@@ -173,6 +173,33 @@ function test_scalarise()
     return
 end
 
+function test_ideal_point()
+    for (flag, result) in (true => [0.0, -9.0], false => [NaN, NaN])
+        model = MOA.Optimizer(HiGHS.Optimizer)
+        MOI.set(model, MOI.Silent(), true)
+        x = MOI.add_variables(model, 2)
+        MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+        MOI.add_constraint(model, x[2], MOI.LessThan(3.0))
+        MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        f = MOI.Utilities.vectorize([3.0 * x[1] + x[2], -1.0 * x[1] - 2.0 * x[2]])
+        MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+        @test MOI.supports(model, MOA.ComputeIdealPoint())
+        @test MOI.get(model, MOA.ComputeIdealPoint())
+        @test MOI.set(model, MOA.ComputeIdealPoint(), flag) === nothing
+        @test MOI.get(model, MOA.ComputeIdealPoint()) == flag
+        MOI.optimize!(model)
+        point = MOI.get(model, MOI.ObjectiveBound())
+        @test length(point) == 2
+        if flag
+            @test point ≈ result
+        else
+            @test all(isnan, point)
+        end
+    end
+    return
 end
+
+end  # module
 
 TestModel.run_tests()
