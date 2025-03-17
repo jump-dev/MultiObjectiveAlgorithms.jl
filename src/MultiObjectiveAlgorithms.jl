@@ -132,7 +132,6 @@ function MOI.empty!(model::Optimizer)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.solve_time = NaN
     empty!(model.ideal_point)
-    model.compute_ideal_point = default(ComputeIdealPoint())
     return
 end
 
@@ -142,8 +141,7 @@ function MOI.is_empty(model::Optimizer)
            isempty(model.solutions) &&
            model.termination_status == MOI.OPTIMIZE_NOT_CALLED &&
            isnan(model.solve_time) &&
-           isempty(model.ideal_point) &&
-           model.compute_ideal_point == default(ComputeIdealPoint())
+           isempty(model.ideal_point)
 end
 
 MOI.supports_incremental_interface(::Optimizer) = true
