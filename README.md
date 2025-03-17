@@ -79,3 +79,13 @@ the solution process.
  * `MOA.ObjectiveWeight(index::Int)`
  * `MOA.SolutionLimit()`
  * `MOI.TimeLimitSec()`
+
+## Ideal point
+
+By default, MOA will compute the ideal point, which can be queried using the
+`MOI.ObjectiveBound` attribute.
+
+Computing the ideal point requires as many solves as the dimension of the
+objective function. Thus, if you do not need the ideal point information, you
+can improve the performance of MOA by setting the `MOA.ComputeIdealPoint()`
+attribute to `false`.

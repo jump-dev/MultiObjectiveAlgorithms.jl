@@ -108,6 +108,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     time_limit_sec::Union{Nothing,Float64}
     solve_time::Float64
     ideal_point::Vector{Float64}
+    compute_ideal_point::Bool
 
     function Optimizer(optimizer_factory)
         return new(
@@ -119,6 +120,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             nothing,
             NaN,
             Float64[],
+            default(ComputeIdealPoint()),
         )
     end
 end
@@ -130,6 +132,7 @@ function MOI.empty!(model::Optimizer)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.solve_time = NaN
     empty!(model.ideal_point)
+    model.compute_ideal_point = default(ComputeIdealPoint())
     return
 end
 
@@ -139,7 +142,8 @@ function MOI.is_empty(model::Optimizer)
            isempty(model.solutions) &&
            model.termination_status == MOI.OPTIMIZE_NOT_CALLED &&
            isnan(model.solve_time) &&
-           isempty(model.ideal_point)
+           isempty(model.ideal_point) &&
+           model.compute_ideal_point == default(ComputeIdealPoint())
 end
 
 MOI.supports_incremental_interface(::Optimizer) = true
@@ -351,6 +355,33 @@ struct LexicographicAllPermutations <: AbstractAlgorithmAttribute end
 
 default(::LexicographicAllPermutations) = true
 
+"""
+    ComputeIdealPoint <: AbstractOptimizerAttribute -> Bool
+
+Controls whether to compute the ideal point.
+
+Defaults to true`.
+
+If this attribute is set to `true`, the ideal point can be queried using the
+`MOI.ObjectiveBound` attribute.
+
+Computing the ideal point requires as many solves as the dimension of the
+objective function. Thus, if you do not need the ideal point information, you
+can improve the performance of MOA by setting this attribute to `false`.
+"""
+struct ComputeIdealPoint <: MOI.AbstractOptimizerAttribute end
+
+default(::ComputeIdealPoint) = true
+
+MOI.supports(::Optimizer, ::ComputeIdealPoint) = true
+
+function MOI.set(model::Optimizer, ::ComputeIdealPoint, value::Bool)
+    model.compute_ideal_point = value
+    return
+end
+
+MOI.get(model::Optimizer, ::ComputeIdealPoint) = model.compute_ideal_point
+
 ### RawOptimizerAttribute
 
 function MOI.supports(model::Optimizer, attr::MOI.RawOptimizerAttribute)
@@ -530,16 +561,12 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
     return
 end
 
-function MOI.optimize!(model::Optimizer)
-    start_time = time()
-    empty!(model.solutions)
-    model.termination_status = MOI.OPTIMIZE_NOT_CALLED
-    if model.f === nothing
-        model.termination_status = MOI.INVALID_MODEL
-        return
-    end
+function _compute_ideal_point(model::Optimizer)
     objectives = MOI.Utilities.eachscalar(model.f)
     model.ideal_point = fill(NaN, length(objectives))
+    if !MOI.get(model, ComputeIdealPoint())
+        return
+    end
     for (i, f) in enumerate(objectives)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
@@ -548,6 +575,18 @@ function MOI.optimize!(model::Optimizer)
             model.ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
         end
     end
+    return
+end
+
+function MOI.optimize!(model::Optimizer)
+    start_time = time()
+    empty!(model.solutions)
+    model.termination_status = MOI.OPTIMIZE_NOT_CALLED
+    if model.f === nothing
+        model.termination_status = MOI.INVALID_MODEL
+        return
+    end
+    _compute_ideal_point(model)
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
