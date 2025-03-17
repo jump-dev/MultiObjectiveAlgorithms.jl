@@ -184,7 +184,7 @@ function test_ideal_point()
         MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         f = MOI.Utilities.vectorize([
             3.0 * x[1] + x[2],
-            -1.0 * x[1] - 2.0 * x[2]
+            -1.0 * x[1] - 2.0 * x[2],
         ])
         MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
         @test MOI.supports(model, MOA.ComputeIdealPoint())
