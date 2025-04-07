@@ -559,13 +559,17 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
     return
 end
 
-function _compute_ideal_point(model::Optimizer)
+function _compute_ideal_point(model::Optimizer, start_time)
     objectives = MOI.Utilities.eachscalar(model.f)
     model.ideal_point = fill(NaN, length(objectives))
     if !MOI.get(model, ComputeIdealPoint())
         return
     end
     for (i, f) in enumerate(objectives)
+        if _time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
@@ -584,7 +588,7 @@ function MOI.optimize!(model::Optimizer)
         model.termination_status = MOI.INVALID_MODEL
         return
     end
-    _compute_ideal_point(model)
+    _compute_ideal_point(model, start_time)
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
