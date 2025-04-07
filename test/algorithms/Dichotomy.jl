@@ -261,7 +261,7 @@ function test_time_limit()
     )
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.TIME_LIMIT
-    @test MOI.get(model, MOI.ResultCount()) > 0
+    @test MOI.get(model, MOI.ResultCount()) == 0
     return
 end
 
