@@ -567,8 +567,7 @@ function _compute_ideal_point(model::Optimizer, start_time)
     end
     for (i, f) in enumerate(objectives)
         if _time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
-            break
+            return
         end
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
