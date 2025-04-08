@@ -79,6 +79,7 @@ function test_knapsack_min_p3()
     @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
     y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
     @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
     return
 end
 
@@ -138,6 +139,7 @@ function test_knapsack_max_p3()
     @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
     y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
     @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
     return
 end
 
@@ -204,6 +206,7 @@ function test_knapsack_min_p4()
     @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
     y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
     @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
     return
 end
 
@@ -270,6 +273,7 @@ function test_knapsack_max_p4()
     @test isapprox(sort(x_sol; dims = 1), sort(X_E'; dims = 1); atol = 1e-6)
     y_sol = vcat([MOI.get(model, MOI.ObjectiveValue(i))' for i in 1:N]...)
     @test isapprox(sort(y_sol; dims = 1), sort(Y_N; dims = 1); atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
     return
 end
 

@@ -68,7 +68,7 @@ function test_knapsack_min()
     @test isapprox(x_sol, X_E'; atol = 1e-6)
     y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
     @test isapprox(y_sol, Y_N'; atol = 1e-6)
-    @test MOI.get(model, MOI.ObjectiveBound()) == [-3394.0, -4636.0]
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
     return
 end
 
@@ -118,7 +118,7 @@ function test_knapsack_max()
     @test isapprox(x_sol, X_E'; atol = 1e-6)
     y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
     @test isapprox(y_sol, Y_N'; atol = 1e-6)
-    @test MOI.get(model, MOI.ObjectiveBound()) == [3395.0, 4636.0]
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
     return
 end
 

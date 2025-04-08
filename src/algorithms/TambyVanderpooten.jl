@@ -92,6 +92,7 @@ function optimize_multiobjective!(
         if solutions !== nothing
             solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
         end
+        model.ideal_point .*= -1
         return status, solutions
     end
     warm_start_supported = false
@@ -114,6 +115,7 @@ function optimize_multiobjective!(
         end
         _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y + 1
+        model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
