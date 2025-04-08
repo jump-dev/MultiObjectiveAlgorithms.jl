@@ -580,22 +580,23 @@ end
 function MOI.optimize!(model::Optimizer)
     start_time = time()
     empty!(model.solutions)
-    # We need to clear the ideal point prior to starting the solve. Algorithms
-    # may update this during the solve, otherwise we will update it at the end.
-    model.ideal_point = fill(NaN, MOI.output_dimension(model.f))
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     if model.f === nothing
         model.termination_status = MOI.INVALID_MODEL
+        empty!(model.ideal_point)
         return
     end
+    # We need to clear the ideal point prior to starting the solve. Algorithms
+    # may update this during the solve, otherwise we will update it at the end.
+    model.ideal_point = fill(NaN, MOI.output_dimension(model.f))
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
-    if MOI.get(model, ComputeIdealPoint())
-        _compute_ideal_point(model, start_time)
-    end
     if solutions !== nothing
         model.solutions = solutions
+    end
+    if MOI.get(model, ComputeIdealPoint())
+        _compute_ideal_point(model, start_time)
     end
     if MOI.supports(model.inner, MOI.TimeLimitSec())
         MOI.set(model.inner, MOI.TimeLimitSec(), nothing)
