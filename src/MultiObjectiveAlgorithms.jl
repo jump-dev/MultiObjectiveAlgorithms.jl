@@ -587,10 +587,10 @@ function MOI.optimize!(model::Optimizer)
         model.termination_status = MOI.INVALID_MODEL
         return
     end
-    _compute_ideal_point(model, start_time)
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
+    _compute_ideal_point(model, start_time)
     if solutions !== nothing
         model.solutions = solutions
     end
