@@ -560,14 +560,12 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
 end
 
 function _compute_ideal_point(model::Optimizer, start_time)
-    objectives = MOI.Utilities.eachscalar(model.f)
-    model.ideal_point = fill(NaN, length(objectives))
-    if !MOI.get(model, ComputeIdealPoint())
-        return
-    end
-    for (i, f) in enumerate(objectives)
+    for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
         if _time_limit_exceeded(model, start_time)
             return
+        end
+        if !isnan(model.ideal_point[i])
+            continue  # The algorithm already updated this information
         end
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model.inner)
@@ -582,6 +580,9 @@ end
 function MOI.optimize!(model::Optimizer)
     start_time = time()
     empty!(model.solutions)
+    # We need to clear the ideal point prior to starting the solve. Algorithms
+    # may update this during the solve, otherwise we will update it at the end.
+    model.ideal_point = fill(NaN, MOI.output_dimension(model.f))
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     if model.f === nothing
         model.termination_status = MOI.INVALID_MODEL
@@ -590,7 +591,9 @@ function MOI.optimize!(model::Optimizer)
     algorithm = something(model.algorithm, default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
-    _compute_ideal_point(model, start_time)
+    if MOI.get(model, ComputeIdealPoint())
+        _compute_ideal_point(model, start_time)
+    end
     if solutions !== nothing
         model.solutions = solutions
     end

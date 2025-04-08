@@ -54,10 +54,6 @@ function MOI.get(alg::Dichotomy, attr::SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
-function _solve_weighted_sum(model::Optimizer, alg::Dichotomy, weight::Float64)
-    return _solve_weighted_sum(model, alg, [weight, 1 - weight])
-end
-
 function _solve_weighted_sum(
     model::Optimizer,
     ::Dichotomy,
@@ -88,15 +84,17 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         return status, [solution]
     end
     solutions = Dict{Float64,SolutionPoint}()
-    for w in (0.0, 1.0)
+    for (i, w) in (1 => 1.0, 2 => 0.0)
         if _time_limit_exceeded(model, start_time)
             return MOI.TIME_LIMIT, nothing
         end
-        status, solution = _solve_weighted_sum(model, algorithm, w)
+        status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
             return status, nothing
         end
         solutions[w] = solution
+        # We already have enough information here to update the ideal point.
+        model.ideal_point[i] = solution.y[i]
     end
     queue = Tuple{Float64,Float64}[]
     if !(solutions[0.0] ≈ solutions[1.0])
@@ -112,7 +110,7 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
-        status, solution = _solve_weighted_sum(model, algorithm, w)
+        status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
             # Exit the solve with some error.
             return status, nothing

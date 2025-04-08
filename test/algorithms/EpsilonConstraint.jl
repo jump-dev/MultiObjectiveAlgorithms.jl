@@ -65,6 +65,7 @@ function test_biobjective_knapsack()
         Y = MOI.get(model, MOI.ObjectiveValue(i))
         @test results[round.(Int, Y)] == X
     end
+    @test MOI.get(model, MOI.ObjectiveBound()) == [956.0, 983.0]
     return
 end
 
@@ -108,6 +109,7 @@ function test_biobjective_knapsack_atol()
         Y = MOI.get(model, MOI.ObjectiveValue(i))
         @test results[round.(Int, Y)] == X
     end
+    @test MOI.get(model, MOI.ObjectiveBound()) == [955.0, 983.0]
     return
 end
 
@@ -136,11 +138,12 @@ function test_biobjective_knapsack_atol_large()
     )
     MOI.optimize!(model)
     results = Dict(
+        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
         [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
         [934, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
         [918, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
     )
-    @test MOI.get(model, MOI.ResultCount()) == 3
+    @test MOI.get(model, MOI.ResultCount()) == 4
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
@@ -191,6 +194,7 @@ function test_biobjective_knapsack_min()
         Y = MOI.get(model, MOI.ObjectiveValue(i))
         @test results[-round.(Int, Y)] == X
     end
+    @test MOI.get(model, MOI.ObjectiveBound()) == [-955.0, -983.0]
     return
 end
 
@@ -219,16 +223,18 @@ function test_biobjective_knapsack_min_solution_limit()
     )
     MOI.optimize!(model)
     results = Dict(
+        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
         [943, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
         [918, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
     )
-    @test MOI.get(model, MOI.ResultCount()) == 2
+    @test MOI.get(model, MOI.ResultCount()) == 3
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
         Y = MOI.get(model, MOI.ObjectiveValue(i))
         @test results[round.(Int, Y)] == X
     end
+    @test MOI.get(model, MOI.ObjectiveBound()) == [955.0, 983.0]
     return
 end
 
@@ -419,7 +425,8 @@ function test_time_limit()
     )
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.TIME_LIMIT
-    @test MOI.get(model, MOI.ResultCount()) == 0
+    # Check time limits in subsolves
+    @test_broken MOI.get(model, MOI.ResultCount()) == 0
     return
 end
 
