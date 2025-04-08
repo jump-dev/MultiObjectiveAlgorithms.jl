@@ -81,11 +81,17 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         error("Only scalar or bi-objective problems supported.")
     end
     if MOI.output_dimension(model.f) == 1
+        if _time_limit_exceeded(model, start_time)
+            return MOI.TIME_LIMIT, nothing
+        end
         status, solution = _solve_weighted_sum(model, algorithm, [1.0])
         return status, [solution]
     end
     solutions = Dict{Float64,SolutionPoint}()
     for w in (0.0, 1.0)
+        if _time_limit_exceeded(model, start_time)
+            return MOI.TIME_LIMIT, nothing
+        end
         status, solution = _solve_weighted_sum(model, algorithm, w)
         if !_is_scalar_status_optimal(status)
             return status, nothing
