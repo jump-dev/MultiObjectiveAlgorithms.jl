@@ -73,7 +73,7 @@ function optimize_multiobjective!(
     if MOI.output_dimension(model.f) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
-    # Compute the bounding box ofthe objectives using Hierarchical().
+    # Compute the bounding box of the objectives using Hierarchical().
     alg = Hierarchical()
     MOI.set.(Ref(alg), ObjectivePriority.(1:2), [1, 0])
     status, solution_1 = optimize_multiobjective!(alg, model)
@@ -87,22 +87,27 @@ function optimize_multiobjective!(
     end
     a, b = solution_1[1].y[1], solution_2[1].y[1]
     left, right = min(a, b), max(a, b)
+    sense = MOI.get(model.inner, MOI.ObjectiveSense())
+    if sense == MOI.MIN_SENSE
+        model.ideal_point .= min.(solution_1[1].y, solution_2[1].y)
+    else
+        model.ideal_point .= max.(solution_1[1].y, solution_2[1].y)
+    end
     # Compute the epsilon that we will be incrementing by each iteration
     ε = MOI.get(algorithm, EpsilonConstraintStep())
     n_points = MOI.get(algorithm, SolutionLimit())
     if n_points != default(algorithm, SolutionLimit())
         ε = abs(right - left) / (n_points - 1)
     end
-    solutions = SolutionPoint[]
+    solutions = SolutionPoint[only(solution_1), only(solution_2)]
     f1, f2 = MOI.Utilities.eachscalar(model.f)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     SetType, bound = if sense == MOI.MIN_SENSE
-        MOI.LessThan{Float64}, right
+        MOI.LessThan{Float64}, right - ε
     else
-        MOI.GreaterThan{Float64}, left
+        MOI.GreaterThan{Float64}, left + ε
     end
     constant = MOI.constant(f1, Float64)
     ci = MOI.Utilities.normalize_and_add_constraint(
@@ -113,7 +118,7 @@ function optimize_multiobjective!(
     )
     bound -= constant
     status = MOI.OPTIMAL
-    for _ in 1:n_points
+    for _ in 3:n_points
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break

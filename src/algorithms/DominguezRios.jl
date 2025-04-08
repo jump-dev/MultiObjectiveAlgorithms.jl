@@ -155,6 +155,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         if solutions !== nothing
             solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
         end
+        model.ideal_point .*= -1
         return status, solutions
     end
     n = MOI.output_dimension(model.f)
@@ -173,6 +174,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         end
         _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y
+        model.ideal_point[i] = Y
         rev_sense = sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE
         MOI.set(model.inner, MOI.ObjectiveSense(), rev_sense)
         MOI.optimize!(model.inner)

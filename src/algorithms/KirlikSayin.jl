@@ -87,6 +87,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         if solutions !== nothing
             solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
         end
+        model.ideal_point .*= -1
         return status, solutions
     end
     solutions = SolutionPoint[]
@@ -111,6 +112,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         end
         _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y + 1
+        model.ideal_point[i] = Y
         MOI.set(
             model.inner,
             MOI.ObjectiveSense(),

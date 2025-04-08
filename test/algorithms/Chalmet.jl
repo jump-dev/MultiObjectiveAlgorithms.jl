@@ -68,6 +68,7 @@ function test_knapsack_min()
     @test isapprox(x_sol, X_E'; atol = 1e-6)
     y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
     @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
     return
 end
 
@@ -117,6 +118,7 @@ function test_knapsack_max()
     @test isapprox(x_sol, X_E'; atol = 1e-6)
     y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
     @test isapprox(y_sol, Y_N'; atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
     return
 end
 
@@ -195,6 +197,7 @@ function test_vector_of_variables_objective()
     end
     MOI.set(model, MOA.Algorithm(), MOA.Chalmet())
     MOI.set(model, MOI.Silent(), true)
+    MOI.set(model, MOA.ComputeIdealPoint(), false)
     x = MOI.add_variables(model, 2)
     MOI.add_constraint.(model, x, MOI.ZeroOne())
     f = MOI.VectorOfVariables(x)
@@ -202,7 +205,9 @@ function test_vector_of_variables_objective()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.add_constraint(model, sum(1.0 * xi for xi in x), MOI.GreaterThan(1.0))
     MOI.optimize!(model)
-    MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    ideal_point = MOI.get(model, MOI.ObjectiveBound())
+    @test length(ideal_point) == 2 && all(isnan, ideal_point)
     return
 end
 

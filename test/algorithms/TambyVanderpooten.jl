@@ -83,6 +83,7 @@ function test_knapsack_min_p3()
     X_E[sortperm(collect(eachrow(Y_N))), :]
     @test isapprox(x_sol, X_E; atol = 1e-6)
     @test isapprox(y_sol, Y_N; atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
     return
 end
 
@@ -146,6 +147,7 @@ function test_knapsack_max_p3()
     X_E[sortperm(collect(eachrow(Y_N))), :]
     @test isapprox(x_sol, X_E; atol = 1e-6)
     @test isapprox(y_sol, Y_N; atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
     return
 end
 
@@ -216,6 +218,7 @@ function test_knapsack_min_p4()
     X_E[sortperm(collect(eachrow(Y_N))), :]
     @test isapprox(x_sol, X_E; atol = 1e-6)
     @test isapprox(y_sol, Y_N; atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
     return
 end
 
@@ -286,6 +289,7 @@ function test_knapsack_max_p4()
     X_E[sortperm(collect(eachrow(Y_N))), :]
     @test isapprox(x_sol, X_E; atol = 1e-6)
     @test isapprox(y_sol, Y_N; atol = 1e-6)
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
     return
 end
 
