@@ -188,6 +188,10 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), sense)
     ϵ = 1 / (2 * n * (maximum(yN - yI) - 1))
+    # If ϵ is small, then the scalar objectives can contain terms that fall
+    # below the tolerance level of the solver. To fix this, we rescale the
+    # objective so that the coefficients have magnitude `1e+00` or larger.
+    scale = max(1.0, 1 / ϵ)
     push!(L[1], _DominguezRiosBox(yI, yN, 0.0))
     t_max = MOI.add_variable(model.inner)
     solutions = SolutionPoint[]
@@ -200,20 +204,31 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         end
         i, k = _select_next_box(L, k)
         B = L[k][i]
-        w = 1 ./ max.(1, B.u - yI)
+        # We're goign to scale `w` here by `scale` instead of the usual
+        # `1 / max(...)`. It will show up in a few places bbelow.
+        w = scale ./ max.(1, B.u - yI)
         constraints = [
             MOI.Utilities.normalize_and_add_constraint(
                 model.inner,
+                # `w` is the scaled version here. This epigraph constraint will
+                # make `t_max` similarly scaled.
                 t_max - (w[i] * (scalars[i] - yI[i])),
                 MOI.GreaterThan(0.0),
             ) for i in 1:n
         ]
+        # There's no need to scale anything explicitly here:
+        #  * t_max is already covered in `constraints`
+        #  * the `ϵ` term is already covered in `w`
         new_f = t_max + ϵ * sum(w[i] * (scalars[i] - yI[i]) for i in 1:n)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
         if _is_scalar_status_optimal(model)
             X, Y = _compute_point(model, variables, model.f)
             obj = MOI.get(model.inner, MOI.ObjectiveValue())
+            # We need to undo the scaling of the scalar objective. There's no
+            # need to unscale `Y` because we have evaluated this explicitly from
+            # the modified `model.f`.
+            obj /= scale
             if (obj < 1) && all(yI .< B.u)
                 push!(solutions, SolutionPoint(X, Y))
                 _update!(L, Y, yI, yN)
