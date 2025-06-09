@@ -100,10 +100,9 @@ function optimize_multiobjective!(
         warm_start_supported = true
     end
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    YN = Vector{Float64}[]
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     n = MOI.output_dimension(model.f)
-    yI, yN = zeros(n), zeros(n)
+    yI = zeros(n)
     scalars = MOI.Utilities.scalarize(model.f)
     for (i, f_i) in enumerate(scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
@@ -114,18 +113,10 @@ function optimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yI[i] = Y + 1
+        yI[i] = Y
         model.ideal_point[i] = Y
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        MOI.optimize!(model.inner)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
-        if !_is_scalar_status_optimal(status)
-            _warn_on_nonfinite_anti_ideal(algorithm, sense, i)
-            return status, nothing
-        end
-        _, Y = _compute_point(model, variables, f_i)
-        yN[i] = Y
     end
+    yN = fill(typemax(Float64), n)
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     U_N = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}()
     V = [Tuple{Vector{Float64},Vector{Float64}}[] for k in 1:n]

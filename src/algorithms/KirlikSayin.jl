@@ -111,7 +111,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yI[i] = Y + 1
+        yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(
             model.inner,
@@ -125,7 +125,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yN[i] = Y
+        yN[i] = Y + 1
     end
     # Reset the sense after modifying it.
     MOI.set(model.inner, MOI.ObjectiveSense(), sense)
