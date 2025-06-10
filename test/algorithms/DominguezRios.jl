@@ -600,7 +600,44 @@ function test_vector_of_variables_objective()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.add_constraint(model, sum(1.0 * xi for xi in x), MOI.GreaterThan(1.0))
     MOI.optimize!(model)
-    MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    return
+end
+
+function test_issue_105()
+    cost = [100.0, 120.0, 150.0, 110.0, 200.0, 170.0]
+    time = [8.0, 3.0, 4.0, 2.0, 5.0, 4.0]
+    capacity = [10.0, 8.0]
+    demand = [5.0, 8.0, 5.0]
+    m, n = 2, 3
+    model = MOI.instantiate(; with_bridge_type = Float64) do
+        return MOA.Optimizer(HiGHS.Optimizer)
+    end
+    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, m * n)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.Integer())
+    X = reshape(x, m, n)
+    for i in 1:m
+        f_i = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, X[i, :]), 0.0)
+        MOI.add_constraint(model, f_i, MOI.LessThan(capacity[i]))
+    end
+    for j in 1:n
+        f_j = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, X[:, j]), 0.0)
+        MOI.add_constraint(model, f_j, MOI.EqualTo(demand[j]))
+    end
+    f = MOI.Utilities.operate(
+        vcat,
+        Float64,
+        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(cost, x), 0.0),
+        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(time, x), 0.0),
+        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, x), 0.0),
+    )
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 6
     return
 end
 
