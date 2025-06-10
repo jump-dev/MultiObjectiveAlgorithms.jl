@@ -642,6 +642,15 @@ function test_issue_105()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.ResultCount()) == 6
+    y = [MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:6]
+    @test sort!(y) == [
+        [2380.0, 81.0, 18.0],
+        [2440.0, 78.0, 18.0],
+        [2500.0, 75.0, 18.0],
+        [2560.0, 72.0, 18.0],
+        [2620.0, 69.0, 18.0],
+        [2680.0, 66.0, 18.0],
+    ]
     return
 end
 
