@@ -26,19 +26,22 @@ reformulation is solved using one of the defining points as a starting solution.
 struct TambyVanderpooten <: AbstractAlgorithm end
 
 function _update_search_region(
-    U_N::Dict{Vector{Float64}, Vector{Vector{Vector{Float64}}}}, 
-    y::Vector{Float64}, 
-    yN::Vector{Float64}, 
+    U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
+    y::Vector{Float64},
+    yN::Vector{Float64},
 )
     p = length(y)
     bounds_to_remove = Vector{Float64}[]
-    bounds_to_add = Dict{Vector{Float64}, Vector{Vector{Vector{Float64}}}}()
+    bounds_to_add = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}()
     for u in keys(U_N)
         if all(y .< u)
             push!(bounds_to_remove, u)
             for l in 1:p
                 u_l = _get_child(u, y, l)
-                N = [k == l ? [y] : [yi for yi in U_N[u][k] if yi[l] < y[l]] for k in 1:p]
+                N = [
+                    k == l ? [y] : [yi for yi in U_N[u][k] if yi[l] < y[l]]
+                    for k in 1:p
+                ]
                 if all(!isempty(N[k]) for k in 1:p if k != l && u_l[k] != yN[k])
                     bounds_to_add[u_l] = N
                 end
@@ -60,17 +63,20 @@ end
 
 function _get_child(u::Vector{Float64}, y::Vector{Float64}, k::Int)
     @assert length(u) == length(y)
-    return vcat(u[1:k-1], y[k], u[k+1:length(y)])
+    return vcat(u[1:(k-1)], y[k], u[(k+1):length(y)])
 end
 
 function _select_search_zone(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
-    yI::Vector{Float64}, 
-    yN::Vector{Float64}, 
+    yI::Vector{Float64},
+    yN::Vector{Float64},
 )
     upper_bounds = collect(keys(U_N))
     p = length(yI)
-    hvs = [u[k] == yN[k] ? 0. : prod(_project(u, k) .- _project(yI, k)) for k in 1:p, u in upper_bounds]
+    hvs = [
+        u[k] == yN[k] ? 0.0 : prod(_project(u, k) .- _project(yI, k)) for
+        k in 1:p, u in upper_bounds
+    ]
     k_star, j_star = argmax(hvs).I
     return k_star, upper_bounds[j_star]
 end
