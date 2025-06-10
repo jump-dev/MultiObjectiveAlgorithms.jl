@@ -620,11 +620,11 @@ function test_issue_105()
     MOI.add_constraint.(model, x, MOI.Integer())
     X = reshape(x, m, n)
     for i in 1:m
-        f_i = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, X[i,:]), 0.0)
+        f_i = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, X[i, :]), 0.0)
         MOI.add_constraint(model, f_i, MOI.LessThan(capacity[i]))
     end
     for j in 1:n
-        f_j = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, X[:,j]), 0.0)
+        f_j = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, X[:, j]), 0.0)
         MOI.add_constraint(model, f_j, MOI.EqualTo(demand[j]))
     end
     f = MOI.Utilities.operate(
