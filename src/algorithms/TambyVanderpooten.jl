@@ -26,23 +26,21 @@ reformulation is solved using one of the defining points as a starting solution.
 struct TambyVanderpooten <: AbstractAlgorithm end
 
 function _update_search_region(
-    U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
-    y::Vector{Float64},
-    yN::Vector{Float64},
+    U_N::Dict{Vector{Float64}, Vector{Vector{Vector{Float64}}}}, 
+    y::Vector{Float64}, 
+    yN::Vector{Float64}, 
 )
-    bounds_to_remove = Vector{Float64}[]
     p = length(y)
+    bounds_to_remove = Vector{Float64}[]
+    bounds_to_add = Dict{Vector{Float64}, Vector{Vector{Vector{Float64}}}}()
     for u in keys(U_N)
         if all(y .< u)
             push!(bounds_to_remove, u)
             for l in 1:p
                 u_l = _get_child(u, y, l)
-                N = [
-                    k != l ? [yi for yi in U_N[u][k] if yi[l] < y[l]] : [y]
-                    for k in 1:p
-                ]
-                if all(!isempty(N[k]) for k in 1:p if u_l[k] ≠ yN[k])
-                    U_N[u_l] = N
+                N = [k == l ? [y] : [yi for yi in U_N[u][k] if yi[l] < y[l]] for k in 1:p]
+                if all(!isempty(N[k]) for k in 1:p if k != l && u_l[k] != yN[k])
+                    bounds_to_add[u_l] = N
                 end
             end
         else
@@ -53,9 +51,10 @@ function _update_search_region(
             end
         end
     end
-    for bound_to_remove in bounds_to_remove
-        delete!(U_N, bound_to_remove)
+    for u in bounds_to_remove
+        delete!(U_N, u)
     end
+    merge!(U_N, bounds_to_add)
     return
 end
 
@@ -66,14 +65,14 @@ end
 
 function _select_search_zone(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
-    yI::Vector{Float64},
+    yI::Vector{Float64}, 
+    yN::Vector{Float64}, 
 )
-    i, j =
-        argmax([
-            prod(_project(u, k) - _project(yI, k)) for k in 1:length(yI),
-            u in keys(U_N)
-        ]).I
-    return i, collect(keys(U_N))[j]
+    upper_bounds = collect(keys(U_N))
+    p = length(yI)
+    hvs = [u[k] == yN[k] ? 0. : prod(_project(u, k) .- _project(yI, k)) for k in 1:p, u in upper_bounds]
+    k_star, j_star = argmax(hvs).I
+    return k_star, upper_bounds[j_star]
 end
 
 function optimize_multiobjective!(
@@ -100,7 +99,6 @@ function optimize_multiobjective!(
         warm_start_supported = true
     end
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    YN = Vector{Float64}[]
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     n = MOI.output_dimension(model.f)
     yI, yN = zeros(n), zeros(n)
@@ -114,7 +112,7 @@ function optimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yI[i] = Y + 1
+        yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOI.optimize!(model.inner)
@@ -124,7 +122,7 @@ function optimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        yN[i] = Y
+        yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     U_N = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}()
@@ -136,7 +134,7 @@ function optimize_multiobjective!(
             status = MOI.TIME_LIMIT
             break
         end
-        k, u = _select_search_zone(U_N, yI)
+        k, u = _select_search_zone(U_N, yI, yN)
         MOI.set(
             model.inner,
             MOI.ObjectiveFunction{typeof(scalars[k])}(),
