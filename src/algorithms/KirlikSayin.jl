@@ -134,7 +134,7 @@ function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         if _time_limit_exceeded(model, start_time)
             return MOI.TIME_LIMIT, solutions
         end
-        max_volume_index = argmax(_volume(Rᵢ, _project(yI, k)) for Rᵢ in L)
+        max_volume_index = argmax([_volume(Rᵢ, _project(yI, k)) for Rᵢ in L])
         uᵢ = L[max_volume_index].u
         # Solving the first stage model: P_k(ε)
         #   minimize: f_1(x)
