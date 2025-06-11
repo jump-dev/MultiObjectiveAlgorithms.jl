@@ -61,16 +61,16 @@ function test_knapsack_default()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
     MOI.optimize!(model)
-    results = Dict(
+    results = [
         [0, 1, 1] => [0, 1, 0, 1],
         [1, 0, 1] => [1, 0, 0, 1],
         [1, 1, 0] => [1, 1, 0, 0],
-    )
+    ]
     @test MOI.get(model, MOI.ResultCount()) == 3
     for i in 1:MOI.get(model, MOI.ResultCount())
         X = round.(Int, MOI.get(model, MOI.VariablePrimal(i), x))
         Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(i)))
-        @test results[Y] == X
+        @test results[i] == (Y => X)
     end
     return
 end
@@ -197,6 +197,6 @@ function test_knapsack_time_limit()
     return
 end
 
-end
+end  # module TestLexicographic
 
 TestLexicographic.run_tests()

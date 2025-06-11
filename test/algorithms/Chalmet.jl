@@ -53,22 +53,17 @@ function test_knapsack_min()
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
-    X_E = Float64[
-        0 0 1 1 1 0 1 1 1 1
-        1 0 1 1 1 0 1 1 0 1
-        0 1 1 1 1 0 1 0 1 1
+    results = [
+        [1, 0, 1, 1, 1, 0, 1, 1, 0, 1] => [-3394, -3817],
+        [0, 1, 1, 1, 1, 0, 1, 0, 1, 1] => [-3042, -4627],
+        [0, 0, 1, 1, 1, 0, 1, 1, 1, 1] => [-2854, -4636],
     ]
-    Y_N = Float64[
-        -2854 -4636
-        -3394 -3817
-        -3042 -4627
-    ]
-    N = MOI.get(model, MOI.ResultCount())
-    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
-    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(minimum(Y_N; dims = 1))
+    @test MOI.get(model, MOI.ResultCount()) == length(results)
+    for (i, (x_sol, y_sol)) in enumerate(results)
+        @test ≈(x_sol, MOI.get(model, MOI.VariablePrimal(i), x); atol = 1e-6)
+        @test ≈(y_sol, MOI.get(model, MOI.ObjectiveValue(i)); atol = 1e-6)
+    end
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ [-3394, -4636]
     return
 end
 
@@ -103,22 +98,17 @@ function test_knapsack_max()
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
-    X_E = Float64[
-        0 0 1 1 1 0 1 1 1 1
-        1 0 1 1 1 0 1 1 0 1
-        0 1 1 1 1 0 1 0 1 1
+    results = [
+        [0, 0, 1, 1, 1, 0, 1, 1, 1, 1] => [2855, 4636],
+        [0, 1, 1, 1, 1, 0, 1, 0, 1, 1] => [3043, 4627],
+        [1, 0, 1, 1, 1, 0, 1, 1, 0, 1] => [3395, 3817],
     ]
-    Y_N = Float64[
-        2855 4636
-        3395 3817
-        3043 4627
-    ]
-    N = MOI.get(model, MOI.ResultCount())
-    x_sol = hcat([MOI.get(model, MOI.VariablePrimal(i), x) for i in 1:N]...)
-    @test isapprox(x_sol, X_E'; atol = 1e-6)
-    y_sol = hcat([MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]...)
-    @test isapprox(y_sol, Y_N'; atol = 1e-6)
-    @test MOI.get(model, MOI.ObjectiveBound()) ≈ vec(maximum(Y_N; dims = 1))
+    @test MOI.get(model, MOI.ResultCount()) == length(results)
+    for (i, (x_sol, y_sol)) in enumerate(results)
+        @test ≈(x_sol, MOI.get(model, MOI.VariablePrimal(i), x); atol = 1e-6)
+        @test ≈(y_sol, MOI.get(model, MOI.ObjectiveValue(i)); atol = 1e-6)
+    end
+    @test MOI.get(model, MOI.ObjectiveBound()) ≈ [3395, 4636]
     return
 end
 
@@ -228,6 +218,6 @@ function test_too_many_objectives()
     return
 end
 
-end
+end  # module TestChalmet
 
 TestChalmet.run_tests()

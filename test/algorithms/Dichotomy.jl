@@ -45,13 +45,13 @@ function test_moi_bolp_1()
     MOI.Utilities.loadfromstring!(
         model,
         """
-variables: x, y
-minobjective: [2 * x + y + 1, x + 3 * y]
-c1: x + y >= 1.0
-c2: 0.5 * x + y >= 0.75
-c3: x >= 0.0
-c4: y >= 0.25
-""",
+        variables: x, y
+        minobjective: [2 * x + y + 1, x + 3 * y]
+        c1: x + y >= 1.0
+        c2: 0.5 * x + y >= 0.75
+        c3: x >= 0.0
+        c4: y >= 0.25
+        """,
     )
     x = MOI.get(model, MOI.VariableIndex, "x")
     y = MOI.get(model, MOI.VariableIndex, "y")
@@ -81,21 +81,21 @@ function test_moi_bolp_1_maximize()
     MOI.Utilities.loadfromstring!(
         model,
         """
-variables: x, y
-maxobjective: [-2.0 * x + -1.0 * y, -1.0 * x + -3.0 * y + 0.5]
-c1: x + y >= 1.0
-c2: 0.5 * x + y >= 0.75
-c3: x >= 0.0
-c4: y >= 0.25
-""",
+        variables: x, y
+        maxobjective: [-2.0 * x + -1.0 * y, -1.0 * x + -3.0 * y + 0.5]
+        c1: x + y >= 1.0
+        c2: 0.5 * x + y >= 0.75
+        c3: x >= 0.0
+        c4: y >= 0.25
+        """,
     )
     x = MOI.get(model, MOI.VariableIndex, "x")
     y = MOI.get(model, MOI.VariableIndex, "y")
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     @test MOI.get(model, MOI.ResultCount()) == 3
-    X = [[0.0, 1.0], [0.5, 0.5], [1.0, 0.25]]
-    Y = [-[1.0, 2.5], -[1.5, 1.5], -[2.25, 1.25]]
+    X = [[1.0, 0.25], [0.5, 0.5], [0.0, 1.0]]
+    Y = [[-2.25, -1.25], [-1.5, -1.5], [-1.0, -2.5]]
     for i in 1:3
         @test MOI.get(model, MOI.PrimalStatus(i)) == MOI.FEASIBLE_POINT
         @test MOI.get(model, MOI.DualStatus(i)) == MOI.NO_SOLUTION
@@ -117,13 +117,13 @@ function test_moi_bolp_1_reversed()
     MOI.Utilities.loadfromstring!(
         model,
         """
-variables: x, y
-minobjective: [x + 3 * y, 2 * x + y]
-c1: x + y >= 1.0
-c2: 0.5 * x + y >= 0.75
-c3: x >= 0.0
-c4: y >= 0.25
-""",
+        variables: x, y
+        minobjective: [x + 3 * y, 2 * x + y]
+        c1: x + y >= 1.0
+        c2: 0.5 * x + y >= 0.75
+        c3: x >= 0.0
+        c4: y >= 0.25
+        """,
     )
     x = MOI.get(model, MOI.VariableIndex, "x")
     y = MOI.get(model, MOI.VariableIndex, "y")
@@ -153,13 +153,13 @@ function test_moi_bolp_1_scalar()
     MOI.Utilities.loadfromstring!(
         model,
         """
-variables: x, y
-minobjective: [2 * x + y, x + 3 * y]
-c1: x + y >= 1.0
-c2: 0.5 * x + y >= 0.75
-c3: x >= 0.0
-c4: y >= 0.25
-""",
+        variables: x, y
+        minobjective: [2 * x + y, x + 3 * y]
+        c1: x + y >= 1.0
+        c2: 0.5 * x + y >= 0.75
+        c3: x >= 0.0
+        c4: y >= 0.25
+        """,
     )
     x = MOI.get(model, MOI.VariableIndex, "x")
     y = MOI.get(model, MOI.VariableIndex, "y")
@@ -219,17 +219,16 @@ function test_biobjective_knapsack()
         MOI.LessThan(900.0),
     )
     MOI.optimize!(model)
-    results = Dict(
-        [955.0, 906.0] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
-        [948.0, 939.0] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
-        [934.0, 971.0] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+    results = [
         [918.0, 983.0] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
-    )
+        [934.0, 971.0] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+        [948.0, 939.0] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
+        [955.0, 906.0] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
+    ]
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
-        X = findall(elt -> elt > 0.9, x_sol)
-        Y = MOI.get(model, MOI.ObjectiveValue(i))
-        @test results[Y] == X
+        @test results[i][2] == findall(elt -> elt > 0.9, x_sol)
+        @test results[i][1] ≈ MOI.get(model, MOI.ObjectiveValue(i))
     end
     return
 end
@@ -353,9 +352,9 @@ function test_three_objective()
     MOI.Utilities.loadfromstring!(
         model,
         """
-variables: x
-maxobjective: [1.0 * x, -1.0 * x, 2.0 * x + 2.0]
-""",
+        variables: x
+        maxobjective: [1.0 * x, -1.0 * x, 2.0 * x + 2.0]
+        """,
     )
     @test_throws(
         ErrorException("Only scalar or bi-objective problems supported."),
@@ -408,6 +407,6 @@ function test_vector_of_variables_objective()
     return
 end
 
-end
+end  # module TestDichotomy
 
 TestDichotomy.run_tests()
