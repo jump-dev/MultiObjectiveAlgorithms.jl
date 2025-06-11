@@ -47,23 +47,23 @@ function test_biobjective_knapsack()
         MOI.LessThan(900.0),
     )
     MOI.optimize!(model)
-    results = Dict(
-        [956, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
-        [950, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
-        [949, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
-        [944, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
-        [937, 942] => [1, 2, 3, 5, 6, 10, 11, 12, 15, 16, 17],
-        [936, 947] => [2, 5, 6, 8, 9, 10, 11, 12, 15, 16, 17],
-        [935, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
-        [928, 972] => [2, 3, 5, 6, 8, 9, 10, 11, 12, 16, 17],
+    results = [
         [919, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
-    )
+        [928, 972] => [2, 3, 5, 6, 8, 9, 10, 11, 12, 16, 17],
+        [935, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+        [936, 947] => [2, 5, 6, 8, 9, 10, 11, 12, 15, 16, 17],
+        [937, 942] => [1, 2, 3, 5, 6, 10, 11, 12, 15, 16, 17],
+        [944, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
+        [949, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
+        [950, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
+        [956, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
+    ]
     @test MOI.get(model, MOI.ResultCount()) == 9
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
         Y = MOI.get(model, MOI.ObjectiveValue(i))
-        @test results[round.(Int, Y)] == X
+        @test results[i] == (round.(Int, Y) => X)
     end
     @test MOI.get(model, MOI.ObjectiveBound()) == [956.0, 983.0]
     return
@@ -91,23 +91,23 @@ function test_biobjective_knapsack_atol()
         MOI.LessThan(900.0),
     )
     MOI.optimize!(model)
-    results = Dict(
-        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
-        [949, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
-        [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
-        [943, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
-        [936, 942] => [1, 2, 3, 5, 6, 10, 11, 12, 15, 16, 17],
-        [935, 947] => [2, 5, 6, 8, 9, 10, 11, 12, 15, 16, 17],
-        [934, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
-        [927, 972] => [2, 3, 5, 6, 8, 9, 10, 11, 12, 16, 17],
+    results = [
         [918, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
-    )
+        [927, 972] => [2, 3, 5, 6, 8, 9, 10, 11, 12, 16, 17],
+        [934, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+        [935, 947] => [2, 5, 6, 8, 9, 10, 11, 12, 15, 16, 17],
+        [936, 942] => [1, 2, 3, 5, 6, 10, 11, 12, 15, 16, 17],
+        [943, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
+        [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
+        [949, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
+        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
+    ]
     @test MOI.get(model, MOI.ResultCount()) == 9
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
         Y = MOI.get(model, MOI.ObjectiveValue(i))
-        @test results[round.(Int, Y)] == X
+        @test results[i] == (round.(Int, Y) => X)
     end
     @test MOI.get(model, MOI.ObjectiveBound()) == [955.0, 983.0]
     return
@@ -137,18 +137,18 @@ function test_biobjective_knapsack_atol_large()
         MOI.LessThan(900.0),
     )
     MOI.optimize!(model)
-    results = Dict(
-        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
-        [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
-        [934, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+    results = [
         [918, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
-    )
+        [934, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
+        [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
+        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
+    ]
     @test MOI.get(model, MOI.ResultCount()) == 4
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
         Y = MOI.get(model, MOI.ObjectiveValue(i))
-        @test results[round.(Int, Y)] == X
+        @test results[i] == (round.(Int, Y) => X)
     end
     return
 end
@@ -176,7 +176,7 @@ function test_biobjective_knapsack_min()
         MOI.LessThan(900.0),
     )
     MOI.optimize!(model)
-    results = Dict(
+    results = [
         [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
         [949, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
         [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
@@ -186,13 +186,13 @@ function test_biobjective_knapsack_min()
         [934, 971] => [2, 3, 5, 6, 8, 10, 11, 12, 15, 16, 17],
         [927, 972] => [2, 3, 5, 6, 8, 9, 10, 11, 12, 16, 17],
         [918, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
-    )
+    ]
     @test MOI.get(model, MOI.ResultCount()) == 9
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
         Y = MOI.get(model, MOI.ObjectiveValue(i))
-        @test results[-round.(Int, Y)] == X
+        @test results[i] == (-round.(Int, Y) => X)
     end
     @test MOI.get(model, MOI.ObjectiveBound()) == [-955.0, -983.0]
     return
@@ -222,17 +222,17 @@ function test_biobjective_knapsack_min_solution_limit()
         MOI.LessThan(900.0),
     )
     MOI.optimize!(model)
-    results = Dict(
-        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
-        [943, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
+    results = [
         [918, 983] => [2, 3, 4, 5, 6, 8, 10, 11, 12, 16, 17],
-    )
+        [943, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
+        [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
+    ]
     @test MOI.get(model, MOI.ResultCount()) == 3
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         X = findall(elt -> elt > 0.9, x_sol)
         Y = MOI.get(model, MOI.ObjectiveValue(i))
-        @test results[round.(Int, Y)] == X
+        @test results[i] == (round.(Int, Y) => X)
     end
     @test MOI.get(model, MOI.ObjectiveBound()) == [955.0, 983.0]
     return
@@ -491,6 +491,6 @@ function test_too_many_objectives()
     return
 end
 
-end
+end  # module TestEpsilonConstraint
 
 TestEpsilonConstraint.run_tests()
