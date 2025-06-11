@@ -165,7 +165,7 @@ function test_vector_of_variables_objective()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.add_constraint(model, sum(1.0 * xi for xi in x), MOI.GreaterThan(1.0))
     MOI.optimize!(model)
-    MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     return
 end
 
