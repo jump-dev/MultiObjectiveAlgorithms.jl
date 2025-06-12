@@ -443,18 +443,17 @@ function test_problem_issue_105(model)
 end
 
 function _test_vOptLib_instance(model, instance)
-    root = joinpath(dirname(dirname(@__DIR__)), "instances")
+    root = joinpath(dirname(@__DIR__), "instances")
     src = MOI.FileFormats.MOF.Model()
     MOI.read_from_file(src, joinpath(root, "models", instance * ".mof.json"))
     MOI.copy_to(model, src)
     MOI.optimize!(model)
+    x = MOI.get(model, MOI.ListOfVariableIndices())
     solutions = JSON.parsefile(joinpath(root, "solutions", instance * ".json"))
     @test MOI.get(model, MOI.ResultCount()) == length(solutions)
-    atol = 1e-6
-    x = MOI.get(model, MOI.ListOfVariableIndices())
     for (i, sol) in enumerate(solutions)
-        @test isapprox(MOI.get(model, MOI.VariablePrimal(i), x), sol["X"]; atol)
-        @test isapprox(MOI.get(model, MOI.ObjectiveValue(i)), sol["Y"]; atol)
+        @test ≈(MOI.get(model, MOI.VariablePrimal(i), x), sol["X"]; atol = 1e-6)
+        @test ≈(MOI.get(model, MOI.ObjectiveValue(i)), sol["Y"]; atol = 1e-6)
     end
     return
 end
