@@ -12,6 +12,8 @@ import Ipopt
 import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
 
+include(joinpath(dirname(@__DIR__), "vOptLib.jl"))
+
 function run_tests()
     for name in names(@__MODULE__; all = true)
         if startswith("$name", "test_")
@@ -20,6 +22,14 @@ function run_tests()
             end
         end
     end
+    return
+end
+
+function test_vOptLib_runtests()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
+    MOI.set(model, MOI.Silent(), true)
+    vOptLib.run_tests(model)
     return
 end
 
