@@ -6,6 +6,7 @@
 module Problems
 
 using Test
+import JSON
 import MathOptInterface as MOI
 
 function run_tests(model::MOI.ModelLike)
