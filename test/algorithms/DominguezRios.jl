@@ -8,6 +8,7 @@ module TestDominguezRios
 using Test
 
 import HiGHS
+import JSON
 import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
 
