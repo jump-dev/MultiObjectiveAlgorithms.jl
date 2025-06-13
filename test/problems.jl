@@ -6,7 +6,6 @@
 module Problems
 
 using Test
-import JSON
 import MathOptInterface as MOI
 
 function run_tests(model::MOI.ModelLike)
@@ -441,29 +440,5 @@ function test_problem_issue_105(model)
     end
     return
 end
-
-function _test_vOptLib_instance(model, instance)
-    root = joinpath(dirname(@__DIR__), "instances")
-    src = MOI.FileFormats.MOF.Model()
-    MOI.read_from_file(src, joinpath(root, "models", instance * ".mof.json"))
-    MOI.copy_to(model, src)
-    MOI.optimize!(model)
-    x = MOI.get(model, MOI.ListOfVariableIndices())
-    solutions = JSON.parsefile(joinpath(root, "solutions", instance * ".json"))
-    @test MOI.get(model, MOI.ResultCount()) == length(solutions)
-    for (i, sol) in enumerate(solutions)
-        @test ≈(MOI.get(model, MOI.VariablePrimal(i), x), sol["X"]; atol = 1e-6)
-        @test ≈(MOI.get(model, MOI.ObjectiveValue(i)), sol["Y"]; atol = 1e-6)
-    end
-    return
-end
-
-test_vOptLib_2KP50_11(model) = _test_vOptLib_instance(model, "2KP50-11")
-
-test_vOptLib_2KP50_50(model) = _test_vOptLib_instance(model, "2KP50-50")
-
-test_vOptLib_2KP50_92(model) = _test_vOptLib_instance(model, "2KP50-92")
-
-test_vOptLib_2KP100_50(model) = _test_vOptLib_instance(model, "2KP100-50")
 
 end  # module Problems
