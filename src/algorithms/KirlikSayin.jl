@@ -74,23 +74,9 @@ function _update_list(L::Vector{_Rectangle}, f::Vector{Float64})
     return L_new
 end
 
-function optimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
+function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     start_time = time()
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    if sense == MOI.MAX_SENSE
-        old_obj, neg_obj = copy(model.f), -model.f
-        MOI.set(model, MOI.ObjectiveFunction{typeof(neg_obj)}(), neg_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-        status, solutions = optimize_multiobjective!(algorithm, model)
-        MOI.set(model, MOI.ObjectiveFunction{typeof(old_obj)}(), old_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        if solutions !== nothing
-            solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
-        end
-        model.ideal_point .*= -1
-        return status, solutions
-    end
-    @assert sense == MOI.MIN_SENSE
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     solutions = SolutionPoint[]
     # Problem with p objectives.
     # Set k = 1, meaning the nondominated points will get projected

@@ -85,7 +85,8 @@ function _sorted_priorities(priorities::Vector{Int})
     return [findall(isequal(u), priorities) for u in unique_priorities]
 end
 
-function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
+function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     objectives = MOI.Utilities.eachscalar(model.f)
     N = length(objectives)
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
@@ -109,14 +110,9 @@ function optimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         end
         # Add tolerance constraints
         X, Y = _compute_point(model, variables, new_vector_f)
-        sense = MOI.get(model.inner, MOI.ObjectiveSense())
         for (i, fi) in enumerate(MOI.Utilities.eachscalar(new_vector_f))
             rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
-            set = if sense == MOI.MIN_SENSE
-                MOI.LessThan(Y[i] + rtol * abs(Y[i]))
-            else
-                MOI.GreaterThan(Y[i] - rtol * abs(Y[i]))
-            end
+            set = MOI.LessThan(Y[i] + rtol * abs(Y[i]))
             ci = MOI.Utilities.normalize_and_add_constraint(model, fi, set)
             push!(constraints, ci)
         end

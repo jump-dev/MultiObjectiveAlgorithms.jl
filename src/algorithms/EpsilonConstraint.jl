@@ -65,11 +65,12 @@ function MOI.get(alg::EpsilonConstraint, ::ObjectiveAbsoluteTolerance)
     return MOI.get(alg, EpsilonConstraintStep())
 end
 
-function optimize_multiobjective!(
+function minimize_multiobjective!(
     algorithm::EpsilonConstraint,
     model::Optimizer,
 )
     start_time = time()
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     if MOI.output_dimension(model.f) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
@@ -87,12 +88,7 @@ function optimize_multiobjective!(
     end
     a, b = solution_1[1].y[1], solution_2[1].y[1]
     left, right = min(a, b), max(a, b)
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    if sense == MOI.MIN_SENSE
-        model.ideal_point .= min.(solution_1[1].y, solution_2[1].y)
-    else
-        model.ideal_point .= max.(solution_1[1].y, solution_2[1].y)
-    end
+    model.ideal_point .= min.(solution_1[1].y, solution_2[1].y)
     # Compute the epsilon that we will be incrementing by each iteration
     ε = MOI.get(algorithm, EpsilonConstraintStep())
     n_points = MOI.get(algorithm, SolutionLimit())
@@ -104,16 +100,12 @@ function optimize_multiobjective!(
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    SetType, bound = if sense == MOI.MIN_SENSE
-        MOI.LessThan{Float64}, right - ε
-    else
-        MOI.GreaterThan{Float64}, left + ε
-    end
+    bound = right - ε
     constant = MOI.constant(f1, Float64)
     ci = MOI.Utilities.normalize_and_add_constraint(
         model,
         f1,
-        SetType(bound);
+        MOI.LessThan{Float64}(bound);
         allow_modify_function = true,
     )
     bound -= constant
@@ -123,7 +115,7 @@ function optimize_multiobjective!(
             status = MOI.TIME_LIMIT
             break
         end
-        MOI.set(model, MOI.ConstraintSet(), ci, SetType(bound))
+        MOI.set(model, MOI.ConstraintSet(), ci, MOI.LessThan{Float64}(bound))
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
             break
@@ -132,12 +124,8 @@ function optimize_multiobjective!(
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end
-        if sense == MOI.MIN_SENSE
-            bound = min(Y[1] - constant - ε, bound - ε)
-        else
-            bound = max(Y[1] - constant + ε, bound + ε)
-        end
+        bound = min(Y[1] - constant - ε, bound - ε)
     end
     MOI.delete(model, ci)
-    return status, filter_nondominated(sense, solutions)
+    return status, filter_nondominated(MOI.MIN_SENSE, solutions)
 end

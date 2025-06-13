@@ -579,6 +579,30 @@ function _compute_ideal_point(model::Optimizer, start_time)
     return
 end
 
+function optimize_multiobjective!(
+    algorithm::AbstractAlgorithm,
+    model::Optimizer,
+)
+    sense = MOI.get(model.inner, MOI.ObjectiveSense())
+    if sense == MOI.FEASIBILITY_SENSE
+        return MOI.INVALID_MODEL, nothing
+    elseif sense == MOI.MAX_SENSE
+        old_obj = copy(model.f)
+        neg_obj = MOI.Utilities.operate(-, Float64, model.f)
+        MOI.set(model, MOI.ObjectiveFunction{typeof(neg_obj)}(), neg_obj)
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        status, solutions = minimize_multiobjective!(algorithm, model)
+        MOI.set(model, MOI.ObjectiveFunction{typeof(old_obj)}(), old_obj)
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        if solutions !== nothing
+            solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
+        end
+        model.ideal_point *= -1
+        return status, solutions
+    end
+    return minimize_multiobjective!(algorithm, model)
+end
+
 function MOI.optimize!(model::Optimizer)
     start_time = time()
     empty!(model.solutions)
