@@ -143,8 +143,8 @@ function _update!(
 end
 
 function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
-    start_time = time()
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    start_time = time()
     n = MOI.output_dimension(model.f)
     L = [_DominguezRiosBox[] for i in 1:n]
     scalars = MOI.Utilities.scalarize(model.f)

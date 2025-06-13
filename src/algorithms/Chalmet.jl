@@ -41,6 +41,7 @@ function _solve_constrained_model(
 end
 
 function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("Chalmet requires exactly two objectives")

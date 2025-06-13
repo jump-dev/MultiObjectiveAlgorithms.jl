@@ -85,8 +85,8 @@ function minimize_multiobjective!(
     algorithm::TambyVanderpooten,
     model::Optimizer,
 )
-    start_time = time()
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    start_time = time()
     warm_start_supported = false
     if MOI.supports(model, MOI.VariablePrimalStart(), MOI.VariableIndex)
         warm_start_supported = true

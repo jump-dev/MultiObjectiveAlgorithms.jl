@@ -75,8 +75,8 @@ function _update_list(L::Vector{_Rectangle}, f::Vector{Float64})
 end
 
 function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
-    start_time = time()
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    start_time = time()
     solutions = SolutionPoint[]
     # Problem with p objectives.
     # Set k = 1, meaning the nondominated points will get projected

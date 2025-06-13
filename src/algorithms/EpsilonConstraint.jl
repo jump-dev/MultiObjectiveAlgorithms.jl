@@ -69,8 +69,8 @@ function minimize_multiobjective!(
     algorithm::EpsilonConstraint,
     model::Optimizer,
 )
-    start_time = time()
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
