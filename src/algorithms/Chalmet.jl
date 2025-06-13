@@ -89,7 +89,7 @@ function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     end
     _, y2[1] = _compute_point(model, variables, f1)
     if y2[1] ≈ solutions[1].y[1]
-        return MOI.OPTIMAL, [solutions]
+        return MOI.OPTIMAL, solutions
     end
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     y2_constraint = MOI.Utilities.normalize_and_add_constraint(
