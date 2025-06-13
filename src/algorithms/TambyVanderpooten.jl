@@ -81,25 +81,12 @@ function _select_search_zone(
     return k_star, upper_bounds[j_star]
 end
 
-function optimize_multiobjective!(
+function minimize_multiobjective!(
     algorithm::TambyVanderpooten,
     model::Optimizer,
 )
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     start_time = time()
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    if sense == MOI.MAX_SENSE
-        old_obj, neg_obj = copy(model.f), -model.f
-        MOI.set(model, MOI.ObjectiveFunction{typeof(neg_obj)}(), neg_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-        status, solutions = optimize_multiobjective!(algorithm, model)
-        MOI.set(model, MOI.ObjectiveFunction{typeof(old_obj)}(), old_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        if solutions !== nothing
-            solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
-        end
-        model.ideal_point .*= -1
-        return status, solutions
-    end
     warm_start_supported = false
     if MOI.supports(model, MOI.VariablePrimalStart(), MOI.VariableIndex)
         warm_start_supported = true
@@ -111,7 +98,7 @@ function optimize_multiobjective!(
     scalars = MOI.Utilities.scalarize(model.f)
     for (i, f_i) in enumerate(scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.set(model.inner, MOI.ObjectiveSense(), sense)
+        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
@@ -124,7 +111,7 @@ function optimize_multiobjective!(
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
-            _warn_on_nonfinite_anti_ideal(algorithm, sense, i)
+            _warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)

@@ -40,23 +40,11 @@ function _solve_constrained_model(
     return status, SolutionPoint(X, Y)
 end
 
-function optimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
+function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("Chalmet requires exactly two objectives")
-    end
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    if sense == MOI.MAX_SENSE
-        old_obj, neg_obj = copy(model.f), -model.f
-        MOI.set(model, MOI.ObjectiveFunction{typeof(neg_obj)}(), neg_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-        status, solutions = optimize_multiobjective!(algorithm, model)
-        MOI.set(model, MOI.ObjectiveFunction{typeof(old_obj)}(), old_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        if solutions !== nothing
-            solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
-        end
-        return status, solutions
     end
     solutions = SolutionPoint[]
     E = Tuple{Int,Int}[]

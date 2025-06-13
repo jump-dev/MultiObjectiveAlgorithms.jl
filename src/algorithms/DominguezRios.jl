@@ -142,22 +142,9 @@ function _update!(
     return
 end
 
-function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
+function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     start_time = time()
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    if sense == MOI.MAX_SENSE
-        old_obj, neg_obj = copy(model.f), -model.f
-        MOI.set(model, MOI.ObjectiveFunction{typeof(neg_obj)}(), neg_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-        status, solutions = optimize_multiobjective!(algorithm, model)
-        MOI.set(model, MOI.ObjectiveFunction{typeof(old_obj)}(), old_obj)
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        if solutions !== nothing
-            solutions = [SolutionPoint(s.x, -s.y) for s in solutions]
-        end
-        model.ideal_point .*= -1
-        return status, solutions
-    end
     n = MOI.output_dimension(model.f)
     L = [_DominguezRiosBox[] for i in 1:n]
     scalars = MOI.Utilities.scalarize(model.f)
@@ -166,7 +153,7 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     # Ideal and Nadir point estimation
     for (i, f_i) in enumerate(scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.set(model.inner, MOI.ObjectiveSense(), sense)
+        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
@@ -175,18 +162,17 @@ function optimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         _, Y = _compute_point(model, variables, f_i)
         yI[i] = Y
         model.ideal_point[i] = Y
-        rev_sense = sense == MOI.MIN_SENSE ? MOI.MAX_SENSE : MOI.MIN_SENSE
-        MOI.set(model.inner, MOI.ObjectiveSense(), rev_sense)
+        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
-            _warn_on_nonfinite_anti_ideal(algorithm, sense, i)
+            _warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
         yN[i] = Y + 1
     end
-    MOI.set(model.inner, MOI.ObjectiveSense(), sense)
+    MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     ϵ = 1 / (2 * n * (maximum(yN - yI) - 1))
     # If ϵ is small, then the scalar objectives can contain terms that fall
     # below the tolerance level of the solver. To fix this, we rescale the
