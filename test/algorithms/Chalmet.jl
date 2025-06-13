@@ -218,6 +218,23 @@ function test_too_many_objectives()
     return
 end
 
+function test_single_point()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Chalmet())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint.(model, x, MOI.EqualTo(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.ResultCount()) == 1
+    @test MOI.get(model, MOI.PrimalStatus()) == MOI.FEASIBLE_POINT
+    @test ≈(MOI.get(model, MOI.VariablePrimal(), x), [1.0, 1.0]; atol = 1e-6)
+    return
+end
+
 end  # module TestChalmet
 
 TestChalmet.run_tests()
