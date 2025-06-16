@@ -67,13 +67,12 @@ end
 
 function _select_next_box(L::Vector{Vector{_DominguezRiosBox}}, k::Int)
     p = length(L)
-    if any(.!isempty.(L))
+    @assert any(!isempty(l) for l in L)
+    k = k % p + 1
+    while isempty(L[k])
         k = k % p + 1
-        while isempty(L[k])
-            k = k % p + 1
-        end
-        i = argmax([B.priority for B in L[k]])
     end
+    i = argmax([B.priority for B in L[k]])
     return i, k
 end
 
@@ -190,7 +189,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         end
         i, k = _select_next_box(L, k)
         B = L[k][i]
-        # We're goign to scale `w` here by `scale` instead of the usual
+        # We're going to scale `w` here by `scale` instead of the usual
         # `1 / max(...)`. It will show up in a few places bbelow.
         w = scale ./ max.(1, B.u - yI)
         constraints = [
@@ -208,19 +207,18 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         new_f = t_max + ϵ * sum(w[i] * (scalars[i] - yI[i]) for i in 1:n)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
-        if _is_scalar_status_optimal(model)
-            X, Y = _compute_point(model, variables, model.f)
-            obj = MOI.get(model.inner, MOI.ObjectiveValue())
-            # We need to undo the scaling of the scalar objective. There's no
-            # need to unscale `Y` because we have evaluated this explicitly from
-            # the modified `model.f`.
-            obj /= scale
-            if (obj < 1) && all(yI .< B.u)
-                push!(solutions, SolutionPoint(X, Y))
-                _update!(L, Y, yI, yN)
-            else
-                deleteat!(L[k], i)
-            end
+        @assert _is_scalar_status_optimal(model)
+        X, Y = _compute_point(model, variables, model.f)
+        obj = MOI.get(model.inner, MOI.ObjectiveValue())
+        # We need to undo the scaling of the scalar objective. There's no
+        # need to unscale `Y` because we have evaluated this explicitly from
+        # the modified `model.f`.
+        obj /= scale
+        if (obj < 1) && all(yI .< B.u)
+            push!(solutions, SolutionPoint(X, Y))
+            _update!(L, Y, yI, yN)
+        else
+            deleteat!(L[k], i)
         end
         MOI.delete.(model.inner, constraints)
     end
