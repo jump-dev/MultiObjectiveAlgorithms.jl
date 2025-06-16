@@ -20,29 +20,41 @@ end
 Base.:(==)(a::SolutionPoint, b::SolutionPoint) = a.y == b.y
 
 """
-    dominates(sense, a::SolutionPoint, b::SolutionPoint)
+    dominates(sense, a::SolutionPoint, b::SolutionPoint; atol::Float64)
 
 Returns `true` if point `a` dominates point `b`.
 """
-function dominates(sense, a::SolutionPoint, b::SolutionPoint)
-    if a.y == b.y
-        return false
-    elseif sense == MOI.MIN_SENSE
-        return all(a.y .<= b.y)
+function dominates(
+    sense::MOI.OptimizationSense,
+    a::SolutionPoint,
+    b::SolutionPoint;
+    atol::Float64 = 1e-6,
+)
+    l, u = extrema(a.y - b.y)
+    if sense == MOI.MIN_SENSE
+        # At least one element must be strictly better => l < -atol
+        # No element can be structly worse => u <= atol
+        return l < -atol && u <= atol
     else
-        return all(a.y .>= b.y)
+        # At least one element must be strictly better => u > atol
+        # No element can be structly worse => l >= -atol
+        return u > atol && l >= -atol
     end
 end
 
 _sort!(solutions::Vector{SolutionPoint}) = sort!(solutions; by = x -> x.y)
 
-function filter_nondominated(sense, solutions::Vector{SolutionPoint})
+function filter_nondominated(
+    sense,
+    solutions::Vector{SolutionPoint};
+    atol::Float64 = 1e-6,
+)
     _sort!(solutions)
     nondominated_solutions = SolutionPoint[]
     for candidate in solutions
-        if any(test -> dominates(sense, test, candidate), solutions)
+        if any(test -> dominates(sense, test, candidate; atol), solutions)
             # Point is dominated. Don't add
-        elseif any(test -> test.y ≈ candidate.y, nondominated_solutions)
+        elseif any(test -> ≈(test.y, candidate.y; atol), nondominated_solutions)
             # Point already added to nondominated solutions. Don't add
         else
             push!(nondominated_solutions, candidate)
