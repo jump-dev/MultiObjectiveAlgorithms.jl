@@ -108,28 +108,20 @@ end
 
 function test_filter_epsilon()
     x = Dict{MOI.VariableIndex,Float64}()
-    solutions = [
-        MOA.SolutionPoint(x, [1, 1 + 1e-6]),
-        MOA.SolutionPoint(x, [2, 1]),
-    ]
+    solutions =
+        [MOA.SolutionPoint(x, [1, 1 + 1e-6]), MOA.SolutionPoint(x, [2, 1])]
     new_solutions = MOA.filter_nondominated(MOI.MAX_SENSE, copy(solutions))
     @test new_solutions == solutions[2:2]
-    solutions = [
-        MOA.SolutionPoint(x, [1, 1 + 9e-5]),
-        MOA.SolutionPoint(x, [2, 1]),
-    ]
+    solutions =
+        [MOA.SolutionPoint(x, [1, 1 + 9e-5]), MOA.SolutionPoint(x, [2, 1])]
     new_solutions = MOA.filter_nondominated(MOI.MAX_SENSE, copy(solutions))
     @test new_solutions == solutions
-    solutions = [
-        MOA.SolutionPoint(x, [-1, -1 - 1e-6]),
-        MOA.SolutionPoint(x, [-2, -1]),
-    ]
+    solutions =
+        [MOA.SolutionPoint(x, [-1, -1 - 1e-6]), MOA.SolutionPoint(x, [-2, -1])]
     new_solutions = MOA.filter_nondominated(MOI.MIN_SENSE, copy(solutions))
     @test new_solutions == solutions[2:2]
-    solutions = [
-        MOA.SolutionPoint(x, [-1, -1 - 9e-5]),
-        MOA.SolutionPoint(x, [-2, -1]),
-    ]
+    solutions =
+        [MOA.SolutionPoint(x, [-1, -1 - 9e-5]), MOA.SolutionPoint(x, [-2, -1])]
     new_solutions = MOA.filter_nondominated(MOI.MIN_SENSE, copy(solutions))
     @test new_solutions == reverse(solutions)
     return
