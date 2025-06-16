@@ -12,6 +12,7 @@ import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
 
 include(joinpath(dirname(@__DIR__), "problems.jl"))
+include(joinpath(dirname(@__DIR__), "vOptLib.jl"))
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -29,6 +30,14 @@ function test_problems()
     MOI.set(model, MOA.Algorithm(), MOA.TambyVanderpooten())
     MOI.set(model, MOI.Silent(), true)
     Problems.run_tests(model)
+    return
+end
+
+function test_vOptLib_runtests()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.TambyVanderpooten())
+    MOI.set(model, MOI.Silent(), true)
+    vOptLib.run_tests(model)
     return
 end
 

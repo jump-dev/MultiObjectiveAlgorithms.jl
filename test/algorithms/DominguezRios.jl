@@ -12,6 +12,7 @@ import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
 
 include(joinpath(dirname(@__DIR__), "problems.jl"))
+include(joinpath(dirname(@__DIR__), "vOptLib.jl"))
 
 function run_tests()
     if Sys.WORD_SIZE == 32
@@ -32,6 +33,15 @@ function test_problems()
     MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
     MOI.set(model, MOI.Silent(), true)
     Problems.run_tests(model)
+    return
+end
+
+function test_vOptLib_runtests()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+    MOI.set(model, MOI.Silent(), true)
+    # TODO(odow): it doesn't terminate
+    # vOptLib.run_tests(model)
     return
 end
 
