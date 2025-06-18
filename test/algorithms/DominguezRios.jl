@@ -38,10 +38,12 @@ end
 
 function test_vOptLib_runtests()
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
-    MOI.set(model, MOI.Silent(), true)
-    # TODO(odow): it doesn't terminate
-    # vOptLib.run_tests(model)
+    for (presolve, complete) in ["off" => true, "choose" => false]
+        MOI.set(model, MOI.RawOptimizerAttribute("presolve"), presolve)
+        MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+        MOI.set(model, MOI.Silent(), true)
+        vOptLib.run_tests(model; complete)
+    end
     return
 end
 
