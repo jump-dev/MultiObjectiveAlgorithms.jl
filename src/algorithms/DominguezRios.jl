@@ -207,7 +207,16 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         new_f = t_max + ϵ * sum(w[i] * (scalars[i] - yI[i]) for i in 1:n)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
-        @assert _is_scalar_status_optimal(model)
+        if !_is_scalar_status_optimal(model)
+            # In theory, this shouldn't happen, because this subproblem is meant
+            # to always be feasible. However, in some of our testing, HiGHS will
+            # fail and return something like OTHER_ERROR (e.g., because the
+            # numerics are challenging). Rather than error completely, let's
+            # just skip this box.
+            deleteat!(L[k], i)
+            MOI.delete.(model.inner, constraints)
+            continue
+        end
         X, Y = _compute_point(model, variables, model.f)
         obj = MOI.get(model.inner, MOI.ObjectiveValue())
         # We need to undo the scaling of the scalar objective. There's no
