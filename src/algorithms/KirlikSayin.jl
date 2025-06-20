@@ -161,9 +161,9 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             MOI.EqualTo(zₖ),
         )
         MOI.optimize!(model.inner)
-        MOI.delete.(model, ε_constraints)
-        MOI.delete(model, zₖ_constraint)
         if !_is_scalar_status_optimal(model)
+            MOI.delete.(model, ε_constraints)
+            MOI.delete(model, zₖ_constraint)
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
             continue
         end
@@ -175,6 +175,8 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             L = _update_list(L, Y_proj)
         end
         _remove_rectangle(L, _Rectangle(Y_proj, uᵢ))
+        MOI.delete.(model, ε_constraints)
+        MOI.delete(model, zₖ_constraint)
     end
     return status, solutions
 end
