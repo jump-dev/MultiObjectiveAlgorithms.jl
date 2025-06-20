@@ -461,11 +461,11 @@ function test_issue_122(model)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     for i in 1:m
-        f_i = sum(w[i,j] * x[i,j] for j in 1:n)
+        f_i = sum(w[i, j] * x[i, j] for j in 1:n)
         MOI.add_constraint(model, f_i, MOI.LessThan(b[i]))
     end
     for j in 1:n
-        MOI.add_constraint(model, sum(1.0 .* x[:,j]), MOI.EqualTo(1.0))
+        MOI.add_constraint(model, sum(1.0 .* x[:, j]), MOI.EqualTo(1.0))
     end
     MOI.optimize!(model)
     @test MOI.get(model, MOI.ResultCount()) == 42
