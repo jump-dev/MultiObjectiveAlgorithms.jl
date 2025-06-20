@@ -441,4 +441,35 @@ function test_problem_issue_105(model)
     return
 end
 
+function test_issue_122(model)
+    m, n = 3, 10
+    p1 = [5.0 1 10 8 3 5 3 3 7 2; 10 6 1 6 8 3 2 10 6 1; 2 3 1 6 9 7 1 5 4 8]
+    p2 = [4.0 6 4 3 1 6 8 2 9 7; 8 8 8 2 4 8 8 1 10 1; 8 7 8 5 9 2 2 7 10 10]
+    p3 = [4.0 3 6 4 7 5 9 5 8 4; 8 6 2 2 6 8 5 2 2 3; 2 8 10 3 5 7 5 9 5 5]
+    w = [5.0 9 3 5 10 5 7 10 7 8; 4 8 8 6 10 8 10 7 5 1; 10 7 5 8 8 2 8 1 10 3]
+    b = [34.0, 33.0, 31.0]
+    x_ = MOI.add_variables(model, m * n)
+    x = reshape(x_, m, n)
+    MOI.add_constraint.(model, x, MOI.ZeroOne())
+    f = MOI.Utilities.operate(
+        vcat,
+        Float64,
+        sum(p1 .* x),
+        sum(p2 .* x),
+        sum(p3 .* x),
+    )
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    for i in 1:m
+        f_i = sum(w[i, j] * x[i, j] for j in 1:n)
+        MOI.add_constraint(model, f_i, MOI.LessThan(b[i]))
+    end
+    for j in 1:n
+        MOI.add_constraint(model, sum(1.0 .* x[:, j]), MOI.EqualTo(1.0))
+    end
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 42
+    return
+end
+
 end  # module Problems

@@ -159,6 +159,7 @@ function minimize_multiobjective!(
         end
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
+            MOI.delete.(model, ε_constraints)
             return status, nothing
         end
         y_k = MOI.get(model.inner, MOI.ObjectiveValue())
@@ -171,6 +172,8 @@ function minimize_multiobjective!(
         )
         MOI.optimize!(model.inner)
         if !_is_scalar_status_optimal(model)
+            MOI.delete.(model, ε_constraints)
+            MOI.delete(model, y_k_constraint)
             return status, nothing
         end
         X, Y = _compute_point(model, variables, model.f)

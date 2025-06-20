@@ -30,13 +30,14 @@ function _solve_constrained_model(
     sets = MOI.LessThan.(rhs .- 1)
     c = MOI.Utilities.normalize_and_add_constraint.(model.inner, f, sets)
     MOI.optimize!(model.inner)
-    MOI.delete.(model, c)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
+        MOI.delete.(model, c)
         return status, nothing
     end
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     X, Y = _compute_point(model, variables, model.f)
+    MOI.delete.(model, c)
     return status, SolutionPoint(X, Y)
 end
 
