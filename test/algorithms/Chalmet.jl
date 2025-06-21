@@ -271,9 +271,7 @@ end
 
 function mock_optimizer(fail_after::Int)
     return () -> begin
-        model = MOI.Utilities.MockOptimizer(
-            MOI.Utilities.Model{Float64}(),
-        )
+        model = MOI.Utilities.MockOptimizer(MOI.Utilities.Model{Float64}())
         MOI.Utilities.set_mock_optimize!(
             model,
             ntuple(i -> _solve_mock, fail_after)...,
@@ -296,12 +294,7 @@ function test_solve_failures()
         x = reshape(x_, m, n)
         # MOI.add_constraint.(model, x, MOI.ZeroOne())
         MOI.add_constraint.(model, x, MOI.Interval(0.0, 1.0))
-        f = MOI.Utilities.operate(
-            vcat,
-            Float64,
-            sum(p1 .* x),
-            sum(p2 .* x),
-        )
+        f = MOI.Utilities.operate(vcat, Float64, sum(p1 .* x), sum(p2 .* x))
         MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
         for i in 1:m
