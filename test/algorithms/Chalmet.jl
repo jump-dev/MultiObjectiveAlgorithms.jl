@@ -11,6 +11,8 @@ import HiGHS
 import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
 
+include(joinpath(dirname(@__DIR__), "mock_optimizer.jl"))
+
 function run_tests()
     for name in names(@__MODULE__; all = true)
         if startswith("$name", "test_")
@@ -253,34 +255,6 @@ function test_single_point()
     return
 end
 
-function _solve_mock(mock)
-    highs = HiGHS.Optimizer()
-    MOI.set(highs, MOI.Silent(), true)
-    index_map = MOI.copy_to(highs, mock)
-    MOI.optimize!(highs)
-    x = [index_map[xi] for xi in MOI.get(mock, MOI.ListOfVariableIndices())]
-    MOI.Utilities.mock_optimize!(
-        mock,
-        MOI.get(highs, MOI.TerminationStatus()),
-        MOI.get(highs, MOI.VariablePrimal(), x),
-    )
-    obj = MOI.get(highs, MOI.ObjectiveValue())
-    MOI.set(mock, MOI.ObjectiveValue(), obj)
-    return
-end
-
-function mock_optimizer(fail_after::Int)
-    return () -> begin
-        model = MOI.Utilities.MockOptimizer(MOI.Utilities.Model{Float64}())
-        MOI.Utilities.set_mock_optimize!(
-            model,
-            ntuple(i -> _solve_mock, fail_after)...,
-            mock -> MOI.Utilities.mock_optimize!(mock, MOI.NUMERICAL_ERROR),
-        )
-        return model
-    end
-end
-
 function test_solve_failures()
     m, n = 2, 10
     p1 = [5.0 1 10 8 3 5 3 3 7 2; 10 6 1 6 8 3 2 10 6 1]
@@ -292,7 +266,6 @@ function test_solve_failures()
         MOI.set(model, MOA.Algorithm(), MOA.Chalmet())
         x_ = MOI.add_variables(model, m * n)
         x = reshape(x_, m, n)
-        # MOI.add_constraint.(model, x, MOI.ZeroOne())
         MOI.add_constraint.(model, x, MOI.Interval(0.0, 1.0))
         f = MOI.Utilities.operate(vcat, Float64, sum(p1 .* x), sum(p2 .* x))
         MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
