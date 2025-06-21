@@ -67,6 +67,10 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         MOI.LessThan(y1[2]),
     )
     MOI.optimize!(model.inner)
+    status = MOI.get(model.inner, MOI.TerminationStatus())
+    if !_is_scalar_status_optimal(status)
+        return status, nothing
+    end
     x1, y1[1] = _compute_point(model, variables, f1)
     MOI.delete(model.inner, y1_constraint)
     push!(solutions, SolutionPoint(x1, y1))
@@ -87,6 +91,10 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         MOI.LessThan(y2[1]),
     )
     MOI.optimize!(model.inner)
+    status = MOI.get(model.inner, MOI.TerminationStatus())
+    if !_is_scalar_status_optimal(status)
+        return status, nothing
+    end
     x2, y2[2] = _compute_point(model, variables, f2)
     MOI.delete(model.inner, y2_constraint)
     push!(solutions, SolutionPoint(x2, y2))
