@@ -59,6 +59,7 @@ The value must be one of the algorithms supported by MOA:
  * `MOA.Hierarchical()`
  * `MOA.KirlikSayin()`
  * `MOA.Lexicographic()` [default]
+ * `MOA.RandomWeighting()`
  * `MOA.TambyVanderpooten()`
 
 Consult their docstrings for details.
