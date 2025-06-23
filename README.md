@@ -40,6 +40,9 @@ set_attribute(model, MOA.Algorithm(), MOA.Dichotomy())
 set_attribute(model, MOA.SolutionLimit(), 4)
 ```
 
+For worked examples, see the [Simple multi-objective examples](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_examples/)
+tutorial in the JuMP documentation.
+
 Replace `HiGHS.Optimizer` with an optimizer capable of solving a
 single-objective instance of your optimization problem.
 
