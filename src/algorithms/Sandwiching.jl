@@ -1,5 +1,5 @@
-function _halfspaces(IPS::Vector{Vector{Float64}})
-    error("MOA.Sandwiching requires Polyhedra.jl to be loaded")
+function _halfspaces(IPS)
+    return error("MOA.Sandwiching requires Polyhedra.jl to be loaded")
 end
 
 mutable struct Sandwiching <: AbstractAlgorithm
@@ -80,7 +80,7 @@ function optimize_multiobjective!(algorithm::Sandwiching, model::Optimizer)
     @info "yI: $(yI)"
     @info "yUB: $(yUB)"
     IPS = [yUB, keys(anchors)...]
-    OPS = Tuple{Vector{Float64}, Float64}[]
+    OPS = Tuple{Vector{Float64},Float64}[]
     for i in 1:n
         e_i = Float64.(1:n .== i)
         push!(OPS, (e_i, yI[i])) # e_i' * y >= yI_i
@@ -90,17 +90,13 @@ function optimize_multiobjective!(algorithm::Sandwiching, model::Optimizer)
     @info "OPS: $(OPS)"
     u = MOI.add_variables(model.inner, n)
     u_constraints = [ # u_i >= 0 for all i = 1:n
-        MOI.add_constraint(
-            model.inner, 
-            u_i, 
-            MOI.GreaterThan{Float64}(0),
-        )
+        MOI.add_constraint(model.inner, u_i, MOI.GreaterThan{Float64}(0))
         for u_i in u
     ]
     f_constraints = [ # f_i + u_i <= yUB_i for all i = 1:n
         MOI.Utilities.normalize_and_add_constraint(
             model.inner,
-            scalars[i] + u[i], 
+            scalars[i] + u[i],
             MOI.LessThan(yUB[i]),
         ) for i in 1:n
     ]
@@ -116,7 +112,7 @@ function optimize_multiobjective!(algorithm::Sandwiching, model::Optimizer)
         @info "Selected halfspace: w: $(w), b: $(b)"
         @info "δ: $(δ)"
         if δ - tol > ε # added some convergence tolerance
-                       # would not terminate when precision is set to 0
+            # would not terminate when precision is set to 0
             new_f = sum(w[i] * (scalars[i] + u[i]) for i in 1:n) # w' * (f(x) + u)
             MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
             MOI.optimize!(model.inner)

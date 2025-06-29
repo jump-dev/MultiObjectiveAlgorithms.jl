@@ -18,7 +18,6 @@ function run_tests()
     return
 end
 
-
 # From International Doctoral School Algorithmic Decision Theory: MCDA and MOO
 # Lecture 2: Multiobjective Linear Programming
 # Matthias Ehrgott
@@ -55,8 +54,8 @@ function test_molp()
     end
     f = MOI.VectorAffineFunction(
         [
-            MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(C[i, j], x[j]))
-            for i in 1:p for j in 1:n
+            MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(C[i, j], x[j])) for
+            i in 1:p for j in 1:n
         ],
         zeros(p),
     )
@@ -64,11 +63,14 @@ function test_molp()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     N = MOI.get(model, MOI.ResultCount())
-    solutions = reverse([MOI.get(model, MOI.VariablePrimal(i), x) => MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N])
+    solutions = reverse([
+        MOI.get(model, MOI.VariablePrimal(i), x) =>
+            MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N
+    ])
     results = reverse([
-        [0., 0.] => [0., 0.],
-        [0., 3.] => [3., -6.],
-        [3., 3.] => [12., -9.],
+        [0.0, 0.0] => [0.0, 0.0],
+        [0.0, 3.0] => [3.0, -6.0],
+        [3.0, 3.0] => [12.0, -9.0],
     ])
     @test length(solutions) == length(results)
     for (sol, res) in zip(solutions, results)
