@@ -1,11 +1,16 @@
+#  Copyright 2019, Oscar Dowson and contributors
+#  This Source Code Form is subject to the terms of the Mozilla Public License,
+#  v.2.0. If a copy of the MPL was not distributed with this file, You can
+#  obtain one at http://mozilla.org/MPL/2.0/.
+
 module TestSandwiching
 
 using Test
 
 import HiGHS
-using Polyhedra
 import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
+import Polyhedra
 
 function run_tests()
     for name in names(@__MODULE__; all = true)
@@ -24,20 +29,12 @@ end
 # Department of Engineering Science, The University of Auckland, New Zealand
 # Laboratoire d’Informatique de Nantes Atlantique, CNRS, Universit´e de Nantes, France
 function test_molp()
-    C = Float64[
-        3 1
-        -1 -2
-    ]
+    C = Float64[3 1; -1 -2]
     p = size(C, 1)
-    A = Float64[
-        0 1
-        3 -1
-    ]
+    A = Float64[0 1; 3 -1]
     m, n = size(A)
     b = Float64[3, 6]
-    model = MOI.instantiate(; with_bridge_type = Float64) do
-        return MOA.Optimizer(HiGHS.Optimizer)
-    end
+    model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Sandwiching(0.0))
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, n)
@@ -79,8 +76,9 @@ function test_molp()
         @test ≈(x_sol, x_res; atol = 1e-6)
         @test ≈(y_sol, y_res; atol = 1e-6)
     end
+    return
 end
 
-end
+end  # TestSandwiching
 
 TestSandwiching.run_tests()

@@ -1,141 +1,23 @@
-function _halfspaces(IPS)
-    return error("MOA.Sandwiching requires Polyhedra.jl to be loaded")
-end
+#  Copyright 2019, Oscar Dowson and contributors
+#  This Source Code Form is subject to the terms of the Mozilla Public License,
+#  v.2.0. If a copy of the MPL was not distributed with this file, You can
+#  obtain one at http://mozilla.org/MPL/2.0/.
 
+"""
+    Sandwiching(precision::Float64)
+
+An algorithm that implemennts the paper described in XXX.
+
+## Compat
+
+To use this algorithm you MUST first load the Polyhedra.jl Julia package:
+
+```julia
+import MultiObjectiveAlgorithms as MOA
+import Polyhedra
+algorithm = MOA.Sandwiching(0.0)
+```
+"""
 mutable struct Sandwiching <: AbstractAlgorithm
     precision::Float64
-end
-
-tol = 1e-3
-
-function _compute_anchors(model::Optimizer)
-    anchors = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    n = MOI.output_dimension(model.f)
-    scalars = MOI.Utilities.scalarize(model.f)
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    yI, yUB = zeros(n), zeros(n)
-    for (i, f_i) in enumerate(scalars)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i) # ρ * sum(f_j for (j, f_j) in enumerate(model.f) if j != i)
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-        MOI.optimize!(model.inner)
-        # status check
-        X, Y = _compute_point(model, variables, model.f)
-        model.ideal_point[i] = Y[i]
-        yI[i] = Y[i]
-        anchors[Y] = X
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        MOI.optimize!(model.inner)
-        # status check
-        _, Y = _compute_point(model, variables, f_i)
-        yUB[i] = Y
-    end
-    MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    return yI, yUB, anchors
-end
-
-@enum DistanceMeasure SUB CUR SOL
-
-function _distance(w̄, b̄, OPS, model)
-    n = MOI.output_dimension(model.f)
-    optimizer = typeof(model.inner.optimizer)
-    δ_optimizer = optimizer()
-    MOI.set(δ_optimizer, MOI.Silent(), true)
-    x = MOI.add_variables(δ_optimizer, n)
-    for (w, b) in OPS
-        MOI.add_constraint(
-            δ_optimizer,
-            MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(w, x), 0.0),
-            MOI.GreaterThan(b),
-        )
-    end
-    MOI.set(
-        δ_optimizer,
-        MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),
-        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(w̄, x), 0.0),
-    )
-    MOI.set(δ_optimizer, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    MOI.optimize!(δ_optimizer)
-    δ = b̄ - MOI.get(δ_optimizer, MOI.ObjectiveValue())
-    return δ
-end
-
-function _select_next_halfspace(H, OPS, model)
-    distances = [_distance(w, b, OPS, model) for (w, b) in H]
-    @info "Distances: $(Dict(zip(H, distances)))"
-    index = argmax(distances)
-    w, b = H[index]
-    return distances[index], w, b
-end
-
-function optimize_multiobjective!(algorithm::Sandwiching, model::Optimizer)
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    ε = algorithm.precision
-    start_time = time()
-    solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    n = MOI.output_dimension(model.f)
-    scalars = MOI.Utilities.scalarize(model.f)
-    yI, yUB, anchors = _compute_anchors(model)
-    merge!(solutions, anchors)
-    @info "yI: $(yI)"
-    @info "yUB: $(yUB)"
-    IPS = [yUB, keys(anchors)...]
-    OPS = Tuple{Vector{Float64},Float64}[]
-    for i in 1:n
-        e_i = Float64.(1:n .== i)
-        push!(OPS, (e_i, yI[i])) # e_i' * y >= yI_i
-        push!(OPS, (-e_i, -yUB[i])) # -e_i' * y >= -yUB_i ⟹ e_i' * y <= yUB_i
-    end
-    @info "IPS: $(IPS)"
-    @info "OPS: $(OPS)"
-    u = MOI.add_variables(model.inner, n)
-    u_constraints = [ # u_i >= 0 for all i = 1:n
-        MOI.add_constraint(model.inner, u_i, MOI.GreaterThan{Float64}(0))
-        for u_i in u
-    ]
-    f_constraints = [ # f_i + u_i <= yUB_i for all i = 1:n
-        MOI.Utilities.normalize_and_add_constraint(
-            model.inner,
-            scalars[i] + u[i],
-            MOI.LessThan(yUB[i]),
-        ) for i in 1:n
-    ]
-    H = _halfspaces(IPS)
-
-    count = 0
-
-    while !isempty(H)
-        count += 1
-        @info "-- Iteration #$(count) --"
-        @info "HalfSpaces: $(H)"
-        δ, w, b = _select_next_halfspace(H, OPS, model)
-        @info "Selected halfspace: w: $(w), b: $(b)"
-        @info "δ: $(δ)"
-        if δ - tol > ε # added some convergence tolerance
-            # would not terminate when precision is set to 0
-            new_f = sum(w[i] * (scalars[i] + u[i]) for i in 1:n) # w' * (f(x) + u)
-            MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
-            MOI.optimize!(model.inner)
-            β̄ = MOI.get(model.inner, MOI.ObjectiveValue())
-            @info "β̄: $(β̄)"
-            X, Y = _compute_point(model, variables, model.f)
-            @info "Y: $(Y)"
-            solutions[Y] = X
-            push!(OPS, (w, β̄))
-            @info "Added halfspace w: $(w), b: $(β̄) to OPS"
-            IPS = push!(IPS, Y)
-        else
-            break
-        end
-        @info "IPS: $(IPS)"
-        @info "OPS: $(OPS)"
-        H = _halfspaces(IPS)
-        if count == 10
-            break
-        end
-    end
-    MOI.delete.(model.inner, f_constraints)
-    MOI.delete.(model.inner, u_constraints)
-    MOI.delete.(model.inner, u)
-    return MOI.OPTIMAL, [SolutionPoint(X, Y) for (Y, X) in solutions]
 end
