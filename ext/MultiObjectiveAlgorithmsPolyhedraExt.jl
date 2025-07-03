@@ -84,12 +84,8 @@ function MOA.minimize_multiobjective!(
         push!(OPS, (e_i, yI[i])) # e_i' * y >= yI_i
         push!(OPS, (-e_i, -yUB[i])) # -e_i' * y >= -yUB_i ⟹ e_i' * y <= yUB_i
     end
-    @info "yI: $(yI)"
-    @info "yUB: $(yUB)"
     IPS = [yUB, keys(anchors)...]
     merge!(solutions, anchors)
-    @info "IPS: $(IPS)"
-    @info "OPS: $(OPS)"
     u = MOI.add_variables(model.inner, n)
     u_constraints = [ # u_i >= 0 for all i = 1:n
         MOI.add_constraint(model.inner, u_i, MOI.GreaterThan{Float64}(0))
@@ -110,11 +106,7 @@ function MOA.minimize_multiobjective!(
             break
         end
         count += 1
-        @info "-- Iteration #$(count) --"
-        @info "HalfSpaces: $(H)"
         δ, w, b = _select_next_halfspace(H, OPS, model)
-        @info "Selected halfspace: w: $(w), b: $(b)"
-        @info "δ: $(δ)"
         if δ - 1e-3 <= algorithm.precision # added some convergence tolerance
             break
         end
@@ -128,15 +120,10 @@ function MOA.minimize_multiobjective!(
             return status, nothing
         end
         β̄ = MOI.get(model.inner, MOI.ObjectiveValue())
-        @info "β̄: $(β̄)"
         X, Y = MOA._compute_point(model, variables, model.f)
-        @info "Y: $(Y)"
         solutions[Y] = X
         push!(OPS, (w, β̄))
-        @info "Added halfspace w: $(w), b: $(β̄) to OPS"
         IPS = push!(IPS, Y)
-        @info "IPS: $(IPS)"
-        @info "OPS: $(OPS)"
         H = _halfspaces(IPS)
     end
     MOI.delete.(model.inner, f_constraints)
