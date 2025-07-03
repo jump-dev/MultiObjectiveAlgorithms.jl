@@ -6,7 +6,7 @@
 """
     Sandwiching(precision::Float64)
 
-An algorithm that implemennts the paper described in XXX.
+An algorithm that implemennts the paper described in Koenen, M., Balvert, M., & Fleuren, H. A. (2023). A Renewed Take on Weighted Sum in Sandwich Algorithms: Modification of the Criterion Space. (Center Discussion Paper; Vol. 2023-012). CentER, Center for Economic Research.
 
 ## Compat
 
