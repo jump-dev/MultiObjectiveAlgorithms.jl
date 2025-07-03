@@ -23,17 +23,9 @@ function run_tests()
     return
 end
 
-# From International Doctoral School Algorithmic Decision Theory: MCDA and MOO
-# Lecture 2: Multiobjective Linear Programming
-# Matthias Ehrgott
-# Department of Engineering Science, The University of Auckland, New Zealand
-# Laboratoire d’Informatique de Nantes Atlantique, CNRS, Universit´e de Nantes, France
-function test_molp()
-    C = Float64[3 1; -1 -2]
+function _test_molp(C, A, b, results, sense)
     p = size(C, 1)
-    A = Float64[0 1; 3 -1]
     m, n = size(A)
-    b = Float64[3, 6]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Sandwiching(0.0))
     MOI.set(model, MOI.Silent(), true)
@@ -56,20 +48,15 @@ function test_molp()
         ],
         zeros(p),
     )
-    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.ObjectiveSense(), sense)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     N = MOI.get(model, MOI.ResultCount())
-    solutions = reverse([
+    solutions = sort([
         MOI.get(model, MOI.VariablePrimal(i), x) =>
             MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N
     ])
-    results = reverse([
-        [0.0, 0.0] => [0.0, 0.0],
-        [0.0, 3.0] => [3.0, -6.0],
-        [3.0, 3.0] => [12.0, -9.0],
-    ])
-    @test length(solutions) == length(results)
+    @test N == length(results)
     for (sol, res) in zip(solutions, results)
         x_sol, y_sol = sol
         x_res, y_res = res
@@ -77,6 +64,41 @@ function test_molp()
         @test ≈(y_sol, y_res; atol = 1e-6)
     end
     return
+end
+
+# From International Doctoral School Algorithmic Decision Theory: MCDA and MOO
+# Lecture 2: Multiobjective Linear Programming
+# Matthias Ehrgott
+# Department of Engineering Science, The University of Auckland, New Zealand
+# Laboratoire d’Informatique de Nantes Atlantique, CNRS, Universit´e de Nantes, France
+function test_molp_1()
+    C = Float64[3 1; -1 -2]
+    A = Float64[0 1; 3 -1]
+    b = Float64[3, 6]
+    results = sort([
+        [0.0, 0.0] => [0.0, 0.0],
+        [0.0, 3.0] => [3.0, -6.0],
+        [3.0, 3.0] => [12.0, -9.0],
+    ])
+    sense = MOI.MIN_SENSE
+    return _test_molp(C, A, b, results, sense)
+end
+
+# From Civil and Environmental Systems Engineering
+# Chapter 5 Exercise 5.A.3 A graphical Interpretation of Noninferiority
+function test_molp_2()
+    C = Float64[3 -2; -1 2]
+    A = Float64[-4 -8; 3 -6; 4 -2; 1 0; -1 3; -2 4; -6 3]
+    b = Float64[-8, 6, 14, 6, 15, 18, 9]
+    results = sort([
+        [1.0, 5.0] => [-7.0, 9.0], # not sure about this
+        [3.0, 6.0] => [-3.0, 9.0],
+        [4.0, 1.0] => [10.0, -2.0],
+        [6.0, 5.0] => [8.0, 4.0],
+        [6.0, 7.0] => [4.0, 8.0],
+    ])
+    sense = MOI.MAX_SENSE
+    return _test_molp(C, A, b, results, sense)
 end
 
 end  # TestSandwiching

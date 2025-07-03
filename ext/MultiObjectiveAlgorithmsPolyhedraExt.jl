@@ -15,31 +15,6 @@ function _halfspaces(IPS::Vector{Vector{Float64}})
     return [(-H_i.a, -H_i.β) for H_i in H]
 end
 
-function _compute_anchors(model::MOA.Optimizer)
-    anchors = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    n = MOI.output_dimension(model.f)
-    scalars = MOI.Utilities.scalarize(model.f)
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    yI, yUB = zeros(n), zeros(n)
-    for (i, f_i) in enumerate(scalars)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.optimize!(model.inner)
-        # status check
-        X, Y = MOA._compute_point(model, variables, model.f)
-        model.ideal_point[i] = Y[i]
-        yI[i] = Y[i]
-        anchors[Y] = X
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        MOI.optimize!(model.inner)
-        # status check
-        _, Y = MOA._compute_point(model, variables, f_i)
-        yUB[i] = Y
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    end
-
-    return yI, yUB, anchors
-end
-
 function _distance(w̄, b̄, OPS, model)
     n = MOI.output_dimension(model.f)
     optimizer = typeof(model.inner.optimizer)
@@ -65,7 +40,6 @@ end
 
 function _select_next_halfspace(H, OPS, model)
     distances = [_distance(w, b, OPS, model) for (w, b) in H]
-    @info "Distances: $(Dict(zip(H, distances)))"
     index = argmax(distances)
     w, b = H[index]
     return distances[index], w, b
@@ -75,24 +49,45 @@ function MOA.minimize_multiobjective!(
     algorithm::MOA.Sandwiching,
     model::MOA.Optimizer,
 )
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    ε = algorithm.precision
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE    
     start_time = time()
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     n = MOI.output_dimension(model.f)
     scalars = MOI.Utilities.scalarize(model.f)
-    yI, yUB, anchors = _compute_anchors(model)
-    merge!(solutions, anchors)
-    @info "yI: $(yI)"
-    @info "yUB: $(yUB)"
-    IPS = [yUB, keys(anchors)...]
+    status = MOI.OPTIMAL
     OPS = Tuple{Vector{Float64},Float64}[]
-    for i in 1:n
+    anchors = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
+    yI, yUB = zeros(n), zeros(n)
+    for (i, f_i) in enumerate(scalars)
+        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
+        MOI.optimize!(model.inner)
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if !MOA._is_scalar_status_optimal(model)
+            return status, nothing
+        end
+        X, Y = MOA._compute_point(model, variables, model.f)
+        model.ideal_point[i] = Y[i]
+        yI[i] = Y[i]
+        anchors[Y] = X
+        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        MOI.optimize!(model.inner)
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if !MOA._is_scalar_status_optimal(model)
+            MOA._warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
+            return status, nothing
+        end
+        _, Y = MOA._compute_point(model, variables, f_i)
+        yUB[i] = Y
+        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         e_i = Float64.(1:n .== i)
         push!(OPS, (e_i, yI[i])) # e_i' * y >= yI_i
         push!(OPS, (-e_i, -yUB[i])) # -e_i' * y >= -yUB_i ⟹ e_i' * y <= yUB_i
     end
+    @info "yI: $(yI)"
+    @info "yUB: $(yUB)"
+    IPS = [yUB, keys(anchors)...]
+    merge!(solutions, anchors)
     @info "IPS: $(IPS)"
     @info "OPS: $(OPS)"
     u = MOI.add_variables(model.inner, n)
@@ -110,19 +105,28 @@ function MOA.minimize_multiobjective!(
     H = _halfspaces(IPS)
     count = 0
     while !isempty(H)
+        if MOA._time_limit_exceeded(model, start_time)
+            status = MOI.TIME_LIMIT
+            break
+        end
         count += 1
         @info "-- Iteration #$(count) --"
         @info "HalfSpaces: $(H)"
         δ, w, b = _select_next_halfspace(H, OPS, model)
         @info "Selected halfspace: w: $(w), b: $(b)"
         @info "δ: $(δ)"
-        if δ - 1e-3 <= ε # added some convergence tolerance
+        if δ - 1e-3 <= algorithm.precision # added some convergence tolerance
             break
         end
         # would not terminate when precision is set to 0
         new_f = sum(w[i] * (scalars[i] + u[i]) for i in 1:n) # w' * (f(x) + u)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOI.optimize!(model.inner)
+        status = MOI.get(model.inner, MOI.TerminationStatus())
+        if !MOA._is_scalar_status_optimal(model)
+            MOA._warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
+            return status, nothing
+        end
         β̄ = MOI.get(model.inner, MOI.ObjectiveValue())
         @info "β̄: $(β̄)"
         X, Y = MOA._compute_point(model, variables, model.f)
@@ -134,9 +138,6 @@ function MOA.minimize_multiobjective!(
         @info "IPS: $(IPS)"
         @info "OPS: $(OPS)"
         H = _halfspaces(IPS)
-        if count == 10
-            break
-        end
     end
     MOI.delete.(model.inner, f_constraints)
     MOI.delete.(model.inner, u_constraints)
