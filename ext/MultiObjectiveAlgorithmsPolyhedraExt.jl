@@ -116,7 +116,6 @@ function MOA.minimize_multiobjective!(
         MOI.optimize!(model.inner)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
-            MOA._warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
             return status, nothing
         end
         β̄ = MOI.get(model.inner, MOI.ObjectiveValue())
@@ -129,7 +128,7 @@ function MOA.minimize_multiobjective!(
     MOI.delete.(model.inner, f_constraints)
     MOI.delete.(model.inner, u_constraints)
     MOI.delete.(model.inner, u)
-    return MOI.OPTIMAL, [MOA.SolutionPoint(X, Y) for (Y, X) in solutions]
+    return status, [MOA.SolutionPoint(X, Y) for (Y, X) in solutions]
 end
 
 end  # module MultiObjectiveAlgorithmsPolyhedraExt
