@@ -49,7 +49,7 @@ function MOA.minimize_multiobjective!(
     algorithm::MOA.Sandwiching,
     model::MOA.Optimizer,
 )
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE    
+    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     start_time = time()
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
