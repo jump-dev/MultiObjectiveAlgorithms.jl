@@ -15,31 +15,20 @@ function _halfspaces(IPS::Vector{Vector{Float64}})
     return [(-H_i.a, -H_i.β) for H_i in H]
 end
 
-function _distance(w̄, b̄, OPS, model)
-    n = MOI.output_dimension(model.f)
-    optimizer = typeof(model.inner.optimizer)
-    δ_optimizer = optimizer()
-    MOI.set(δ_optimizer, MOI.Silent(), true)
-    x = MOI.add_variables(δ_optimizer, n)
-    for (w, b) in OPS
-        MOI.add_constraint(
-            δ_optimizer,
-            MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(w, x), 0.0),
-            MOI.GreaterThan(b),
-        )
-    end
+function _distance(w̄, b̄, δ_OPS_optimizer)
+    y = MOI.get(δ_OPS_optimizer, MOI.ListOfVariableIndices())
     MOI.set(
-        δ_optimizer,
+        δ_OPS_optimizer,
         MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),
-        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(w̄, x), 0.0),
+        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(w̄, y), 0.0),
     )
-    MOI.set(δ_optimizer, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    MOI.optimize!(δ_optimizer)
-    return b̄ - MOI.get(δ_optimizer, MOI.ObjectiveValue())
+    MOI.set(δ_OPS_optimizer, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(δ_OPS_optimizer)
+    return b̄ - MOI.get(δ_OPS_optimizer, MOI.ObjectiveValue())
 end
 
-function _select_next_halfspace(H, OPS, model)
-    distances = [_distance(w, b, OPS, model) for (w, b) in H]
+function _select_next_halfspace(H, δ_OPS_optimizer)
+    distances = [_distance(w, b, δ_OPS_optimizer) for (w, b) in H]
     index = argmax(distances)
     w, b = H[index]
     return distances[index], w, b
@@ -56,7 +45,10 @@ function MOA.minimize_multiobjective!(
     n = MOI.output_dimension(model.f)
     scalars = MOI.Utilities.scalarize(model.f)
     status = MOI.OPTIMAL
-    OPS = Tuple{Vector{Float64},Float64}[]
+    optimizer = typeof(model.inner.optimizer)
+    δ_OPS_optimizer = optimizer()
+    MOI.set(δ_OPS_optimizer, MOI.Silent(), true)
+    y = MOI.add_variables(δ_OPS_optimizer, n)
     anchors = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     yI, yUB = zeros(n), zeros(n)
     for (i, f_i) in enumerate(scalars)
@@ -81,8 +73,16 @@ function MOA.minimize_multiobjective!(
         yUB[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         e_i = Float64.(1:n .== i)
-        push!(OPS, (e_i, yI[i])) # e_i' * y >= yI_i
-        push!(OPS, (-e_i, -yUB[i])) # -e_i' * y >= -yUB_i ⟹ e_i' * y <= yUB_i
+        MOI.add_constraint(
+            δ_OPS_optimizer,
+            MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(e_i, y), 0.0),
+            MOI.GreaterThan(yI[i]),
+        )
+        MOI.add_constraint(
+            δ_OPS_optimizer,
+            MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(e_i, y), 0.0),
+            MOI.LessThan(yUB[i]),
+        )
     end
     IPS = [yUB, keys(anchors)...]
     merge!(solutions, anchors)
@@ -106,7 +106,7 @@ function MOA.minimize_multiobjective!(
             break
         end
         count += 1
-        δ, w, b = _select_next_halfspace(H, OPS, model)
+        δ, w, b = _select_next_halfspace(H, δ_OPS_optimizer)
         if δ - 1e-3 <= algorithm.precision # added some convergence tolerance
             break
         end
@@ -121,7 +121,11 @@ function MOA.minimize_multiobjective!(
         β̄ = MOI.get(model.inner, MOI.ObjectiveValue())
         X, Y = MOA._compute_point(model, variables, model.f)
         solutions[Y] = X
-        push!(OPS, (w, β̄))
+        MOI.add_constraint(
+            δ_OPS_optimizer,
+            MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(w, y), 0.0),
+            MOI.GreaterThan(β̄),
+        )
         IPS = push!(IPS, Y)
         H = _halfspaces(IPS)
     end
