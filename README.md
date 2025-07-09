@@ -94,3 +94,19 @@ Computing the ideal point requires as many solves as the dimension of the
 objective function. Thus, if you do not need the ideal point information, you
 can improve the performance of MOA by setting the `MOA.ComputeIdealPoint()`
 attribute to `false`.
+
+## Citation
+
+If you use this package for academic research, please cite the [following preprint](https://www.arxiv.org/abs/2507.05501):
+
+```bibtex
+@misc{dowson2025MOA.jl,
+      title={MultiObjectiveAlgorithms.jl: a Julia package for solving multi-objective optimization problems},
+      author={Oscar Dowson and Xavier Gandibleux and G{\"o}khan Kof},
+      year={2025},
+      eprint={2507.05501},
+      archivePrefix={arXiv},
+      primaryClass={math.OC},
+      url={https://arxiv.org/abs/2507.05501}
+}
+```
