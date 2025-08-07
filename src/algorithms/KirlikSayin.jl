@@ -169,7 +169,9 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         end
         X, Y = _compute_point(model, variables, model.f)
         Y_proj = _project(Y, k)
-        if !(Y in YN)
+        # We want `if !(Y in YN)` but this tests exact equality. We want
+        # an approximate comparison.
+        if all(!isapprox(Y; atol = 1e-6), YN)
             push!(solutions, SolutionPoint(X, Y))
             push!(YN, Y)
             L = _update_list(L, Y_proj)

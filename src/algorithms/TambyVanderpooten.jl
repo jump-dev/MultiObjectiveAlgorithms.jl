@@ -180,7 +180,9 @@ function minimize_multiobjective!(
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, y_k_constraint)
         push!(V[k], (u, Y))
-        if Y ∉ U_N[u][k]
+        # We want `if !(Y in U_N[u][k])` but this tests exact equality. We want
+        # an approximate comparison.
+        if all(!isapprox(Y; atol = 1e-6), U_N[u][k])
             _update_search_region(U_N, Y, yN)
             solutions[Y] = X
         end
@@ -205,6 +207,5 @@ function minimize_multiobjective!(
             end
         end
     end
-    solutions_vec = [SolutionPoint(X, Y) for (Y, X) in solutions]
-    return status, filter_nondominated(MOI.MIN_SENSE, solutions_vec)
+    return status, [SolutionPoint(X, Y) for (Y, X) in solutions]
 end
