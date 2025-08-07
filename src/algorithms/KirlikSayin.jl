@@ -169,9 +169,6 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         end
         X, Y = _compute_point(model, variables, model.f)
         Y_proj = _project(Y, k)
-        # We want `if !(Y in YN)` but this tests exact equality. We want
-        # an approximate comparison.
-        # if all(!isapprox(Y; atol = 1e-6), YN)
         if !(Y in YN)
             push!(solutions, SolutionPoint(X, Y))
             push!(YN, Y)
@@ -181,5 +178,5 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, zₖ_constraint)
     end
-    return status, solutions
+    return status, filter_nondominated(MOI.MIN_SENSE, solutions)
 end
