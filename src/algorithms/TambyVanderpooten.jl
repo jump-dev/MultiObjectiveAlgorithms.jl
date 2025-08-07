@@ -187,12 +187,12 @@ function minimize_multiobjective!(
         bounds_to_remove = Vector{Float64}[]
         for u_i in keys(U_N)
             for k in 1:n
-                if u_i[k] == yI[k]
+                if isapprox(u_i[k], yI[k]; atol = 1e-6)
                     push!(bounds_to_remove, u_i)
                 else
                     for (u_j, y_j) in V[k]
                         if all(_project(u_i, k) .<= _project(u_j, k)) &&
-                           (y_j[k] == u_i[k])
+                           isapprox(y_j[k], u_i[k]; atol = 1e-6)
                             push!(bounds_to_remove, u_i)
                         end
                     end
@@ -205,6 +205,6 @@ function minimize_multiobjective!(
             end
         end
     end
-    solutions = [SolutionPoint(X, Y) for (Y, X) in solutions]
-    return status, solutions
+    solutions_vec = [SolutionPoint(X, Y) for (Y, X) in solutions]
+    return status, filter_nondominated(MOI.MIN_SENSE, solutions_vec)
 end

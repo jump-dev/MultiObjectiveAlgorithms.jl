@@ -472,4 +472,31 @@ function test_issue_122(model)
     return
 end
 
+function test_issue_133()
+    #!format: off
+    p = Float64[
+        33 90 96 75 1 69 100 50 63 61 59 95 58 10 77 30 86 89 82 51 38 33 73 54 91 89 95 82 48 67
+        55 36 80 58 20 96 75 57 24 68 37 58 8 85 27 25 71 53 47 72 57 64 1 8 12 68 3 80 20 90
+        22 40 50 73 44 65 12 26 13 77 14 68 71 35 54 98 45 95 98 19 18 38 14 51 37 48 35 97 95 36
+    ]
+    w = Float64[
+        22, 13, 10, 25, 4, 15, 17, 15, 15, 28, 14, 13, 2, 23, 6, 22, 18, 6, 23,
+        21, 7, 7, 14, 4, 3, 27, 10, 5, 9, 10
+    ]
+    #!format: on
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.TambyVanderpooten())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, length(w))
+    MOI.add_constraint.(model, x, MOI.ZeroOne())
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.vectorize(p * x)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, w' * x, MOI.LessThan(204.0))
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.ResultCount()) == 95
+    return
+end
+
 end  # module Problems
