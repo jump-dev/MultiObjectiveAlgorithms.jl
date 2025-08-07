@@ -472,7 +472,7 @@ function test_issue_122(model)
     return
 end
 
-function test_issue_133()
+function test_issue_133(model)
     #!format: off
     p = Float64[
         33 90 96 75 1 69 100 50 63 61 59 95 58 10 77 30 86 89 82 51 38 33 73 54 91 89 95 82 48 67
@@ -484,9 +484,6 @@ function test_issue_133()
         21, 7, 7, 14, 4, 3, 27, 10, 5, 9, 10
     ]
     #!format: on
-    model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.TambyVanderpooten())
-    MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
     MOI.add_constraint.(model, x, MOI.ZeroOne())
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
