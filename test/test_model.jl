@@ -216,10 +216,7 @@ function test_SubproblemCount()
     MOI.add_constraint(model, x[2], MOI.LessThan(3.0))
     MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    f = MOI.Utilities.vectorize([
-        3.0 * x[1] + x[2],
-        -1.0 * x[1] - 2.0 * x[2],
-    ])
+    f = MOI.Utilities.vectorize([3.0 * x[1] + x[2], -1.0 * x[1] - 2.0 * x[2]])
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     @test MOI.get(model, MOA.SubproblemCount()) > 0
