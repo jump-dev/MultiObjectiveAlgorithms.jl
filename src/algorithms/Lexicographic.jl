@@ -104,7 +104,7 @@ function _solve_in_sequence(
         end
         f = scalars[i]
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         primal_status = MOI.get(model.inner, MOI.PrimalStatus())
         if _is_scalar_status_feasible_point(primal_status)

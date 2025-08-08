@@ -57,6 +57,7 @@ function _test_molp(C, A, b, results, sense)
             MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N
     ])
     @test N == length(results)
+    @test MOI.get(model, MOA.SubproblemCount()) >= length(results)
     for (sol, res) in zip(solutions, results)
         x_sol, y_sol = sol
         x_res, y_res = res

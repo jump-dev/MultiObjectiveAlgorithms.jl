@@ -206,6 +206,25 @@ function test_ideal_point()
     return
 end
 
+function test_SubproblemCount()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    @test MOI.get(model, MOA.SubproblemCount()) == 0
+    @test MOI.is_set_by_optimize(MOA.SubproblemCount())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x[2], MOI.LessThan(3.0))
+    MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.vectorize([3.0 * x[1] + x[2], -1.0 * x[1] - 2.0 * x[2]])
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOA.SubproblemCount()) > 0
+    MOI.empty!(model)
+    @test MOI.get(model, MOA.SubproblemCount()) == 0
+    return
+end
+
 end  # module
 
 TestModel.run_tests()

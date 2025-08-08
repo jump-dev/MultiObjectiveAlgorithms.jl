@@ -252,6 +252,7 @@ function test_single_point()
     @test MOI.get(model, MOI.ResultCount()) == 1
     @test MOI.get(model, MOI.PrimalStatus()) == MOI.FEASIBLE_POINT
     @test ≈(MOI.get(model, MOI.VariablePrimal(), x), [1.0, 1.0]; atol = 1e-6)
+    @test MOI.get(model, MOA.SubproblemCount()) >= 1
     return
 end
 

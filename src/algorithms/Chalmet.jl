@@ -29,7 +29,7 @@ function _solve_constrained_model(
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(g)}(), g)
     sets = MOI.LessThan.(rhs .- 1)
     c = MOI.Utilities.normalize_and_add_constraint.(model.inner, f, sets)
-    MOI.optimize!(model.inner)
+    optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         MOI.delete.(model, c)
@@ -54,7 +54,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     f1, f2 = MOI.Utilities.scalarize(model.f)
     y1, y2 = zeros(2), zeros(2)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
-    MOI.optimize!(model.inner)
+    optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
@@ -66,7 +66,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         f2,
         MOI.LessThan(y1[2]),
     )
-    MOI.optimize!(model.inner)
+    optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
@@ -75,7 +75,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     MOI.delete(model.inner, y1_constraint)
     push!(solutions, SolutionPoint(x1, y1))
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
-    MOI.optimize!(model.inner)
+    optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
@@ -90,7 +90,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         f1,
         MOI.LessThan(y2[1]),
     )
-    MOI.optimize!(model.inner)
+    optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing

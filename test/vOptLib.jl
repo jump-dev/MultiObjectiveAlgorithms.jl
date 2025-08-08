@@ -8,6 +8,7 @@ module vOptLib
 using Test
 import JSON
 import MathOptInterface as MOI
+import MultiObjectiveAlgorithms as MOA
 
 function run_tests(model::MOI.ModelLike; kwargs...)
     for name in names(@__MODULE__; all = true)
@@ -40,6 +41,7 @@ function _test_vOptLib_instance(model, instance; complete::Bool = true)
     end
     min_solutions = complete ? length(solutions) : 1
     @test MOI.get(model, MOI.ResultCount()) >= min_solutions
+    @test MOI.get(model, MOA.SubproblemCount()) >= min_solutions
     for i in 1:MOI.get(model, MOI.ResultCount())
         Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(i)))
         @test haskey(solutions, Y)

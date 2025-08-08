@@ -7,6 +7,7 @@ module Problems
 
 using Test
 import MathOptInterface as MOI
+import MultiObjectiveAlgorithms as MOA
 
 function run_tests(model::MOI.ModelLike)
     for name in names(@__MODULE__; all = true)
@@ -391,6 +392,7 @@ function test_problem_assignment_max_p3(model)
         [0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0] => [50, 40, 32],
     ])
     @test MOI.get(model, MOI.ResultCount()) == length(results)
+    @test MOI.get(model, MOA.SubproblemCount()) >= length(results)
     for (i, (x_sol, y_sol)) in enumerate(results)
         x_primal = MOI.get(model, MOI.VariablePrimal(i), vec(x))
         @test ≈(vec(x_sol), x_primal; atol = 1e-6)
@@ -428,6 +430,7 @@ function test_problem_issue_105(model)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.ResultCount()) == 6
+    @test MOI.get(model, MOA.SubproblemCount()) >= 6
     for (i, y) in enumerate([
         [2380.0, 81.0, 18.0],
         [2440.0, 78.0, 18.0],
@@ -469,6 +472,7 @@ function test_issue_122(model)
     end
     MOI.optimize!(model)
     @test MOI.get(model, MOI.ResultCount()) == 42
+    @test MOI.get(model, MOA.SubproblemCount()) >= 42
     return
 end
 
@@ -493,6 +497,7 @@ function test_issue_133(model)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
     @test MOI.get(model, MOI.ResultCount()) == 95
+    @test MOI.get(model, MOA.SubproblemCount()) >= 95
     return
 end
 

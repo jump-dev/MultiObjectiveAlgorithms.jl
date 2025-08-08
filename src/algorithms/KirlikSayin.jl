@@ -93,7 +93,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     for (i, f_i) in enumerate(scalars)
         # Ideal point
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
@@ -102,7 +102,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         model.ideal_point[i] = yI[i] = Y
         # Nadir point
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             # Repair ObjectiveSense before exiting
@@ -143,7 +143,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             )
             push!(ε_constraints, ci)
         end
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
             MOI.delete.(model, ε_constraints)
@@ -160,7 +160,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             scalars[k],
             MOI.EqualTo(zₖ),
         )
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             MOI.delete.(model, ε_constraints)
             MOI.delete(model, zₖ_constraint)

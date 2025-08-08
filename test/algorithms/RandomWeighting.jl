@@ -78,6 +78,7 @@ function test_knapsack_min()
         [0, 0, 1, 1, 1, 0, 1, 1, 1, 1] => [-2854, -4636],
     ]
     @test MOI.get(model, MOI.ResultCount()) == length(results)
+    @test MOI.get(model, MOA.SubproblemCount()) >= 3
     for (i, (x_sol, y_sol)) in enumerate(results)
         @test ≈(x_sol, MOI.get(model, MOI.VariablePrimal(i), x); atol = 1e-6)
         @test ≈(y_sol, MOI.get(model, MOI.ObjectiveValue(i)); atol = 1e-6)

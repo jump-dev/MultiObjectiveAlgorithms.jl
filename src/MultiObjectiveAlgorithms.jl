@@ -123,6 +123,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solve_time::Float64
     ideal_point::Vector{Float64}
     compute_ideal_point::Bool
+    subproblem_count::Int
 
     function Optimizer(optimizer_factory)
         return new(
@@ -135,6 +136,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             NaN,
             Float64[],
             default(ComputeIdealPoint()),
+            0,
         )
     end
 end
@@ -146,6 +148,7 @@ function MOI.empty!(model::Optimizer)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.solve_time = NaN
     empty!(model.ideal_point)
+    model.subproblem_count = 0
     return
 end
 
@@ -394,6 +397,20 @@ end
 
 MOI.get(model::Optimizer, ::ComputeIdealPoint) = model.compute_ideal_point
 
+### SubproblemCount
+
+"""
+    SubproblemCount <: AbstractModelAttribute -> Int
+
+A result attribute for querying the total number of subproblem solves by an
+algorithm.
+"""
+struct SubproblemCount <: MOI.AbstractModelAttribute end
+
+MOI.is_set_by_optimize(::SubproblemCount) = true
+
+MOI.get(model::Optimizer, ::SubproblemCount) = model.subproblem_count
+
 ### RawOptimizerAttribute
 
 function MOI.supports(model::Optimizer, attr::MOI.RawOptimizerAttribute)
@@ -573,6 +590,18 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
     return
 end
 
+"""
+    optimize_inner!(model::Optimizer)
+
+A function that must be called instead of `MOI.optimize!(model.inner)` because
+it also increments the `subproblem_count`.
+"""
+function optimize_inner!(model::Optimizer)
+    MOI.optimize!(model.inner)
+    model.subproblem_count += 1
+    return
+end
+
 function _compute_ideal_point(model::Optimizer, start_time)
     for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
         if _time_limit_exceeded(model, start_time)
@@ -582,7 +611,7 @@ function _compute_ideal_point(model::Optimizer, start_time)
             continue  # The algorithm already updated this information
         end
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if _is_scalar_status_optimal(status)
             model.ideal_point[i] = MOI.get(model.inner, MOI.ObjectiveValue())
@@ -619,6 +648,7 @@ function MOI.optimize!(model::Optimizer)
     start_time = time()
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
+    model.subproblem_count = 0
     if model.f === nothing
         model.termination_status = MOI.INVALID_MODEL
         empty!(model.ideal_point)

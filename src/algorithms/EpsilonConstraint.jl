@@ -116,7 +116,7 @@ function minimize_multiobjective!(
             break
         end
         MOI.set(model, MOI.ConstraintSet(), ci, MOI.LessThan{Float64}(bound))
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             break
         end
