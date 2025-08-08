@@ -7,6 +7,7 @@ module Problems
 
 using Test
 import MathOptInterface as MOI
+import MultiObjectiveAlgorithms as MOA
 
 function run_tests(model::MOI.ModelLike)
     for name in names(@__MODULE__; all = true)
