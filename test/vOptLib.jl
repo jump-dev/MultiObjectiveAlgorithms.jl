@@ -8,6 +8,7 @@ module vOptLib
 using Test
 import JSON
 import MathOptInterface as MOI
+import MultiObjectiveAlgorithms as MOA
 
 function run_tests(model::MOI.ModelLike; kwargs...)
     for name in names(@__MODULE__; all = true)
