@@ -406,6 +406,7 @@ function test_vector_of_variables_objective()
     MOI.add_constraint(model, sum(1.0 * xi for xi in x), MOI.GreaterThan(1.0))
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOA.SubproblemCount()) >= 1
     return
 end
 

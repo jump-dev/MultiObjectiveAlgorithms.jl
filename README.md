@@ -85,6 +85,10 @@ the solution process.
  * `MOA.SolutionLimit()`
  * `MOI.TimeLimitSec()`
 
+Query the number of scalar subproblems that were solved using
+
+ * `MOA.SubproblemCount()`
+
 ## Ideal point
 
 By default, MOA will compute the ideal point, which can be queried using the

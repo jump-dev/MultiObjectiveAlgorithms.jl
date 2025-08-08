@@ -53,7 +53,7 @@ function MOA.minimize_multiobjective!(
     yI, yUB = zeros(n), zeros(n)
     for (i, f_i) in enumerate(scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.optimize!(model.inner)
+        MOA.optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
             return status, nothing
@@ -63,7 +63,7 @@ function MOA.minimize_multiobjective!(
         yI[i] = Y[i]
         anchors[Y] = X
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        MOI.optimize!(model.inner)
+        MOA.optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
             MOA._warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
@@ -113,7 +113,7 @@ function MOA.minimize_multiobjective!(
         # would not terminate when precision is set to 0
         new_f = sum(w[i] * (scalars[i] + u[i]) for i in 1:n) # w' * (f(x) + u)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
-        MOI.optimize!(model.inner)
+        MOA.optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
             return status, nothing

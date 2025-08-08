@@ -57,6 +57,7 @@ function test_knapsack()
     @test ≈(x_sol, [0.9, 0, 0.9, 0.2]; atol = 1e-3)
     y_sol = MOI.get(model, MOI.ObjectiveValue())
     @test ≈(y_sol, P * x_sol .+ [0.0, 0.0, 0.0, 1_000.0]; atol = 1e-4)
+    @test MOI.get(model, MOA.SubproblemCount()) >= 1
     return
 end
 

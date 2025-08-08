@@ -99,7 +99,7 @@ function minimize_multiobjective!(
     for (i, f_i) in enumerate(scalars)
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
@@ -108,7 +108,7 @@ function minimize_multiobjective!(
         yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             _warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
@@ -157,7 +157,7 @@ function minimize_multiobjective!(
                 end
             end
         end
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             MOI.delete.(model, ε_constraints)
             return status, nothing
@@ -170,7 +170,7 @@ function minimize_multiobjective!(
             scalars[k],
             MOI.EqualTo(y_k),
         )
-        MOI.optimize!(model.inner)
+        optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             MOI.delete.(model, ε_constraints)
             MOI.delete(model, y_k_constraint)
