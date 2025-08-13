@@ -198,6 +198,55 @@ function test_knapsack_time_limit()
     return
 end
 
+function test_knapsack_5_objectives()
+    P = Float64[
+        1 0 0 0;
+        0 1 0 0;
+        0 0 1 0;
+        0 0 0 1;
+        1 1 1 1;
+    ]
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    @test_logs (:warn,) MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 6
+    results = [
+        [0, 0, 1, 1, 2] => [0, 0, 1, 1],
+        [0, 1, 0, 1, 2] => [0, 1, 0, 1],
+        [0, 1, 1, 0, 2] => [0, 1, 1, 0],
+        [1, 0, 0, 1, 2] => [1, 0, 0, 1],
+        [1, 0, 1, 0, 2] => [1, 0, 1, 0],
+        [1, 1, 0, 0, 2] => [1, 1, 0, 0],
+    ]
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        X = round.(Int, MOI.get(model, MOI.VariablePrimal(i), x))
+        Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(i)))
+        @test results[i] == (Y => X)
+    end
+    MOI.set(model, MOA.LexicographicAllPermutations(), true)
+    @test_nowarn MOI.optimize!(model)
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        X = round.(Int, MOI.get(model, MOI.VariablePrimal(i), x))
+        Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(i)))
+        @test results[i] == (Y => X)
+    end
+    MOI.set(model, MOA.LexicographicAllPermutations(), false)
+    @test_nowarn MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 1
+    X = round.(Int, MOI.get(model, MOI.VariablePrimal(1), x))
+    Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(1)))
+    @test ([1, 1, 0, 0, 2] => [1, 1, 0, 0]) == (Y => X)
+    return
+end
+
 end  # module TestLexicographic
 
 TestLexicographic.run_tests()

@@ -364,7 +364,7 @@ Controls whether to return the lexicographic solution for all permutations of
 the scalar objectives (when `true`), or only the solution corresponding to the
 lexicographic solution of the original objective function (when `false`).
 
-Defaults to true`.
+Defaults to `true`.
 """
 struct LexicographicAllPermutations <: AbstractAlgorithmAttribute end
 
