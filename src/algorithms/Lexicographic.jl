@@ -124,8 +124,8 @@ function _solve_in_sequence(
     solution = SolutionPoint[]
     status = MOI.OPTIMAL
     for i in sequence
-        if _time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            status = ret
             break
         end
         f = scalars[i]

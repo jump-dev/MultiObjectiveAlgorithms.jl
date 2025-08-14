@@ -111,8 +111,8 @@ function minimize_multiobjective!(
     bound -= constant
     status = MOI.OPTIMAL
     for _ in 3:n_points
-        if _time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            status = ret
             break
         end
         MOI.set(model, MOI.ConstraintSet(), ci, MOI.LessThan{Float64}(bound))

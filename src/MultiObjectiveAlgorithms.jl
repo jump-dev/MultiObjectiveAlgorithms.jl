@@ -185,21 +185,6 @@ function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, ::Nothing)
     return
 end
 
-function _time_limit_exceeded(model::Optimizer, start_time::Float64)
-    time_limit = MOI.get(model, MOI.TimeLimitSec())
-    if time_limit === nothing
-        return false
-    end
-    time_remaining = time_limit - (time() - start_time)
-    if time_remaining <= 0
-        return true
-    end
-    if MOI.supports(model.inner, MOI.TimeLimitSec())
-        MOI.set(model.inner, MOI.TimeLimitSec(), time_remaining)
-    end
-    return false
-end
-
 ### SolveTimeSec
 
 function MOI.get(model::Optimizer, ::MOI.SolveTimeSec)
@@ -604,7 +589,7 @@ end
 
 function _compute_ideal_point(model::Optimizer, start_time)
     for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
-        if _time_limit_exceeded(model, start_time)
+        if _check_premature_termination(model, start_time) !== nothing
             return
         end
         if !isnan(model.ideal_point[i])
@@ -644,7 +629,39 @@ function optimize_multiobjective!(
     return minimize_multiobjective!(algorithm, model)
 end
 
+function _check_interrupt(f)
+    try
+        return reenable_sigint(f)
+    catch ex
+        if !(ex isa InterruptException)
+            rethrow(ex)
+        end
+        return MOI.INTERRUPTED
+    end
+end
+
+function _check_premature_termination(model::Optimizer, start_time::Float64)
+    return _check_interrupt() do
+        time_limit = MOI.get(model, MOI.TimeLimitSec())
+        if time_limit !== nothing
+            time_remaining = time_limit - (time() - start_time)
+            if time_remaining <= 0
+                return MOI.TIME_LIMIT
+            end
+            if MOI.supports(model.inner, MOI.TimeLimitSec())
+                MOI.set(model.inner, MOI.TimeLimitSec(), time_remaining)
+            end
+        end
+        return
+    end
+end
+
 function MOI.optimize!(model::Optimizer)
+    disable_sigint(() -> _optimize!(model))
+    return
+end
+
+function _optimize!(model::Optimizer)
     start_time = time()
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED

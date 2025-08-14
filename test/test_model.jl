@@ -225,6 +225,15 @@ function test_SubproblemCount()
     return
 end
 
+function test_check_interrupt()
+    function _test_check_interrupt(err)
+        return disable_sigint(() -> MOA._check_interrupt(() -> throw(err)))
+    end
+    @test _test_check_interrupt(InterruptException()) == MOI.INTERRUPTED
+    @test_throws ArgumentError("") _test_check_interrupt(ArgumentError(""))
+    return
+end
+
 end  # module
 
 TestModel.run_tests()

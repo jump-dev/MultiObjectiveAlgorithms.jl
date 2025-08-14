@@ -183,8 +183,8 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     k = 0
     status = MOI.OPTIMAL
     while any(!isempty(l) for l in L)
-        if _time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            status = ret
             break
         end
         i, k = _select_next_box(L, k)

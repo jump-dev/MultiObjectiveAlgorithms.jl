@@ -101,8 +101,8 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     push!(Q, (1, 2))
     t = 3
     while !isempty(Q)
-        if _time_limit_exceeded(model, start_time)
-            return MOI.TIME_LIMIT, solutions
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            return ret, solutions
         end
         r, s = pop!(Q)
         yr, ys = solutions[r].y, solutions[s].y
