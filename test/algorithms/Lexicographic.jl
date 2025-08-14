@@ -199,13 +199,7 @@ function test_knapsack_time_limit()
 end
 
 function test_knapsack_5_objectives()
-    P = Float64[
-        1 0 0 0;
-        0 1 0 0;
-        0 0 1 0;
-        0 0 0 1;
-        1 1 1 1;
-    ]
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1; 1 1 1 1]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
     MOI.set(model, MOI.Silent(), true)
