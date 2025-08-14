@@ -440,6 +440,24 @@ function test_solve_failures()
     return
 end
 
+function test_scalar_time_limit()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
+    MOI.set(model, MOI.Silent(), true)
+    MOI.set(model, MOI.TimeLimitSec(), 0.0)
+    MOI.Utilities.loadfromstring!(
+        model,
+        """
+        variables: x
+        minobjective: [2 * x]
+        x >= 0.0
+        """,
+    )
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.TIME_LIMIT
+    return
+end
+
 end  # module TestDichotomy
 
 TestDichotomy.run_tests()
