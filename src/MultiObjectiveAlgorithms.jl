@@ -629,13 +629,21 @@ function optimize_multiobjective!(
     return minimize_multiobjective!(algorithm, model)
 end
 
-function _check_premature_termination(model::Optimizer, start_time::Float64)
+function _check_interrupt(f)
     try
-        return reenable_sigint() do
-            time_limit = MOI.get(model, MOI.TimeLimitSec())
-            if time_limit === nothing
-                return
-            end
+        return reenable_sigint(f)
+    catch ex
+        if !(ex isa InterruptException)
+            rethrow(ex)
+        end
+        return MOI.INTERRUPTED
+    end
+end
+
+function _check_premature_termination(model::Optimizer, start_time::Float64)
+    return _check_interrupt() do
+        time_limit = MOI.get(model, MOI.TimeLimitSec())
+        if time_limit !== nothing
             time_remaining = time_limit - (time() - start_time)
             if time_remaining <= 0
                 return MOI.TIME_LIMIT
@@ -643,15 +651,9 @@ function _check_premature_termination(model::Optimizer, start_time::Float64)
             if MOI.supports(model.inner, MOI.TimeLimitSec())
                 MOI.set(model.inner, MOI.TimeLimitSec(), time_remaining)
             end
-            return
         end
-    catch ex
-        if ex isa InterruptException
-            return MOI.INTERRUPTED
-        end
-        rethrow(ex)
+        return
     end
-    return nothing  # no termination
 end
 
 function MOI.optimize!(model::Optimizer)
