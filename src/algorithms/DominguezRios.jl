@@ -186,6 +186,9 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break
+        elseif _check_interrupt()
+            status = MOI.INTERRUPTED
+            break
         end
         i, k = _select_next_box(L, k)
         B = L[k][i]

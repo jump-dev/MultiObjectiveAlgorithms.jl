@@ -79,6 +79,8 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     if MOI.output_dimension(model.f) == 1
         if _time_limit_exceeded(model, start_time)
             return MOI.TIME_LIMIT, nothing
+        elseif _check_interrupt()
+            return MOI.INTERRUPTED, nothing
         end
         status, solution = _solve_weighted_sum(model, algorithm, [1.0])
         return status, [solution]
@@ -87,6 +89,8 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     for (i, w) in (1 => 1.0, 2 => 0.0)
         if _time_limit_exceeded(model, start_time)
             return MOI.TIME_LIMIT, nothing
+        elseif _check_interrupt()
+            return MOI.INTERRUPTED, nothing
         end
         status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
@@ -106,14 +110,16 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break
+        elseif _check_interrupt()
+            status = MOI.INTERRUPTED
+            break
         end
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
         status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
-            # Exit the solve with some error.
-            return status, nothing
+            break # Exit the solve with some error.
         elseif solution ≈ solutions[a] || solution ≈ solutions[b]
             # We have found an existing solution. We're free to prune (a, b)
             # from the search space.

@@ -114,6 +114,9 @@ function minimize_multiobjective!(
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break
+        elseif _check_interrupt()
+            status = MOI.INTERRUPTED
+            break
         end
         MOI.set(model, MOI.ConstraintSet(), ci, MOI.LessThan{Float64}(bound))
         optimize_inner!(model)

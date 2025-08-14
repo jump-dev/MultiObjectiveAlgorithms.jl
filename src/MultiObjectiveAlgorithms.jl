@@ -644,7 +644,24 @@ function optimize_multiobjective!(
     return minimize_multiobjective!(algorithm, model)
 end
 
+function _check_interrupt()
+    try
+        reenable_sigint(() -> nothing)
+    catch ex
+        if ex isa InterruptException
+            return true
+        end
+        rethrow(ex)
+    end
+    return false
+end
+
 function MOI.optimize!(model::Optimizer)
+    disable_sigint(() -> _optimize!(model))
+    return
+end
+
+function _optimize!(model::Optimizer)
     start_time = time()
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED

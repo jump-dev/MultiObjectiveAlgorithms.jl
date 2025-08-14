@@ -127,6 +127,9 @@ function _solve_in_sequence(
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break
+        elseif _check_interrupt()
+            status = MOI.INTERRUPTED
+            break
         end
         f = scalars[i]
         MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)

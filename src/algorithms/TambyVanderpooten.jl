@@ -126,6 +126,9 @@ function minimize_multiobjective!(
         if _time_limit_exceeded(model, start_time)
             status = MOI.TIME_LIMIT
             break
+        elseif _check_interrupt()
+            status = MOI.INTERRUPTED
+            break
         end
         k, u = _select_search_zone(U_N, yI, yN)
         MOI.set(

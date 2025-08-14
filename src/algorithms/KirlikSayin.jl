@@ -118,7 +118,11 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     status = MOI.OPTIMAL
     while !isempty(L)
         if _time_limit_exceeded(model, start_time)
-            return MOI.TIME_LIMIT, solutions
+            status = MOI.TIME_LIMIT
+            break
+        elseif _check_interrupt()
+            status = MOI.INTERRUPTED
+            break
         end
         max_volume_index = argmax([_volume(Rᵢ, _project(yI, k)) for Rᵢ in L])
         uᵢ = L[max_volume_index].u
