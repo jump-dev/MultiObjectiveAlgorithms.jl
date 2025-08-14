@@ -25,7 +25,7 @@ point on the frontier, corresponding to solving each objective in order.
 """
 mutable struct Lexicographic <: AbstractAlgorithm
     rtol::Vector{Float64}
-    all_permutations::Bool
+    all_permutations::Union{Nothing,Bool}
 
     function Lexicographic(; all_permutations::Union{Nothing,Bool} = nothing)
         if all_permutations !== nothing
@@ -35,7 +35,7 @@ mutable struct Lexicographic <: AbstractAlgorithm
                 "option to `$all_permutations` instead.",
             )
         end
-        return new(Float64[], default(LexicographicAllPermutations()))
+        return new(Float64[], nothing)
     end
 end
 
@@ -67,8 +67,34 @@ end
 function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     start_time = time()
     sequence = 1:MOI.output_dimension(model.f)
-    if !MOI.get(algorithm, LexicographicAllPermutations())
+    perm = MOI.get(algorithm, LexicographicAllPermutations())
+    if !something(perm, default(LexicographicAllPermutations()))
         return _solve_in_sequence(algorithm, model, sequence, start_time)
+    end
+    if perm === nothing && length(sequence) >= 5
+        o, n = length(sequence), factorial(length(sequence))
+        @warn(
+            """
+            The `MOA.Lexicographic` algorithm has been called with the default
+            option for `MOA.LexicographicAllPermutations()`.
+
+            Because there are $o objectives, the algorithm will solve all
+            $(o)! = $n permutations of the objectives.
+
+            To solve only a single sequence corresponding to the lexicographic
+            order of the objective function, set `MOA.LexicographicAllPermutations()`
+            to `false`:
+            ```julia
+            set_attribute(model, MOA.LexicographicAllPermutations(), false)
+            ```
+
+            To disable this warning, explicitly opt-in to all permutations by
+            setting it to `true`:
+            ```julia
+            set_attribute(model, MOA.LexicographicAllPermutations(), true)
+            ```
+            """,
+        )
     end
     solutions = SolutionPoint[]
     status = MOI.OPTIMAL
