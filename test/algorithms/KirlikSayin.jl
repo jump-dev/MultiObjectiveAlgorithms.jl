@@ -171,7 +171,7 @@ function test_solve_failures()
         end
         MOI.optimize!(model)
         @test MOI.get(model, MOI.TerminationStatus()) ==
-             (fail_after <= 3 ? MOI.NUMERICAL_ERROR : MOI.OPTIMAL)
+              (fail_after <= 3 ? MOI.NUMERICAL_ERROR : MOI.OPTIMAL)
         @test MOI.get(model, MOI.ResultCount()) == 0
     end
     return
