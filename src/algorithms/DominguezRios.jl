@@ -57,8 +57,8 @@ function _p_partition(
     ẑ = max.(z, B.l)
     ret = _DominguezRiosBox[]
     for i in 1:length(z)
-        new_l = vcat(B.l[1:i], ẑ[(i+1):end])
-        new_u = vcat(B.u[1:(i-1)], ẑ[i], B.u[(i+1):end])
+        new_l = vcat(B.l[1:i], ẑ[i+1:end])
+        new_u = vcat(B.u[1:i-1], ẑ[i], B.u[i+1:end])
         new_priority = _reduced_scaled_priority(new_l, new_u, i, ẑ, yI, yN)
         push!(ret, _DominguezRiosBox(new_l, new_u, new_priority))
     end
