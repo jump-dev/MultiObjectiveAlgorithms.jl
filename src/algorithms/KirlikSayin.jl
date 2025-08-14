@@ -146,6 +146,8 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         end
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
+            # If this fails, it likely means that the solver experienced a
+            # numerical error with this box. Just skip it.
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
             MOI.delete.(model, ε_constraints)
             continue
@@ -163,6 +165,8 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         )
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
+            # If this fails, it likely means that the solver experienced a
+            # numerical error with this box. Just skip it.
             MOI.delete.(model, ε_constraints)
             MOI.delete(model, zₖ_constraint)
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
