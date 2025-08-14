@@ -60,10 +60,9 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
     #   * then the outer loop goes again
     while length(solutions) < MOI.get(algorithm, SolutionLimit())
         while length(solutions) < MOI.get(algorithm, SolutionLimit())
-            if _time_limit_exceeded(model, start_time)
-                return MOI.TIME_LIMIT, filter_nondominated(sense, solutions)
-            elseif _check_interrupt()
-                return MOI.INTERRUPTED, filter_nondominated(sense, solutions)
+            ret = _check_premature_termination(model, start_time)
+            if ret !== nothing
+                return ret, filter_nondominated(sense, solutions)
             end
             weights = rand(P)
             f = _scalarise(model.f, weights)

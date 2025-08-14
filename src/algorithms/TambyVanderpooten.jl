@@ -123,11 +123,8 @@ function minimize_multiobjective!(
     U_N[yN] = [[_get_child(yN, yI, k)] for k in 1:n]
     status = MOI.OPTIMAL
     while !isempty(U_N)
-        if _time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
-            break
-        elseif _check_interrupt()
-            status = MOI.INTERRUPTED
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            status = ret
             break
         end
         k, u = _select_search_zone(U_N, yI, yN)

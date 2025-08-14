@@ -77,20 +77,16 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         error("Only scalar or bi-objective problems supported.")
     end
     if MOI.output_dimension(model.f) == 1
-        if _time_limit_exceeded(model, start_time)
-            return MOI.TIME_LIMIT, nothing
-        elseif _check_interrupt()
-            return MOI.INTERRUPTED, nothing
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            return ret, nothing
         end
         status, solution = _solve_weighted_sum(model, algorithm, [1.0])
         return status, [solution]
     end
     solutions = Dict{Float64,SolutionPoint}()
     for (i, w) in (1 => 1.0, 2 => 0.0)
-        if _time_limit_exceeded(model, start_time)
-            return MOI.TIME_LIMIT, nothing
-        elseif _check_interrupt()
-            return MOI.INTERRUPTED, nothing
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            return ret, nothing
         end
         status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
@@ -107,11 +103,8 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     limit = MOI.get(algorithm, SolutionLimit())
     status = MOI.OPTIMAL
     while length(queue) > 0 && length(solutions) < limit
-        if _time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
-            break
-        elseif _check_interrupt()
-            status = MOI.INTERRUPTED
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            status = ret
             break
         end
         (a, b) = popfirst!(queue)

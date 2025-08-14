@@ -101,8 +101,9 @@ function MOA.minimize_multiobjective!(
     H = _halfspaces(IPS)
     count = 0
     while !isempty(H)
-        if MOA._time_limit_exceeded(model, start_time)
-            status = MOI.TIME_LIMIT
+        ret = MOA._check_premature_termination(model, start_time)
+        if ret !== nothing
+            status = ret
             break
         end
         count += 1
