@@ -160,6 +160,8 @@ function minimize_multiobjective!(
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             MOI.delete.(model, ε_constraints)
+            # If this fails, it likely means that the solver experienced a
+            # numerical error with this box. Just skip it.
             return status, nothing
         end
         y_k = MOI.get(model.inner, MOI.ObjectiveValue())
@@ -172,6 +174,8 @@ function minimize_multiobjective!(
         )
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
+            # If this fails, it likely means that the solver experienced a
+            # numerical error with this box. Just skip it.
             MOI.delete.(model, ε_constraints)
             MOI.delete(model, y_k_constraint)
             return status, nothing

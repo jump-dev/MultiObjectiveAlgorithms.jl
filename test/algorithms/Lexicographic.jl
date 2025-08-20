@@ -49,6 +49,33 @@ function test_knapsack()
     return
 end
 
+function test_caching_optimizer_knapsack()
+    model = MOI.instantiate(
+        () -> MOA.Optimizer(HiGHS.Optimizer);
+        with_cache_type = Float64,
+    )
+    P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1; 0 0 1 0]
+    MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+    @test MOI.supports(model, MOA.LexicographicAllPermutations())
+    @test MOI.supports(model, MOA.ObjectiveRelativeTolerance(1))
+    MOI.set(model, MOA.LexicographicAllPermutations(), false)
+    MOI.set(model, MOA.ObjectiveRelativeTolerance(1), 0.1)
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 4)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    f = MOI.Utilities.operate(vcat, Float64, P * x...)
+    f.constants[4] = 1_000.0
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.add_constraint(model, sum(1.0 * x[i] for i in 1:4), MOI.LessThan(2.0))
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.ResultCount()) == 1
+    x_sol = MOI.get(model, MOI.VariablePrimal(), x)
+    @test ≈(x_sol, [0.9, 1, 0, 0.1]; atol = 1e-3)
+    return
+end
+
 function test_knapsack_default()
     P = Float64[1 0 0 0; 0 1 0 0; 0 0 0 1]
     model = MOA.Optimizer(HiGHS.Optimizer)
