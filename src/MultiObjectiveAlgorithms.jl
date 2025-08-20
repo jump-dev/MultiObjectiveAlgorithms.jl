@@ -266,6 +266,7 @@ end
 const SolutionLimit = MOI.SolutionLimit
 
 default(::MOI.SolutionLimit) = typemax(Int)
+default(::AbstractAlgorithm, attr::MOI.SolutionLimit) = default(attr)
 
 """
     ObjectivePriority(index::Int) <: AbstractAlgorithmAttribute -> Int
