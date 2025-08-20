@@ -234,6 +234,11 @@ function test_check_interrupt()
     return
 end
 
+function test_SolutionLimit()
+    @test MOI.SolutionLimit === MOA.SolutionLimit
+    return
+end
+
 end  # module
 
 TestModel.run_tests()

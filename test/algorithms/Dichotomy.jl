@@ -28,12 +28,12 @@ end
 function test_Dichotomy_SolutionLimit()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
-    @test MOI.supports(MOA.Dichotomy(), MOA.SolutionLimit())
-    @test MOI.supports(model, MOA.SolutionLimit())
-    @test MOI.get(model, MOA.SolutionLimit()) ==
-          MOA.default(MOA.SolutionLimit())
-    MOI.set(model, MOA.SolutionLimit(), 1)
-    @test MOI.get(model, MOA.SolutionLimit()) == 1
+    @test MOI.supports(MOA.Dichotomy(), MOI.SolutionLimit())
+    @test MOI.supports(model, MOI.SolutionLimit())
+    @test MOI.get(model, MOI.SolutionLimit()) ==
+          MOA.default(MOI.SolutionLimit())
+    MOI.set(model, MOI.SolutionLimit(), 1)
+    @test MOI.get(model, MOI.SolutionLimit()) == 1
     return
 end
 
@@ -371,7 +371,7 @@ function test_quadratic()
     N = 2
     model = MOA.Optimizer(Ipopt.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
-    MOI.set(model, MOA.SolutionLimit(), 10)
+    MOI.set(model, MOI.SolutionLimit(), 10)
     MOI.set(model, MOI.Silent(), true)
     w = MOI.add_variables(model, N)
     MOI.add_constraint.(model, w, MOI.GreaterThan(0.0))

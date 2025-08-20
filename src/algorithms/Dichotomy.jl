@@ -16,7 +16,7 @@ Science 25(1), 73-78.
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
    list of current solutions.
 
- * `MOA.SolutionLimit()`: terminate once this many solutions have been found.
+ * `MOI.SolutionLimit()`: terminate once this many solutions have been found.
 """
 mutable struct Dichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
@@ -39,18 +39,18 @@ trade‐offs: An algorithm for bicriterion problems. Water Resources Research,
 
 ## Supported optimizer attributes
 
- * `MOA.SolutionLimit()`
+ * `MOI.SolutionLimit()`
 """
 NISE() = Dichotomy()
 
-MOI.supports(::Dichotomy, ::SolutionLimit) = true
+MOI.supports(::Dichotomy, ::MOI.SolutionLimit) = true
 
-function MOI.set(alg::Dichotomy, ::SolutionLimit, value)
+function MOI.set(alg::Dichotomy, ::MOI.SolutionLimit, value)
     alg.solution_limit = value
     return
 end
 
-function MOI.get(alg::Dichotomy, attr::SolutionLimit)
+function MOI.get(alg::Dichotomy, attr::MOI.SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
@@ -100,7 +100,7 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     if !(solutions[0.0] ≈ solutions[1.0])
         push!(queue, (0.0, 1.0))
     end
-    limit = MOI.get(algorithm, SolutionLimit())
+    limit = MOI.get(algorithm, MOI.SolutionLimit())
     status = MOI.OPTIMAL
     while length(queue) > 0 && length(solutions) < limit
         if (ret = _check_premature_termination(model, start_time)) !== nothing

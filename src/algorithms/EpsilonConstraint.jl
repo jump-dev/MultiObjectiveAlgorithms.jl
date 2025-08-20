@@ -16,12 +16,15 @@ bi-objective programs.
    default is `1`, so that for a pure integer program this algorithm will
    enumerate all non-dominated solutions.
 
- * `MOA.SolutionLimit()`: if this attribute is set then, instead of using the
+ * `MOI.SolutionLimit()`: if this attribute is set then, instead of using the
    `MOA.EpsilonConstraintStep`, with a slight abuse of notation,
    `EpsilonConstraint` divides the width of the first-objective's domain in
-   objective space by `SolutionLimit` to obtain the epsilon to use when
-   iterating. Thus, there can be at most `SolutionLimit` solutions returned, but
-   there may be fewer.
+   objective space by `MOI.SolutionLimit` to obtain the epsilon to use when
+   iterating. Thus, there can be at most `MOI.SolutionLimit` solutions returned,
+   but there may be fewer.
+
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+   list of current solutions.
 """
 mutable struct EpsilonConstraint <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
@@ -30,14 +33,14 @@ mutable struct EpsilonConstraint <: AbstractAlgorithm
     EpsilonConstraint() = new(nothing, nothing)
 end
 
-MOI.supports(::EpsilonConstraint, ::SolutionLimit) = true
+MOI.supports(::EpsilonConstraint, ::MOI.SolutionLimit) = true
 
-function MOI.set(alg::EpsilonConstraint, ::SolutionLimit, value)
+function MOI.set(alg::EpsilonConstraint, ::MOI.SolutionLimit, value)
     alg.solution_limit = value
     return
 end
 
-function MOI.get(alg::EpsilonConstraint, attr::SolutionLimit)
+function MOI.get(alg::EpsilonConstraint, attr::MOI.SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
@@ -91,8 +94,8 @@ function minimize_multiobjective!(
     model.ideal_point .= min.(solution_1[1].y, solution_2[1].y)
     # Compute the epsilon that we will be incrementing by each iteration
     ε = MOI.get(algorithm, EpsilonConstraintStep())
-    n_points = MOI.get(algorithm, SolutionLimit())
-    if n_points != default(algorithm, SolutionLimit())
+    n_points = MOI.get(algorithm, MOI.SolutionLimit())
+    if n_points != default(algorithm, MOI.SolutionLimit())
         ε = abs(right - left) / (n_points - 1)
     end
     solutions = SolutionPoint[only(solution_1), only(solution_2)]

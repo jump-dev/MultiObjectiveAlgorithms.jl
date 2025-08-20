@@ -263,16 +263,9 @@ function MOI.get(model::Optimizer, attr::AbstractAlgorithmAttribute)
     return MOI.get(model.algorithm, attr)
 end
 
-"""
-    SolutionLimit <: AbstractAlgorithmAttribute -> Int
+const SolutionLimit = MOI.SolutionLimit
 
-Terminate the algorithm once the set number of solutions have been found.
-
-Defaults to `typemax(Int)`.
-"""
-struct SolutionLimit <: AbstractAlgorithmAttribute end
-
-default(::SolutionLimit) = typemax(Int)
+default(::MOI.SolutionLimit) = typemax(Int)
 
 """
     ObjectivePriority(index::Int) <: AbstractAlgorithmAttribute -> Int

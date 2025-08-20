@@ -33,7 +33,7 @@ function test_error_attribute()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     @test_throws(
         ErrorException(
-            "At least `MOI.TimeLimitSec` or `MOA.SolutionLimit` must be set",
+            "At least `MOI.TimeLimitSec` or `MOI.SolutionLimit` must be set",
         ),
         MOI.optimize!(model),
     )
@@ -50,7 +50,7 @@ function test_knapsack_min()
     w = Float64[557, 898, 148, 63, 78, 964, 246, 662, 386, 272]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.RandomWeighting())
-    MOI.set(model, MOA.SolutionLimit(), 3)
+    MOI.set(model, MOI.SolutionLimit(), 3)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, n)
     MOI.add_constraint.(model, x, MOI.ZeroOne())
@@ -97,7 +97,7 @@ function test_knapsack_max()
     w = Float64[557, 898, 148, 63, 78, 964, 246, 662, 386, 272]
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.RandomWeighting())
-    MOI.set(model, MOA.SolutionLimit(), 3)
+    MOI.set(model, MOI.SolutionLimit(), 3)
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, n)
     MOI.add_constraint.(model, x, MOI.ZeroOne())
@@ -174,8 +174,8 @@ function test_unbounded()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.RandomWeighting())
     MOI.set(model, MOI.Silent(), true)
-    @test MOI.supports(model, MOA.SolutionLimit())
-    MOI.set(model, MOA.SolutionLimit(), 10)
+    @test MOI.supports(model, MOI.SolutionLimit())
+    MOI.set(model, MOI.SolutionLimit(), 10)
     x = MOI.add_variables(model, 2)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
     f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)

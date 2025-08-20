@@ -37,7 +37,7 @@ import HiGHS
 import MultiObjectiveAlgorithms as MOA
 model = JuMP.Model(() -> MOA.Optimizer(HiGHS.Optimizer))
 set_attribute(model, MOA.Algorithm(), MOA.Dichotomy())
-set_attribute(model, MOA.SolutionLimit(), 4)
+set_attribute(model, MOI.SolutionLimit(), 4)
 ```
 
 For worked examples, see the [Simple multi-objective examples](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_examples/)
@@ -82,7 +82,7 @@ the solution process.
  * `MOA.ObjectivePriority(index::Int)`
  * `MOA.ObjectiveRelativeTolerance(index::Int)`
  * `MOA.ObjectiveWeight(index::Int)`
- * `MOA.SolutionLimit()`
+ * `MOI.SolutionLimit()`
  * `MOI.TimeLimitSec()`
 
 Query the number of scalar subproblems that were solved using

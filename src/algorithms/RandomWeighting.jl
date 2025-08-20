@@ -14,7 +14,7 @@ random weights.
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
    list of current solutions.
 
- * `MOA.SolutionLimit()`: terminate once this many solutions have been found.
+ * `MOI.SolutionLimit()`: terminate once this many solutions have been found.
 
 At least one of these two limits must be set.
 """
@@ -23,21 +23,21 @@ mutable struct RandomWeighting <: AbstractAlgorithm
     RandomWeighting() = new(nothing)
 end
 
-MOI.supports(::RandomWeighting, ::SolutionLimit) = true
+MOI.supports(::RandomWeighting, ::MOI.SolutionLimit) = true
 
-function MOI.set(alg::RandomWeighting, ::SolutionLimit, value)
+function MOI.set(alg::RandomWeighting, ::MOI.SolutionLimit, value)
     alg.solution_limit = value
     return
 end
 
-function MOI.get(alg::RandomWeighting, attr::SolutionLimit)
+function MOI.get(alg::RandomWeighting, attr::MOI.SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
 function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
     if MOI.get(model, MOI.TimeLimitSec()) === nothing &&
        algorithm.solution_limit === nothing
-        error("At least `MOI.TimeLimitSec` or `MOA.SolutionLimit` must be set")
+        error("At least `MOI.TimeLimitSec` or `MOI.SolutionLimit` must be set")
     end
     start_time = time()
     solutions = SolutionPoint[]
