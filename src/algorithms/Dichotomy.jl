@@ -18,11 +18,7 @@ Science 25(1), 73-78.
 
  * `MOI.SolutionLimit()`: terminate once this many solutions have been found.
 """
-mutable struct Dichotomy <: AbstractAlgorithm
-    solution_limit::Union{Nothing,Int}
-
-    Dichotomy() = new(nothing)
-end
+mutable struct Dichotomy <: AbstractAlgorithm end
 
 """
     NISE()
@@ -42,17 +38,6 @@ trade‐offs: An algorithm for bicriterion problems. Water Resources Research,
  * `MOI.SolutionLimit()`
 """
 NISE() = Dichotomy()
-
-MOI.supports(::Dichotomy, ::MOI.SolutionLimit) = true
-
-function MOI.set(alg::Dichotomy, ::MOI.SolutionLimit, value)
-    alg.solution_limit = value
-    return
-end
-
-function MOI.get(alg::Dichotomy, attr::MOI.SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
-end
 
 function _solve_weighted_sum(
     model::Optimizer,
@@ -100,7 +85,7 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     if !(solutions[0.0] ≈ solutions[1.0])
         push!(queue, (0.0, 1.0))
     end
-    limit = MOI.get(algorithm, MOI.SolutionLimit())
+    limit = something(MOI.get(model, MOI.SolutionLimit()), typemax(Int))
     status = MOI.OPTIMAL
     while length(queue) > 0 && length(solutions) < limit
         if (ret = _check_premature_termination(model, start_time)) !== nothing

@@ -120,6 +120,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
     time_limit_sec::Union{Nothing,Float64}
+    solution_limit::Union{Nothing,Int}
     solve_time::Float64
     ideal_point::Vector{Float64}
     compute_ideal_point::Bool
@@ -133,6 +134,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             nothing,
             SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
+            nothing,
             nothing,
             NaN,
             Float64[],
@@ -184,6 +186,24 @@ end
 
 function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, ::Nothing)
     model.time_limit_sec = nothing
+    return
+end
+
+### SolutionLimit
+
+const SolutionLimit = MOI.SolutionLimit
+
+MOI.supports(::Optimizer, ::MOI.SolutionLimit) = true
+
+MOI.get(model::Optimizer, ::MOI.SolutionLimit) = model.solution_limit
+
+function MOI.set(model::Optimizer, ::MOI.SolutionLimit, value::Integer)
+    model.solution_limit = Int(value)
+    return
+end
+
+function MOI.set(model::Optimizer, ::MOI.SolutionLimit, ::Nothing)
+    model.solution_limit = nothing
     return
 end
 
@@ -262,11 +282,6 @@ end
 function MOI.get(model::Optimizer, attr::AbstractAlgorithmAttribute)
     return MOI.get(model.algorithm, attr)
 end
-
-const SolutionLimit = MOI.SolutionLimit
-
-default(::MOI.SolutionLimit) = typemax(Int)
-default(::AbstractAlgorithm, attr::MOI.SolutionLimit) = default(attr)
 
 """
     ObjectivePriority(index::Int) <: AbstractAlgorithmAttribute -> Int

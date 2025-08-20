@@ -18,21 +18,7 @@ random weights.
 
 At least one of these two limits must be set.
 """
-mutable struct RandomWeighting <: AbstractAlgorithm
-    solution_limit::Union{Nothing,Int}
-    RandomWeighting() = new(nothing)
-end
-
-MOI.supports(::RandomWeighting, ::MOI.SolutionLimit) = true
-
-function MOI.set(alg::RandomWeighting, ::MOI.SolutionLimit, value)
-    alg.solution_limit = value
-    return
-end
-
-function MOI.get(alg::RandomWeighting, attr::MOI.SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
-end
+mutable struct RandomWeighting <: AbstractAlgorithm end
 
 function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
     if MOI.get(model, MOI.TimeLimitSec()) === nothing &&
@@ -42,39 +28,25 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
     start_time = time()
     solutions = SolutionPoint[]
     sense = MOI.get(model, MOI.ObjectiveSense())
-    P = MOI.output_dimension(model.f)
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    f = _scalarise(model.f, ones(P))
-    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
-    optimize_inner!(model)
-    status = MOI.get(model.inner, MOI.TerminationStatus())
-    if _is_scalar_status_optimal(status)
-        X, Y = _compute_point(model, variables, model.f)
-        push!(solutions, SolutionPoint(X, Y))
-    else
-        return status, nothing
-    end
-    # This double loop is a bit weird:
-    #   * the inner loop fills up SolutionLimit number of solutions. Then we cut
-    #     it back to nondominated.
-    #   * then the outer loop goes again
-    while length(solutions) < MOI.get(algorithm, SolutionLimit())
-        while length(solutions) < MOI.get(algorithm, SolutionLimit())
-            ret = _check_premature_termination(model, start_time)
-            if ret !== nothing
-                return ret, filter_nondominated(sense, solutions)
-            end
-            weights = rand(P)
-            f = _scalarise(model.f, weights)
-            MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
-            optimize_inner!(model)
-            status = MOI.get(model.inner, MOI.TerminationStatus())
-            if _is_scalar_status_optimal(status)
-                X, Y = _compute_point(model, variables, model.f)
-                push!(solutions, SolutionPoint(X, Y))
-            end
+    limit = something(MOI.get(model, MOI.SolutionLimit()), typemax(Int))
+    status = MOI.OPTIMAL
+    while length(solutions) < limit
+        if (ret = _check_premature_termination(model, start_time)) !== nothing
+            status = ret
+            break
         end
-        solutions = filter_nondominated(sense, solutions)
+        weights = rand(MOI.output_dimension(model.f))
+        f = _scalarise(model.f, weights)
+        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+        optimize_inner!(model)
+        if _is_scalar_status_optimal(model)
+            X, Y = _compute_point(model, variables, model.f)
+            push!(solutions, SolutionPoint(X, Y))
+        end
+        if length(solutions) == limit
+            solutions = filter_nondominated(sense, solutions)
+        end
     end
-    return MOI.OPTIMAL, filter_nondominated(sense, solutions)
+    return status, filter_nondominated(sense, solutions)
 end

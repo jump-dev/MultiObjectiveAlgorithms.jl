@@ -27,21 +27,9 @@ bi-objective programs.
    list of current solutions.
 """
 mutable struct EpsilonConstraint <: AbstractAlgorithm
-    solution_limit::Union{Nothing,Int}
     atol::Union{Nothing,Float64}
 
-    EpsilonConstraint() = new(nothing, nothing)
-end
-
-MOI.supports(::EpsilonConstraint, ::MOI.SolutionLimit) = true
-
-function MOI.set(alg::EpsilonConstraint, ::MOI.SolutionLimit, value)
-    alg.solution_limit = value
-    return
-end
-
-function MOI.get(alg::EpsilonConstraint, attr::MOI.SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
+    EpsilonConstraint() = new(nothing)
 end
 
 MOI.supports(::EpsilonConstraint, ::EpsilonConstraintStep) = true
@@ -94,8 +82,9 @@ function minimize_multiobjective!(
     model.ideal_point .= min.(solution_1[1].y, solution_2[1].y)
     # Compute the epsilon that we will be incrementing by each iteration
     ε = MOI.get(algorithm, EpsilonConstraintStep())
-    n_points = MOI.get(algorithm, MOI.SolutionLimit())
-    if n_points != default(algorithm, MOI.SolutionLimit())
+    n_points = MOI.get(model, MOI.SolutionLimit())
+    if n_points === nothing
+        n_points = typemax(Int)
         ε = abs(right - left) / (n_points - 1)
     end
     solutions = SolutionPoint[only(solution_1), only(solution_2)]

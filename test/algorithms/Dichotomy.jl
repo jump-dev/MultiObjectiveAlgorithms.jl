@@ -28,10 +28,8 @@ end
 function test_Dichotomy_SolutionLimit()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.Dichotomy())
-    @test MOI.supports(MOA.Dichotomy(), MOI.SolutionLimit())
     @test MOI.supports(model, MOI.SolutionLimit())
-    @test MOI.get(model, MOI.SolutionLimit()) ==
-          MOA.default(MOI.SolutionLimit())
+    @test MOI.get(model, MOI.SolutionLimit()) == nothing
     MOI.set(model, MOI.SolutionLimit(), 1)
     @test MOI.get(model, MOI.SolutionLimit()) == 1
     return
@@ -343,7 +341,6 @@ function test_deprecated()
     nise = MOA.NISE()
     dichotomy = MOA.Dichotomy()
     @test nise isa typeof(dichotomy)
-    @test nise.solution_limit === dichotomy.solution_limit
     return
 end
 
