@@ -85,9 +85,6 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     end
     solutions = Dict{Float64,SolutionPoint}()
     for (i, w) in (1 => 1.0, 2 => 0.0)
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
-            return ret, nothing
-        end
         status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
             return status, nothing
