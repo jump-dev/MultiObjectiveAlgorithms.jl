@@ -170,8 +170,7 @@ function test_solve_failures()
             MOI.add_constraint(model, sum(1.0 .* x[:, j]), MOI.EqualTo(1.0))
         end
         MOI.optimize!(model)
-        @test MOI.get(model, MOI.TerminationStatus()) ==
-             (fail_after <= 3 ? MOI.NUMERICAL_ERROR : MOI.OPTIMAL)
+        @test MOI.get(model, MOI.TerminationStatus()) == MOI.NUMERICAL_ERROR
         @test MOI.get(model, MOI.ResultCount()) == 0
     end
     return
