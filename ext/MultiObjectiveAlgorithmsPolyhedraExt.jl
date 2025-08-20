@@ -45,9 +45,10 @@ function MOA.minimize_multiobjective!(
     n = MOI.output_dimension(model.f)
     scalars = MOI.Utilities.scalarize(model.f)
     status = MOI.OPTIMAL
-    optimizer = typeof(model.inner.optimizer)
-    δ_OPS_optimizer = optimizer()
-    MOI.set(δ_OPS_optimizer, MOI.Silent(), true)
+    δ_OPS_optimizer = MOI.instantiate(model.optimizer_factory)
+    if MOI.supports(δ_OPS_optimizer, MOI.Silent())
+        MOI.set(δ_OPS_optimizer, MOI.Silent(), true)
+    end
     y = MOI.add_variables(δ_OPS_optimizer, n)
     anchors = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     yI, yUB = zeros(n), zeros(n)
