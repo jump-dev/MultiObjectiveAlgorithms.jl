@@ -124,6 +124,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     ideal_point::Vector{Float64}
     compute_ideal_point::Bool
     subproblem_count::Int
+    optimizer_factory::Any
 
     function Optimizer(optimizer_factory)
         return new(
@@ -137,6 +138,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             Float64[],
             default(ComputeIdealPoint()),
             0,
+            optimizer_factory,
         )
     end
 end
