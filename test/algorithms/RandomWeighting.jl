@@ -124,6 +124,7 @@ function test_knapsack_max()
         [0, 1, 1, 1, 1, 0, 1, 0, 1, 1] => [3043, 4627],
         [1, 0, 1, 1, 1, 0, 1, 1, 0, 1] => [3395, 3817],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == length(results)
     for (i, (x_sol, y_sol)) in enumerate(results)
         @test ≈(x_sol, MOI.get(model, MOI.VariablePrimal(i), x); atol = 1e-6)

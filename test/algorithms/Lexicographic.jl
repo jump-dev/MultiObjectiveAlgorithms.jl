@@ -94,6 +94,7 @@ function test_knapsack_default()
         [1, 0, 1] => [1, 0, 0, 1],
         [1, 1, 0] => [1, 1, 0, 0],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == 3
     for i in 1:MOI.get(model, MOI.ResultCount())
         X = round.(Int, MOI.get(model, MOI.VariablePrimal(i), x))
@@ -247,6 +248,7 @@ function test_knapsack_5_objectives()
         [1, 0, 1, 0, 2] => [1, 0, 1, 0],
         [1, 1, 0, 0, 2] => [1, 1, 0, 0],
     ]
+    reverse!(results)
     for i in 1:MOI.get(model, MOI.ResultCount())
         X = round.(Int, MOI.get(model, MOI.VariablePrimal(i), x))
         Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(i)))

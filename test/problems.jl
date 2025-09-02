@@ -113,6 +113,7 @@ function test_problem_knapsack_max_p3(model)
         [0, 1, 1, 1, 1, 0, 1, 0, 1, 1] => [3042, 4627, 3189],
         [1, 0, 1, 1, 1, 0, 1, 1, 0, 1] => [3394, 3817, 3408],
     ]
+    reverse!(results)
     N = MOI.get(model, MOI.ResultCount())
     @assert N == length(results)
     for i in 1:length(results)
@@ -223,6 +224,7 @@ function test_problem_knapsack_max_p4(model)
         [0, 1, 1, 0, 1, 1, 1, 1, 1, 0] => [3152, 3232, 3596, 3382],
         [1, 1, 1, 0, 1, 1, 1, 0, 0, 0] => [3269, 2320, 3059, 2891],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == length(results)
     for (i, (x_sol, y_sol)) in enumerate(results)
         @test ≈(x_sol, MOI.get(model, MOI.VariablePrimal(i), x); atol = 1e-6)
@@ -368,7 +370,7 @@ function test_problem_assignment_max_p3(model)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
-    results = reverse([
+    results = [
         [0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 1] => [16, 61, 47],
         [0 0 1 0 0 0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1] => [17, 43, 71],
         [0 1 0 0 0 0 0 1 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1] => [18, 47, 67],
@@ -390,7 +392,7 @@ function test_problem_assignment_max_p3(model)
         [0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0 0 0 0 0 1 0] => [43, 51, 31],
         [0 1 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 1 0 0 1 0 0] => [45, 33, 34],
         [0 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 0 0 0 1 0 0] => [50, 40, 32],
-    ])
+    ]
     @test MOI.get(model, MOI.ResultCount()) == length(results)
     @test MOI.get(model, MOA.SubproblemCount()) >= length(results)
     for (i, (x_sol, y_sol)) in enumerate(results)

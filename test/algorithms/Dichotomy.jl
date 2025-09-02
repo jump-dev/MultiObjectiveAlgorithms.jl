@@ -98,6 +98,8 @@ function test_moi_bolp_1_maximize()
     @test MOI.get(model, MOI.ResultCount()) == 3
     X = [[1.0, 0.25], [0.5, 0.5], [0.0, 1.0]]
     Y = [[-2.25, -1.25], [-1.5, -1.5], [-1.0, -2.5]]
+    reverse!(X)
+    reverse!(Y)
     for i in 1:3
         @test MOI.get(model, MOI.PrimalStatus(i)) == MOI.FEASIBLE_POINT
         @test MOI.get(model, MOI.DualStatus(i)) == MOI.NO_SOLUTION
@@ -227,6 +229,7 @@ function test_biobjective_knapsack()
         [948.0, 939.0] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
         [955.0, 906.0] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
     ]
+    reverse!(results)
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
         @test results[i][2] == findall(elt -> elt > 0.9, x_sol)
