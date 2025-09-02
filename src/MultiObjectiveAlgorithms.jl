@@ -51,7 +51,6 @@ function filter_nondominated(
     solutions::Vector{SolutionPoint};
     atol::Float64 = 1e-6,
 )
-    _sort!(solutions, sense)
     nondominated_solutions = SolutionPoint[]
     for candidate in solutions
         if any(test -> dominates(sense, test, candidate; atol), solutions)
@@ -62,6 +61,7 @@ function filter_nondominated(
             push!(nondominated_solutions, candidate)
         end
     end
+    _sort!(nondominated_solutions, sense)
     return nondominated_solutions
 end
 
