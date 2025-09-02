@@ -42,14 +42,16 @@ function dominates(
     end
 end
 
-_sort!(solutions::Vector{SolutionPoint}) = sort!(solutions; by = x -> x.y)
+function _sort!(solutions::Vector{SolutionPoint}, sense::MOI.OptimizationSense)
+    return sort!(solutions; by = x -> x.y, rev = sense == MOI.MAX_SENSE)
+end
 
 function filter_nondominated(
     sense,
     solutions::Vector{SolutionPoint};
     atol::Float64 = 1e-6,
 )
-    _sort!(solutions)
+    _sort!(solutions, sense)
     nondominated_solutions = SolutionPoint[]
     for candidate in solutions
         if any(test -> dominates(sense, test, candidate; atol), solutions)
@@ -681,7 +683,7 @@ function _optimize!(model::Optimizer)
     model.termination_status = status
     if solutions !== nothing
         model.solutions = solutions
-        _sort!(model.solutions)
+        _sort!(model.solutions, MOI.get(model, MOI.ObjectiveSense()))
     end
     if MOI.get(model, ComputeIdealPoint())
         _compute_ideal_point(model, start_time)
