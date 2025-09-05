@@ -89,6 +89,11 @@ Query the number of scalar subproblems that were solved using
 
  * `MOA.SubproblemCount()`
 
+## Solution ordering
+
+Results are lexicograhically ordered by their objective vectors. The order
+depends on the objective sense. The first result is best.
+
 ## Ideal point
 
 By default, MOA will compute the ideal point, which can be queried using the

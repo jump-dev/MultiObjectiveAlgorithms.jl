@@ -69,6 +69,7 @@ function test_biobjective_knapsack()
         [950, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
         [956, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == 9
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
@@ -113,6 +114,7 @@ function test_biobjective_knapsack_atol()
         [949, 915] => [1, 2, 5, 6, 8, 9, 10, 11, 15, 16, 17],
         [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == 9
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
@@ -154,6 +156,7 @@ function test_biobjective_knapsack_atol_large()
         [948, 939] => [1, 2, 3, 5, 6, 8, 10, 11, 15, 16, 17],
         [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == 4
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
@@ -238,6 +241,7 @@ function test_biobjective_knapsack_min_solution_limit()
         [943, 940] => [2, 3, 5, 6, 8, 9, 10, 11, 15, 16, 17],
         [955, 906] => [2, 3, 5, 6, 9, 10, 11, 14, 15, 16, 17],
     ]
+    reverse!(results)
     @test MOI.get(model, MOI.ResultCount()) == 3
     for i in 1:MOI.get(model, MOI.ResultCount())
         x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
