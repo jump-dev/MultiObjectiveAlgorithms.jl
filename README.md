@@ -91,7 +91,8 @@ Query the number of scalar subproblems that were solved using
 
 ## Solution ordering
 
-Results are lexicograhically ordered by their objective vectors. The order depends on the objective sense. The first result is best.
+Results are lexicograhically ordered by their objective vectors. The order
+depends on the objective sense. The first result is best.
 
 ## Ideal point
 
