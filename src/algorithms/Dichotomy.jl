@@ -51,7 +51,7 @@ function MOI.set(alg::Dichotomy, ::SolutionLimit, value)
 end
 
 function MOI.get(alg::Dichotomy, attr::SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
+    return something(alg.solution_limit, _default(alg, attr))
 end
 
 function _solve_weighted_sum(

@@ -42,12 +42,12 @@ end
 MOI.supports(::Lexicographic, ::ObjectiveRelativeTolerance) = true
 
 function MOI.get(alg::Lexicographic, attr::ObjectiveRelativeTolerance)
-    return get(alg.rtol, attr.index, default(alg, attr))
+    return get(alg.rtol, attr.index, _default(alg, attr))
 end
 
 function MOI.set(alg::Lexicographic, attr::ObjectiveRelativeTolerance, value)
     for _ in (1+length(alg.rtol)):attr.index
-        push!(alg.rtol, default(alg, attr))
+        push!(alg.rtol, _default(alg, attr))
     end
     alg.rtol[attr.index] = value
     return
@@ -68,7 +68,7 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     start_time = time()
     sequence = 1:MOI.output_dimension(model.f)
     perm = MOI.get(algorithm, LexicographicAllPermutations())
-    if !something(perm, default(LexicographicAllPermutations()))
+    if !something(perm, _default(LexicographicAllPermutations()))
         return _solve_in_sequence(algorithm, model, sequence, start_time)
     end
     if perm === nothing && length(sequence) >= 5
