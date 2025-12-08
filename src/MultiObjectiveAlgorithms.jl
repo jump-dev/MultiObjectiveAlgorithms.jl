@@ -8,6 +8,19 @@ module MultiObjectiveAlgorithms
 import Combinatorics
 import MathOptInterface as MOI
 
+"""
+    struct SolutionPoint
+        x::Dict{MOI.VariableIndex,Float64}
+        y::Vector{Float64}
+    end
+
+The struct for representing a single solution point found by a multiobjective
+algorithm.
+
+The field `.x` is a mapping from decision variables to their primal values.
+
+The field `.y` is a vector of the corresponding objective value.
+"""
 struct SolutionPoint
     x::Dict{MOI.VariableIndex,Float64}
     y::Vector{Float64}
@@ -19,12 +32,7 @@ end
 
 Base.:(==)(a::SolutionPoint, b::SolutionPoint) = a.y == b.y
 
-"""
-    dominates(sense, a::SolutionPoint, b::SolutionPoint; atol::Float64)
-
-Returns `true` if point `a` dominates point `b`.
-"""
-function dominates(
+function _dominates(
     sense::MOI.OptimizationSense,
     a::SolutionPoint,
     b::SolutionPoint;
@@ -46,14 +54,27 @@ function _sort!(solutions::Vector{SolutionPoint}, sense::MOI.OptimizationSense)
     return sort!(solutions; by = x -> x.y, rev = sense == MOI.MAX_SENSE)
 end
 
+"""
+    filter_nondominated(
+        sense::MOI.OptimizationSense,
+        solutions::Vector{SolutionPoint};
+        atol::Float64 = 1e-6,
+    )::Vector{SolutionPoint}
+
+Return the subset of non-dominated points from `solutions` as a new vector.
+
+`atol` is used when comparing objective vectors elementwise. The use of `atol`
+avoids returning a large set of solution points that are practically equivalent
+but differ only by some small (less than `atol`) value.
+"""
 function filter_nondominated(
-    sense,
+    sense::MOI.OptimizationSense,
     solutions::Vector{SolutionPoint};
     atol::Float64 = 1e-6,
 )
     nondominated_solutions = SolutionPoint[]
     for candidate in solutions
-        if any(test -> dominates(sense, test, candidate; atol), solutions)
+        if any(test -> _dominates(sense, test, candidate; atol), solutions)
             # Point is dominated. Don't add
         elseif any(test -> ≈(test.y, candidate.y; atol), nondominated_solutions)
             # Point already added to nondominated solutions. Don't add
@@ -111,10 +132,38 @@ function _scalarise(f::MOI.VectorNonlinearFunction, w::Vector{Float64})
     return MOI.ScalarNonlinearFunction(:+, scalars)
 end
 
+"""
+    abstract type AbstractAlgorithm end
+
+The base abtract type for solution algorithms.
+
+To define a new solution algorithm, define a subtype of `AbstractAlgorithm` and
+implement `MOA.optimize_multiobjective!`.
+"""
 abstract type AbstractAlgorithm end
 
 MOI.Utilities.map_indices(::Function, x::AbstractAlgorithm) = x
 
+"""
+    Optimizer(optimizer_factory)
+
+Create a new instance of a MultiObjectiveAlgorithms optimizer.
+
+`optimizer_factory` must define an inner optimizer constructor that MOA can use
+to solve the scalar-objective subproblems. The inner optimizer is constructed
+with:
+```julia
+MOI.instantiate(optimizer_factory; with_cache_type = Float64)
+```
+
+## Example
+
+```julia
+import MultiObjectiveAlgorithms as MOA
+import HiGHS
+optimizer = () -> MOA.Optimizer(HiGHS.Optimizer)
+```
+"""
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.AbstractOptimizer
     algorithm::Union{Nothing,AbstractAlgorithm}
@@ -138,7 +187,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             nothing,
             NaN,
             Float64[],
-            default(ComputeIdealPoint()),
+            _default(ComputeIdealPoint()),
             0,
             optimizer_factory,
         )
@@ -224,7 +273,7 @@ const _ATTRIBUTES = Union{
 ### Algorithm
 
 """
-    Algorithm <: MOI.AbstractOptimizerAttribute
+    Algorithm() <: MOI.AbstractOptimizerAttribute
 
 An attribute to control the algorithm used by MOA.
 """
@@ -239,7 +288,7 @@ function MOI.set(model::Optimizer, ::Algorithm, alg::AbstractAlgorithm)
     return
 end
 
-default(::Algorithm) = Lexicographic()
+_default(::Algorithm) = Lexicographic()
 
 ### AbstractAlgorithmAttribute
 
@@ -250,7 +299,7 @@ A super-type for MOA-specific optimizer attributes.
 """
 abstract type AbstractAlgorithmAttribute <: MOI.AbstractOptimizerAttribute end
 
-default(::AbstractAlgorithm, attr::AbstractAlgorithmAttribute) = default(attr)
+_default(::AbstractAlgorithm, attr::AbstractAlgorithmAttribute) = _default(attr)
 
 function MOI.supports(model::Optimizer, attr::AbstractAlgorithmAttribute)
     return MOI.supports(model.algorithm, attr)
@@ -266,7 +315,7 @@ function MOI.get(model::Optimizer, attr::AbstractAlgorithmAttribute)
 end
 
 """
-    SolutionLimit <: AbstractAlgorithmAttribute -> Int
+    SolutionLimit() <: AbstractAlgorithmAttribute -> Int
 
 Terminate the algorithm once the set number of solutions have been found.
 
@@ -274,7 +323,7 @@ Defaults to `typemax(Int)`.
 """
 struct SolutionLimit <: AbstractAlgorithmAttribute end
 
-default(::SolutionLimit) = typemax(Int)
+_default(::SolutionLimit) = typemax(Int)
 
 """
     ObjectivePriority(index::Int) <: AbstractAlgorithmAttribute -> Int
@@ -289,7 +338,7 @@ struct ObjectivePriority <: AbstractAlgorithmAttribute
     index::Int
 end
 
-default(::ObjectivePriority) = 0
+_default(::ObjectivePriority) = 0
 
 """
     ObjectiveWeight(index::Int) <: AbstractAlgorithmAttribute -> Float64
@@ -303,7 +352,7 @@ struct ObjectiveWeight <: AbstractAlgorithmAttribute
     index::Int
 end
 
-default(::ObjectiveWeight) = 1.0
+_default(::ObjectiveWeight) = 1.0
 
 """
     ObjectiveRelativeTolerance(index::Int) <: AbstractAlgorithmAttribute -> Float64
@@ -318,7 +367,7 @@ struct ObjectiveRelativeTolerance <: AbstractAlgorithmAttribute
     index::Int
 end
 
-default(::ObjectiveRelativeTolerance) = 0.0
+_default(::ObjectiveRelativeTolerance) = 0.0
 
 """
     ObjectiveAbsoluteTolerance(index::Int) <: AbstractAlgorithmAttribute -> Float64
@@ -333,7 +382,7 @@ struct ObjectiveAbsoluteTolerance <: AbstractAlgorithmAttribute
     index::Int
 end
 
-default(::ObjectiveAbsoluteTolerance) = 0.0
+_default(::ObjectiveAbsoluteTolerance) = 0.0
 
 """
     EpsilonConstraintStep <: AbstractAlgorithmAttribute -> Float64
@@ -344,7 +393,7 @@ Defaults to `1.0`.
 """
 struct EpsilonConstraintStep <: AbstractAlgorithmAttribute end
 
-default(::EpsilonConstraintStep) = 1.0
+_default(::EpsilonConstraintStep) = 1.0
 
 """
     LexicographicAllPermutations <: AbstractAlgorithmAttribute -> Bool
@@ -357,7 +406,7 @@ Defaults to `true`.
 """
 struct LexicographicAllPermutations <: AbstractAlgorithmAttribute end
 
-default(::LexicographicAllPermutations) = true
+_default(::LexicographicAllPermutations) = true
 
 """
     ComputeIdealPoint <: AbstractOptimizerAttribute -> Bool
@@ -375,7 +424,7 @@ can improve the performance of MOA by setting this attribute to `false`.
 """
 struct ComputeIdealPoint <: MOI.AbstractOptimizerAttribute end
 
-default(::ComputeIdealPoint) = true
+_default(::ComputeIdealPoint) = true
 
 MOI.supports(::Optimizer, ::ComputeIdealPoint) = true
 
@@ -431,7 +480,7 @@ function MOI.get(model::Optimizer, attr::MOI.AbstractOptimizerAttribute)
 end
 
 function MOI.get(model::Optimizer, ::MOI.SolverName)
-    alg = typeof(something(model.algorithm, default(Algorithm())))
+    alg = typeof(something(model.algorithm, _default(Algorithm())))
     inner = MOI.get(model.inner, MOI.SolverName())
     return "MOA[algorithm=$alg, optimizer=$inner]"
 end
@@ -584,6 +633,12 @@ end
 
 A function that must be called instead of `MOI.optimize!(model.inner)` because
 it also increments the `subproblem_count`.
+
+## Usage
+
+This function is part of the public developer API. You should not call it from
+user-facing code. You may use it when implementing new algorithms in third-party
+packages.
 """
 function optimize_inner!(model::Optimizer)
     MOI.optimize!(model.inner)
@@ -609,6 +664,40 @@ function _compute_ideal_point(model::Optimizer, start_time)
     return
 end
 
+"""
+    minimize_multiobjective!(
+        algorithm::AbstractAlgorithm,
+        model::Optimizer,
+    )::Union{MOI.TerminationStatusCode,Union{Nothing,Vector{SolutionPoint}}}
+
+This function is equivalent to `optimize_multiobjective!`, except that you may
+assume that the problem is a minimization problem. This can make implementing
+new solution algorithms simpler.
+
+## Usage
+
+This function is part of the public developer API. You should not call it from
+user-facing code. You may use it when implementing new algorithms in third-party
+packages.
+"""
+function minimize_multiobjective! end
+
+"""
+    optimize_multiobjective!(
+        algorithm::AbstractAlgorithm,
+        model::Optimizer,
+    )::Tuple{MOI.TerminationStatusCode,Union{Nothing,Vector{SolutionPoint}}}
+
+Optimize `model` using `algorithm` and return a solution tuple comprised of a
+`MOI.TerminationStatusCode` explaining why the solver stopped, and a vector of
+`SolutionPoint` (or `nothing`, if something went wrong).
+
+## Usage
+
+This function is part of the public developer API. You should not call it from
+user-facing code. You may use it when implementing new algorithms in third-party
+packages.
+"""
 function optimize_multiobjective!(
     algorithm::AbstractAlgorithm,
     model::Optimizer,
@@ -678,7 +767,7 @@ function _optimize!(model::Optimizer)
     # We need to clear the ideal point prior to starting the solve. Algorithms
     # may update this during the solve, otherwise we will update it at the end.
     model.ideal_point = fill(NaN, MOI.output_dimension(model.f))
-    algorithm = something(model.algorithm, default(Algorithm()))
+    algorithm = something(model.algorithm, _default(Algorithm()))
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
     if solutions !== nothing
@@ -788,4 +877,19 @@ for file in readdir(joinpath(@__DIR__, "algorithms"))
     end
 end
 
+# MOA exports everything except internal symbols, which are defined as those
+# whose name starts with an underscore. If you don't want all of these symbols
+# in your environment, then use `import` instead of `using`.
+
+# Do not add MOA-defined symbols to this exclude list. Instead, rename them with
+# an underscore.
+const _EXCLUDE = Symbol[Symbol(@__MODULE__), :eval, :include]
+
+for sym in names(@__MODULE__; all = true)
+    if sym in _EXCLUDE || startswith("$sym", "_") || !Base.isidentifier(sym)
+        continue
+    end
+    @eval export $sym
 end
+
+end  # module

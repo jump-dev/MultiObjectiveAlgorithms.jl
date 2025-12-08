@@ -31,7 +31,7 @@ function test_Dichotomy_SolutionLimit()
     @test MOI.supports(MOA.Dichotomy(), MOA.SolutionLimit())
     @test MOI.supports(model, MOA.SolutionLimit())
     @test MOI.get(model, MOA.SolutionLimit()) ==
-          MOA.default(MOA.SolutionLimit())
+          MOA._default(MOA.SolutionLimit())
     MOI.set(model, MOA.SolutionLimit(), 1)
     @test MOI.get(model, MOA.SolutionLimit()) == 1
     return

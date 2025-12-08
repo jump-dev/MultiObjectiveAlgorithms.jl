@@ -307,7 +307,7 @@ function test_deprecated()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
     @test MOI.supports(model, MOA.ObjectiveAbsoluteTolerance(1))
-    @test MOA.default(MOA.ObjectiveAbsoluteTolerance(1)) == 0.0
+    @test MOA._default(MOA.ObjectiveAbsoluteTolerance(1)) == 0.0
     @test_logs (:warn,) MOI.set(model, MOA.ObjectiveAbsoluteTolerance(1), 1.0)
     @test_logs (:warn,) MOI.get(model, MOA.ObjectiveAbsoluteTolerance(1))
     return

@@ -38,7 +38,7 @@ function MOI.set(alg::EpsilonConstraint, ::SolutionLimit, value)
 end
 
 function MOI.get(alg::EpsilonConstraint, attr::SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
+    return something(alg.solution_limit, _default(alg, attr))
 end
 
 MOI.supports(::EpsilonConstraint, ::EpsilonConstraintStep) = true
@@ -49,7 +49,7 @@ function MOI.set(alg::EpsilonConstraint, ::EpsilonConstraintStep, value)
 end
 
 function MOI.get(alg::EpsilonConstraint, attr::EpsilonConstraintStep)
-    return something(alg.atol, default(alg, attr))
+    return something(alg.atol, _default(alg, attr))
 end
 
 MOI.supports(::EpsilonConstraint, ::ObjectiveAbsoluteTolerance) = true
@@ -92,7 +92,7 @@ function minimize_multiobjective!(
     # Compute the epsilon that we will be incrementing by each iteration
     ε = MOI.get(algorithm, EpsilonConstraintStep())
     n_points = MOI.get(algorithm, SolutionLimit())
-    if n_points != default(algorithm, SolutionLimit())
+    if n_points != _default(algorithm, SolutionLimit())
         ε = abs(right - left) / (n_points - 1)
     end
     solutions = SolutionPoint[only(solution_1), only(solution_2)]

@@ -36,7 +36,7 @@ end
 MOI.supports(::Hierarchical, ::ObjectivePriority) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectivePriority)
-    return get(alg.priorities, attr.index, default(alg, attr))
+    return get(alg.priorities, attr.index, _default(alg, attr))
 end
 
 function _append_default(
@@ -45,7 +45,7 @@ function _append_default(
     x::Vector,
 )
     for _ in (1+length(x)):attr.index
-        push!(x, default(alg, attr))
+        push!(x, _default(alg, attr))
     end
     return
 end
@@ -59,7 +59,7 @@ end
 MOI.supports(::Hierarchical, ::ObjectiveWeight) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectiveWeight)
-    return get(alg.weights, attr.index, default(alg, attr))
+    return get(alg.weights, attr.index, _default(alg, attr))
 end
 
 function MOI.set(alg::Hierarchical, attr::ObjectiveWeight, value)
@@ -71,7 +71,7 @@ end
 MOI.supports(::Hierarchical, ::ObjectiveRelativeTolerance) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectiveRelativeTolerance)
-    return get(alg.rtol, attr.index, default(alg, attr))
+    return get(alg.rtol, attr.index, _default(alg, attr))
 end
 
 function MOI.set(alg::Hierarchical, attr::ObjectiveRelativeTolerance, value)

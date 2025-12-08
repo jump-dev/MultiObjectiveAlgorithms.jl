@@ -31,7 +31,7 @@ function MOI.set(alg::RandomWeighting, ::SolutionLimit, value)
 end
 
 function MOI.get(alg::RandomWeighting, attr::SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
+    return something(alg.solution_limit, _default(alg, attr))
 end
 
 function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
