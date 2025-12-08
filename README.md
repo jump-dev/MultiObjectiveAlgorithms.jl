@@ -40,14 +40,16 @@ set_attribute(model, MOA.Algorithm(), MOA.Dichotomy())
 set_attribute(model, MOA.SolutionLimit(), 4)
 ```
 
-For worked examples, see the [Simple multi-objective examples](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_examples/)
-tutorial in the JuMP documentation.
-
 Replace `HiGHS.Optimizer` with an optimizer capable of solving a
 single-objective instance of your optimization problem.
 
 You may set additional optimizer attributes, the supported attributes depend on
 the choice of solution algorithm.
+
+For worked examples, see the [Simple multi-objective examples](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_examples/)
+tutorial in the JuMP documentation. A larger example is the
+[Multi-objective knapsack](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_knapsack/)
+tutorial, which also includes code for plotting the solutions.
 
 ## Algorithm
 
@@ -89,6 +91,18 @@ Query the number of scalar subproblems that were solved using
 
  * `MOA.SubproblemCount()`
 
+For example:
+
+```julia
+using JuMP
+import HiGHS
+import MultiObjectiveAlgorithms as MOA
+model = Model(() -> MOA.Optimizer(HiGHS.Optimizer))
+# build the model
+optimize!(model)
+get_attribute(model, MOA.SubproblemCount())
+```
+
 ## Solution ordering
 
 Results are lexicographically ordered by their objective vectors. The order
@@ -97,12 +111,20 @@ depends on the objective sense. The first result is best.
 ## Ideal point
 
 By default, MOA will compute the ideal point, which can be queried using the
-`MOI.ObjectiveBound` attribute.
+`MOI.ObjectiveBound` attribute (or `JuMP.objective_bound`).
 
 Computing the ideal point requires as many solves as the dimension of the
 objective function. Thus, if you do not need the ideal point information, you
 can improve the performance of MOA by setting the `MOA.ComputeIdealPoint()`
-attribute to `false`.
+attribute to `false`:
+
+```julia
+using JuMP
+import HiGHS
+import MultiObjectiveAlgorithms as MOA
+model = Model(() -> MOA.Optimizer(HiGHS.Optimizer))
+set_attribute(model, MOA.ComputeIdealPoint(), false)
+```
 
 ## Citation
 
