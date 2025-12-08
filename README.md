@@ -51,22 +51,24 @@ the choice of solution algorithm.
 
 ## Algorithm
 
-Set the algorithm using the `MOA.Algorithm()` attribute.
+Set the algorithm using the `MOA.Algorithm()` attribute. The value must be one
+of the algorithms supported by MOA. Consult their docstrings for details.
 
-The value must be one of the algorithms supported by MOA:
+Some algorithms are restricted to certain problem classes. The solution set
+depends on the algorithm and the problem class.
 
- * `MOA.Chalmet()`
- * `MOA.Dichotomy()`
- * `MOA.DominguezRios()`
- * `MOA.EpsilonConstraint()`
- * `MOA.Hierarchical()`
- * `MOA.KirlikSayin()`
- * `MOA.Lexicographic()` [default]
- * `MOA.RandomWeighting()`
- * `MOA.Sandwiching()`
- * `MOA.TambyVanderpooten()`
-
-Consult their docstrings for details.
+| `MOA.Algorithm`           | Applicable problem class |
+| :------------------------ | ------------------------ |
+| `MOA.Chalmet()`           | Exactly two objectives   |
+| `MOA.Dichotomy()`         | Exactly two objectives   |
+| `MOA.DominguezRios()`     | Discrete variables only  |
+| `MOA.EpsilonConstraint()` | Exactly two objectives   |
+| `MOA.Hierarchical()`      | Any                      |
+| `MOA.KirlikSayin()`       | Discrete variables only  |
+| `MOA.Lexicographic()` [default] | Any                |
+| `MOA.RandomWeighting()`   | Any                      |
+| `MOA.Sandwiching()`       | Any                      |
+| `MOA.TambyVanderpooten()` | Discrete variables only  |
 
 ## Other optimizer attributes
 

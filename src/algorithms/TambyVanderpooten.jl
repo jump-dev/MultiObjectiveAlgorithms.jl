@@ -18,6 +18,13 @@ minimization problems) and their associated defining points. At each iteration,
 one of the objectives and an upper bound is picked and the single objective
 reformulation is solved using one of the defining points as a starting solution.
 
+## Supported problem classes
+
+This algorithm is restricted to problems with:
+
+ * discrete variables only. It will fail to converge if the problem is purely
+   continuous.
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the

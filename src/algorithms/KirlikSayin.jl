@@ -17,6 +17,13 @@ discrete optimization problems. The algorithm maintains `(p-1)`-dimensional
 rectangle regions in the solution space, and a two-stage optimization problem
 is solved for each rectangle.
 
+## Supported problem classes
+
+This algorithm is restricted to problems with:
+
+ * discrete variables only. It will fail to converge if the problem is purely
+   continuous.
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the

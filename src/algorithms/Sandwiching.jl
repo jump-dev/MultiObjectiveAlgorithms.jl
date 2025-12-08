@@ -11,6 +11,10 @@ Fleuren, H. A. (2023). A Renewed Take on Weighted Sum in Sandwich Algorithms:
 Modification of the Criterion Space. (Center Discussion Paper; Vol. 2023-012).
 CentER, Center for Economic Research.
 
+## Supported problem classes
+
+This algorithm supports all problem classes.
+
 ## Compat
 
 To use this algorithm you MUST first load the Polyhedra.jl Julia package:

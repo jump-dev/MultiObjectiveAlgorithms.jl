@@ -11,6 +11,12 @@ A solver that implements the algorithm of:
 Y. P. Aneja, K. P. K. Nair, (1979) Bicriteria Transportation Problem. Management
 Science 25(1), 73-78.
 
+## Supported problem classes
+
+This algorithm is restricted to problems with:
+
+ * exactly two objectives
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
