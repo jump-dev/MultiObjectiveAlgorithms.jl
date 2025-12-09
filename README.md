@@ -46,6 +46,9 @@ single-objective instance of your optimization problem.
 You may set additional optimizer attributes, the supported attributes depend on
 the choice of solution algorithm.
 
+Documentation is available in the JuMP documentation. There are sections on
+[setting a vector-valued objective](https://jump.dev/JuMP.jl/stable/manual/objective/#Set-a-vector-valued-objective)
+and [working wtih multiple solutions](https://jump.dev/JuMP.jl/stable/manual/solutions/#Multiple-solutions).
 For worked examples, see the [Simple multi-objective examples](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_examples/)
 tutorial in the JuMP documentation. A larger example is the
 [Multi-objective knapsack](https://jump.dev/JuMP.jl/stable/tutorials/linear/multi_objective_knapsack/)
