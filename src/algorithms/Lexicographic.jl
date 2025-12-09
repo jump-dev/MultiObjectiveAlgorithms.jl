@@ -9,6 +9,10 @@
 `Lexicographic()` implements a lexigographic algorithm that returns a single
 point on the frontier, corresponding to solving each objective in order.
 
+## Supported problem classes
+
+This algorithm supports all problem classes.
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the

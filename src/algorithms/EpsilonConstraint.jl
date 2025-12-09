@@ -9,6 +9,12 @@
 `EpsilonConstraint` implements the epsilon-constraint algorithm for
 bi-objective programs.
 
+## Supported problem classes
+
+This algorithm is restricted to problems with:
+
+ * exactly two objectives
+
 ## Supported optimizer attributes
 
  * `MOA.EpsilonConstraintStep()`: `EpsilonConstraint` uses this value

@@ -12,6 +12,12 @@ Chalmet, L.G., and Lemonidis, L., and Elzinga, D.J. (1986). An algorithm for the
 bi-criterion integer programming problem. European Journal of Operational
 Research. 25(2), 292-300
 
+## Supported problem classes
+
+This algorithm is restricted to problems with:
+
+ * exactly two objectives
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the

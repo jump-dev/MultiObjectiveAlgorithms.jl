@@ -12,6 +12,13 @@ Dominguez-Rios, M.A. & Chicano, F., & Alba, E. (2021). Effective anytime
 algorithm for multiobjective combinatorial optimization problems. Information
 Sciences, 565(7), 210-228.
 
+## Supported problem classes
+
+This algorithm is restricted to problems with:
+
+ * discrete variables only. It will fail to converge if the problem is purely
+   continuous.
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the

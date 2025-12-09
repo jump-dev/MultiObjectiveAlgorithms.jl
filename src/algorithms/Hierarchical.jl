@@ -19,6 +19,10 @@ future solves. Finally, it steps to the next set of prioritized objectives.
 The solution is a single point that trades off the various objectives. It does
 not record the partial solutions that were found along the way.
 
+## Supported problem classes
+
+This algorithm supports all problem classes.
+
 ## Supported optimizer attributes
 
  * `MOA.ObjectivePriority`

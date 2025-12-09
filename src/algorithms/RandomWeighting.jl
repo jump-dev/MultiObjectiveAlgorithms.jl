@@ -9,6 +9,10 @@
 A heuristic solver that works by repeatedly solving a weighted sum problem with
 random weights.
 
+## Supported problem classes
+
+This algorithm supports all problem classes.
+
 ## Supported optimizer attributes
 
  * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
