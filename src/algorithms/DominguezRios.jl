@@ -166,6 +166,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_solution(model, Y)
         yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -176,6 +177,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_solution(model, Y)
         yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -216,6 +218,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         optimize_inner!(model)
         if _is_scalar_status_optimal(model)
             X, Y = _compute_point(model, variables, model.f)
+            _log_solution(model, Y)
             obj = MOI.get(model.inner, MOI.ObjectiveValue())
             # We need to undo the scaling of the scalar objective. There's no
             # need to unscale `Y` because we have evaluated this explicitly from

@@ -96,6 +96,8 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     # This tolerance is really important!
     δ = 1.0
     scalars = MOI.Utilities.scalarize(model.f)
+    printing = Vector{Union{Nothing,Float64}}(undef, n)
+    fill!(printing, nothing)
     # Ideal and Nadir point estimation
     for (i, f_i) in enumerate(scalars)
         # Ideal point
@@ -106,6 +108,8 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        printing[i] = Y
+        _log_solution(model, printing)
         model.ideal_point[i] = yI[i] = Y
         # Nadir point
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -118,6 +122,9 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        printing[i] = Y
+        _log_solution(model, printing)
+        printing[i] = nothing
         yN[i] = Y + δ
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
@@ -180,6 +187,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             continue
         end
         X, Y = _compute_point(model, variables, model.f)
+        _log_solution(model, Y)
         Y_proj = _project(Y, k)
         if !(Y in YN)
             push!(solutions, SolutionPoint(X, Y))

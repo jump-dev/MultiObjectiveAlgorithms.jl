@@ -139,12 +139,14 @@ function _solve_in_sequence(
         primal_status = MOI.get(model.inner, MOI.PrimalStatus())
         if _is_scalar_status_feasible_point(primal_status)
             X, Y = _compute_point(model, variables, model.f)
+            _log_solution(model, Y)
             solution = [SolutionPoint(X, Y)]
         end
         if !_is_scalar_status_optimal(status)
             break
         end
         X, Y = _compute_point(model, variables, f)
+        _log_solution(model, Y)
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
         set = if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
             MOI.LessThan(Y + rtol * abs(Y))

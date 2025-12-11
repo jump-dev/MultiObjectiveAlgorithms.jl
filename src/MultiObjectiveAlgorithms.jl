@@ -170,6 +170,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     f::Union{Nothing,MOI.AbstractVectorFunction}
     solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
+    silent::Bool
     time_limit_sec::Union{Nothing,Float64}
     solve_time::Float64
     ideal_point::Vector{Float64}
@@ -178,12 +179,17 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     optimizer_factory::Any
 
     function Optimizer(optimizer_factory)
+        inner = MOI.instantiate(optimizer_factory; with_cache_type = Float64)
+        if MOI.supports(inner, MOI.Silent())
+            MOI.set(inner, MOI.Silent(), true)
+        end
         return new(
-            MOI.instantiate(optimizer_factory; with_cache_type = Float64),
+            inner,
             nothing,
             nothing,
             SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
+            false,
             nothing,
             NaN,
             Float64[],
@@ -218,6 +224,17 @@ MOI.supports_incremental_interface(::Optimizer) = true
 
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     return MOI.Utilities.default_copy_to(dest, src)
+end
+
+### Silent
+
+MOI.supports(::Optimizer, ::MOI.Silent) = true
+
+MOI.get(model::Optimizer, ::MOI.Silent) = model.silent
+
+function MOI.set(model::Optimizer, ::MOI.Silent, value::Bool)
+    model.silent = value
+    return
 end
 
 ### TimeLimitSec
@@ -628,6 +645,8 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
     return
 end
 
+import Printf
+
 """
     optimize_inner!(model::Optimizer)
 
@@ -645,6 +664,21 @@ function optimize_inner!(model::Optimizer)
     model.subproblem_count += 1
     return
 end
+
+function _log_solution(model::Optimizer, Y)
+    if model.silent
+        return
+    end
+    print(_format(model.subproblem_count))
+    for y in Y
+        print(" ", _format(y))
+    end
+    println()
+    return
+end
+_format(x::Int) = Printf.@sprintf("%5d", x)
+_format(x::Float64) = Printf.@sprintf("% .5e", x)
+_format(::Nothing) = "            "
 
 function _compute_ideal_point(model::Optimizer, start_time)
     for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
@@ -764,6 +798,13 @@ function _optimize!(model::Optimizer)
         empty!(model.ideal_point)
         return
     end
+    if !model.silent
+        print("Iter.")
+        for i in 1:MOI.output_dimension(model.f)
+            print(lpad("Obj. $i", 13))
+        end
+        println()
+    end
     # We need to clear the ideal point prior to starting the solve. Algorithms
     # may update this during the solve, otherwise we will update it at the end.
     model.ideal_point = fill(NaN, MOI.output_dimension(model.f))
@@ -773,6 +814,9 @@ function _optimize!(model::Optimizer)
     if solutions !== nothing
         model.solutions = solutions
         _sort!(model.solutions, MOI.get(model, MOI.ObjectiveSense()))
+    end
+    if !model.silent
+        println("Found $(length(model.solutions)) solutions")
     end
     if MOI.get(model, ComputeIdealPoint())
         _compute_ideal_point(model, start_time)

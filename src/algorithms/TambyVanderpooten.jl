@@ -112,6 +112,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_solution(model, Y)
         yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -122,6 +123,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_solution(model, Y)
         yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -186,6 +188,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         X, Y = _compute_point(model, variables, model.f)
+        _log_solution(model, Y)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, y_k_constraint)
         push!(V[k], (u, Y))

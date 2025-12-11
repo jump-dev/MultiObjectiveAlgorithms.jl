@@ -127,6 +127,7 @@ function minimize_multiobjective!(
             break
         end
         X, Y = _compute_point(model, variables, model.f)
+        _log_solution(model, Y)
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end
