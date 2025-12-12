@@ -30,8 +30,6 @@ mutable struct Dichotomy <: AbstractAlgorithm
     Dichotomy() = new(nothing)
 end
 
-_describe(::Dichotomy) = "Dichotomy()"
-
 """
     NISE()
 
@@ -76,7 +74,7 @@ function _solve_weighted_sum(
     end
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     X, Y = _compute_point(model, variables, model.f)
-    _log_solution(model, Y)
+    _log_subproblem_solve(model, Y)
     return status, SolutionPoint(X, Y)
 end
 

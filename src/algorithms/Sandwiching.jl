@@ -28,5 +28,3 @@ algorithm = MOA.Sandwiching(0.0)
 mutable struct Sandwiching <: AbstractAlgorithm
     precision::Float64
 end
-
-_describe(alg::Sandwiching) = "Sandwiching($(alg.precision))"

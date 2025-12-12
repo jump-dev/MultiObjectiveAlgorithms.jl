@@ -27,8 +27,6 @@ mutable struct RandomWeighting <: AbstractAlgorithm
     RandomWeighting() = new(nothing)
 end
 
-_describe(::RandomWeighting) = "RandomWeighting()"
-
 MOI.supports(::RandomWeighting, ::SolutionLimit) = true
 
 function MOI.set(alg::RandomWeighting, ::SolutionLimit, value)
@@ -55,7 +53,7 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if _is_scalar_status_optimal(status)
         X, Y = _compute_point(model, variables, model.f)
-        _log_solution(model, Y)
+        _log_subproblem_solve(model, Y)
         push!(solutions, SolutionPoint(X, Y))
     else
         return status, nothing
@@ -77,7 +75,7 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
             status = MOI.get(model.inner, MOI.TerminationStatus())
             if _is_scalar_status_optimal(status)
                 X, Y = _compute_point(model, variables, model.f)
-                _log_solution(model, Y)
+                _log_subproblem_solve(model, Y)
                 push!(solutions, SolutionPoint(X, Y))
             end
         end

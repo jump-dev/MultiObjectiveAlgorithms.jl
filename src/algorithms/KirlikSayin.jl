@@ -31,8 +31,6 @@ This algorithm is restricted to problems with:
 """
 struct KirlikSayin <: AbstractAlgorithm end
 
-_describe(::KirlikSayin) = "KirlikSayin()"
-
 struct _Rectangle
     l::Vector{Float64}
     u::Vector{Float64}
@@ -107,7 +105,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        _log_solution(model, variables)
+        _log_subproblem_solve(model, variables)
         model.ideal_point[i] = yI[i] = Y
         # Nadir point
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -120,7 +118,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        _log_solution(model, variables)
+        _log_subproblem_solve(model, variables)
         yN[i] = Y + δ
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
@@ -155,7 +153,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             push!(ε_constraints, ci)
         end
         optimize_inner!(model)
-        _log_solution(model, "auxillary subproblem")
+        _log_subproblem_solve(model, "auxillary subproblem")
         if !_is_scalar_status_optimal(model)
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
@@ -176,7 +174,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         )
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
-            _log_solution(model, "subproblem not optimal")
+            _log_subproblem_solve(model, "subproblem not optimal")
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
             MOI.delete.(model, ε_constraints)
@@ -185,7 +183,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             continue
         end
         X, Y = _compute_point(model, variables, model.f)
-        _log_solution(model, Y)
+        _log_subproblem_solve(model, Y)
         Y_proj = _project(Y, k)
         if !(Y in YN)
             push!(solutions, SolutionPoint(X, Y))

@@ -43,8 +43,6 @@ mutable struct Lexicographic <: AbstractAlgorithm
     end
 end
 
-_describe(::Lexicographic) = "Lexicographic()"
-
 MOI.supports(::Lexicographic, ::ObjectiveRelativeTolerance) = true
 
 function MOI.get(alg::Lexicographic, attr::ObjectiveRelativeTolerance)
@@ -138,7 +136,7 @@ function _solve_in_sequence(
         primal_status = MOI.get(model.inner, MOI.PrimalStatus())
         if _is_scalar_status_feasible_point(primal_status)
             X, Y = _compute_point(model, variables, model.f)
-            _log_solution(model, Y)
+            _log_subproblem_solve(model, Y)
             solution = [SolutionPoint(X, Y)]
         end
         if !_is_scalar_status_optimal(status)

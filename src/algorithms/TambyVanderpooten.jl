@@ -32,8 +32,6 @@ This algorithm is restricted to problems with:
 """
 struct TambyVanderpooten <: AbstractAlgorithm end
 
-_describe(::TambyVanderpooten) = "TambyVanderpooten()"
-
 function _update_search_region(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
     y::Vector{Float64},
@@ -113,7 +111,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        _log_solution(model, variables)
+        _log_subproblem_solve(model, variables)
         yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -124,7 +122,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        _log_solution(model, variables)
+        _log_subproblem_solve(model, variables)
         yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -168,7 +166,7 @@ function minimize_multiobjective!(
             end
         end
         optimize_inner!(model)
-        _log_solution(model, "auxillary subproblem")
+        _log_subproblem_solve(model, "auxillary subproblem")
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             MOI.delete.(model, ε_constraints)
@@ -190,7 +188,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         X, Y = _compute_point(model, variables, model.f)
-        _log_solution(model, Y)
+        _log_subproblem_solve(model, Y)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, y_k_constraint)
         push!(V[k], (u, Y))

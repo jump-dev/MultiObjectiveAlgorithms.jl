@@ -37,8 +37,6 @@ mutable struct Hierarchical <: AbstractAlgorithm
     Hierarchical() = new(Int[], Float64[], Float64[])
 end
 
-_describe(::Hierarchical) = "Hierarchical()"
-
 MOI.supports(::Hierarchical, ::ObjectivePriority) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectivePriority)
@@ -116,7 +114,7 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         end
         if !model.silent
             X, Y = _compute_point(model, variables, model.f)
-            _log_solution(model, Y)
+            _log_subproblem_solve(model, Y)
         end
         # Add tolerance constraints
         X, Y = _compute_point(model, variables, new_vector_f)
@@ -128,7 +126,7 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         end
     end
     X, Y = _compute_point(model, variables, model.f)
-    _log_solution(model, Y)
+    _log_subproblem_solve(model, Y)
     # Remove tolerance constraints
     for c in constraints
         MOI.delete(model, c)

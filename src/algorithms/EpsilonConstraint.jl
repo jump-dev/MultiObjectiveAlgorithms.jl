@@ -36,8 +36,6 @@ mutable struct EpsilonConstraint <: AbstractAlgorithm
     EpsilonConstraint() = new(nothing, nothing)
 end
 
-_describe(::EpsilonConstraint) = "EpsilonConstraint()"
-
 MOI.supports(::EpsilonConstraint, ::SolutionLimit) = true
 
 function MOI.set(alg::EpsilonConstraint, ::SolutionLimit, value)
@@ -128,7 +126,7 @@ function minimize_multiobjective!(
             break
         end
         X, Y = _compute_point(model, variables, model.f)
-        _log_solution(model, Y)
+        _log_subproblem_solve(model, Y)
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end

@@ -667,53 +667,6 @@ function optimize_inner!(model::Optimizer)
     return
 end
 
-"""
-    _log_solution(model::Optimizer, variables::Vector{MOI.VariableIndex})
-
-Log the solution. We don't have a pre-computed point, so compute one from the
-variable values.
-"""
-function _log_solution(model::Optimizer, variables::Vector{MOI.VariableIndex})
-    if !model.silent
-        _, Y = _compute_point(model, variables, model.f)
-        _log_solution(model, Y)
-    end
-    return
-end
-
-"""
-    _log_solution(model::Optimizer, variables::Vector{MOI.VariableIndex})
-
-Log the solution. We have a pre-computed point.
-"""
-function _log_solution(model::Optimizer, Y)
-    if !model.silent
-        print(_format(model.subproblem_count), "  ")
-        for y in Y
-            print(" ", _format(y))
-        end
-        println(" ", _format(time() - model.start_time))
-    end
-    return
-end
-"""
-    _log_solution(model::Optimizer, msg::String)
-
-Log the solution. Assume the subproblem failed to solve.
-"""
-function _log_solution(model::Optimizer, msg::String)
-    if !model.silent
-        print(_format(model.subproblem_count), "  ")
-        print(rpad(msg, 13 * MOI.output_dimension(model.f)))
-        println(" ", _format(time() - model.start_time))
-    end
-    return
-end
-
-_format(x::Int) = Printf.@sprintf("%5d", x)
-_format(x::Float64) = Printf.@sprintf("% .5e", x)
-_format(::Nothing) = "            "
-
 function _compute_ideal_point(model::Optimizer)
     for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
         if _check_premature_termination(model) !== nothing
@@ -822,6 +775,82 @@ function MOI.optimize!(model::Optimizer)
     return
 end
 
+function _print_header(io::IO, model::Optimizer)
+    rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
+    println(io, rule)
+    println(io, "        MultiObjectiveAlgorithms.jl")
+    println(io, rule)
+    println(
+        io,
+        "Algorithm: ",
+        replace(
+            string(typeof(model.algorithm)),
+            "MultiObjectiveAlgorithms." => "",
+        ),
+    )
+    println(io, rule)
+    print(io, "solve #")
+    for i in 1:MOI.output_dimension(model.f)
+        print(io, lpad("Obj. $i  ", 13))
+    end
+    println(io, "     Time    ")
+    println(io, rule)
+    return
+end
+
+function _print_footer(io::IO, model::Optimizer)
+    rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
+    println(io, rule)
+    println(io, "TerminationStatus: ", model.termination_status)
+    println(io, "ResultCount: ", length(model.solutions))
+    println(io, rule)
+    return
+end
+
+"""
+    _log_subproblem_solve(model::Optimizer, variables::Vector{MOI.VariableIndex})
+
+Log the solution. We don't have a pre-computed point, so compute one from the
+variable values.
+"""
+function _log_subproblem_solve(model::Optimizer, arg)
+    if !model.silent
+        _log_subproblem_inner(model, arg)
+    end
+    return
+end
+
+# Variables; compute the associated Y
+function _log_subproblem_inner(model::Optimizer, x::Vector{MOI.VariableIndex})
+    _, Y = _compute_point(model, x, model.f)
+    _log_subproblem_solve(model, Y)
+    return
+end
+
+# We have a pre-computed point.
+function _log_subproblem_inner(model::Optimizer, Y::Vector)
+    print(_format(model.subproblem_count), "  ")
+    for y in Y
+        print(" ", _format(y))
+    end
+    println(" ", _format(time() - model.start_time))
+    return
+end
+
+# Assume the subproblem failed to solve.
+function _log_subproblem_inner(model::Optimizer, msg::String)
+    print(_format(model.subproblem_count), "  ")
+    print(rpad(msg, 13 * MOI.output_dimension(model.f)))
+    println(" ", _format(time() - model.start_time))
+    return
+end
+
+_format(x::Int) = Printf.@sprintf("%5d", x)
+
+_format(x::Float64) = Printf.@sprintf("% .5e", x)
+
+_format(::Nothing) = "            "
+
 function _optimize!(model::Optimizer)
     model.start_time = time()
     empty!(model.solutions)
@@ -833,18 +862,7 @@ function _optimize!(model::Optimizer)
         return
     end
     if !model.silent
-        rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
-        println(rule)
-        println("        MultiObjectiveAlgorithms.jl")
-        println(rule)
-        println("Algorithm: ", _describe(model.algorithm))
-        println(rule)
-        print("solve #")
-        for i in 1:MOI.output_dimension(model.f)
-            print(lpad("Obj. $i  ", 13))
-        end
-        println("     Time    ")
-        println(rule)
+        _print_header(stdout, model)
     end
     # We need to clear the ideal point prior to starting the solve. Algorithms
     # may update this during the solve, otherwise we will update it at the end.
@@ -857,10 +875,7 @@ function _optimize!(model::Optimizer)
         _sort!(model.solutions, MOI.get(model, MOI.ObjectiveSense()))
     end
     if !model.silent
-        println(rule)
-        println("Terminating with status: ", status)
-        println("Number of non-dominated solutions: ", length(model.solutions))
-        println(rule)
+        _print_footer(stdout, model)
     end
     if MOI.get(model, ComputeIdealPoint())
         _compute_ideal_point(model)
