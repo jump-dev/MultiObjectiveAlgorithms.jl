@@ -43,7 +43,6 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
        algorithm.solution_limit === nothing
         error("At least `MOI.TimeLimitSec` or `MOA.SolutionLimit` must be set")
     end
-    start_time = time()
     solutions = SolutionPoint[]
     sense = MOI.get(model, MOI.ObjectiveSense())
     P = MOI.output_dimension(model.f)
@@ -65,7 +64,7 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
     #   * then the outer loop goes again
     while length(solutions) < MOI.get(algorithm, SolutionLimit())
         while length(solutions) < MOI.get(algorithm, SolutionLimit())
-            ret = _check_premature_termination(model, start_time)
+            ret = _check_premature_termination(model)
             if ret !== nothing
                 return ret, filter_nondominated(sense, solutions)
             end

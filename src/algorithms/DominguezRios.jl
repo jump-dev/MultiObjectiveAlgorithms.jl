@@ -150,7 +150,6 @@ end
 
 function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     n = MOI.output_dimension(model.f)
     L = [_DominguezRiosBox[] for i in 1:n]
     scalars = MOI.Utilities.scalarize(model.f)
@@ -166,7 +165,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        _log_solution(model, Y)
+        _log_solution(model, variables)
         yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -177,7 +176,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        _log_solution(model, Y)
+        _log_solution(model, variables)
         yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -192,7 +191,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     k = 0
     status = MOI.OPTIMAL
     while any(!isempty(l) for l in L)
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
@@ -236,6 +235,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             # fail and return something like OTHER_ERROR (e.g., because the
             # numerics are challenging). Rather than error completely, let's
             # just skip this box.
+            _log_solution(model, "subproblem not optimal")
             deleteat!(L[k], i)
         end
         MOI.delete.(model.inner, constraints)

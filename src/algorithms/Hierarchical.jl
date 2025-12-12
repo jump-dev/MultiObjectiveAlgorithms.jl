@@ -112,9 +112,12 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         if round == length(objective_subsets)
             break
         end
+        if !model.silent
+            X, Y = _compute_point(model, variables, model.f)
+            _log_solution(model, Y)
+        end
         # Add tolerance constraints
         X, Y = _compute_point(model, variables, new_vector_f)
-        _log_solution(model, Y)
         for (i, fi) in enumerate(MOI.Utilities.eachscalar(new_vector_f))
             rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
             set = MOI.LessThan(Y[i] + rtol * abs(Y[i]))

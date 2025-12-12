@@ -39,7 +39,6 @@ function MOA.minimize_multiobjective!(
     model::MOA.Optimizer,
 )
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     n = MOI.output_dimension(model.f)
@@ -102,7 +101,7 @@ function MOA.minimize_multiobjective!(
     H = _halfspaces(IPS)
     count = 0
     while !isempty(H)
-        ret = MOA._check_premature_termination(model, start_time)
+        ret = MOA._check_premature_termination(model)
         if ret !== nothing
             status = ret
             break

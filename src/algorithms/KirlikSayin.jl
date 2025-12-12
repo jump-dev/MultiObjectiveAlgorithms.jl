@@ -83,7 +83,6 @@ end
 
 function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     solutions = SolutionPoint[]
     # Problem with p objectives.
     # Set k = 1, meaning the nondominated points will get projected
@@ -96,8 +95,6 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     # This tolerance is really important!
     δ = 1.0
     scalars = MOI.Utilities.scalarize(model.f)
-    printing = Vector{Union{Nothing,Float64}}(undef, n)
-    fill!(printing, nothing)
     # Ideal and Nadir point estimation
     for (i, f_i) in enumerate(scalars)
         # Ideal point
@@ -108,8 +105,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        printing[i] = Y
-        _log_solution(model, printing)
+        _log_solution(model, variables)
         model.ideal_point[i] = yI[i] = Y
         # Nadir point
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -122,16 +118,14 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
-        printing[i] = Y
-        _log_solution(model, printing)
-        printing[i] = nothing
+        _log_solution(model, variables)
         yN[i] = Y + δ
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
     L = [_Rectangle(_project(yI, k), _project(yN, k))]
     status = MOI.OPTIMAL
     while !isempty(L)
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
@@ -159,6 +153,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             push!(ε_constraints, ci)
         end
         optimize_inner!(model)
+        _log_solution(model, "auxillary subproblem")
         if !_is_scalar_status_optimal(model)
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
@@ -179,6 +174,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         )
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
+            _log_solution(model, "subproblem not optimal")
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
             MOI.delete.(model, ε_constraints)

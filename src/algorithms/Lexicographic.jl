@@ -69,11 +69,10 @@ function MOI.set(alg::Lexicographic, ::LexicographicAllPermutations, val::Bool)
 end
 
 function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
-    start_time = time()
     sequence = 1:MOI.output_dimension(model.f)
     perm = MOI.get(algorithm, LexicographicAllPermutations())
     if !something(perm, _default(LexicographicAllPermutations()))
-        return _solve_in_sequence(algorithm, model, sequence, start_time)
+        return _solve_in_sequence(algorithm, model, sequence)
     end
     if perm === nothing && length(sequence) >= 5
         o, n = length(sequence), factorial(length(sequence))
@@ -104,7 +103,7 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     status = MOI.OPTIMAL
     for sequence in Combinatorics.permutations(sequence)
         status, solution =
-            _solve_in_sequence(algorithm, model, sequence, start_time)
+            _solve_in_sequence(algorithm, model, sequence)
         if !isempty(solution)
             push!(solutions, solution[1])
         end
@@ -120,7 +119,6 @@ function _solve_in_sequence(
     algorithm::Lexicographic,
     model::Optimizer,
     sequence::AbstractVector{Int},
-    start_time::Float64,
 )
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     constraints = Any[]
@@ -128,7 +126,7 @@ function _solve_in_sequence(
     solution = SolutionPoint[]
     status = MOI.OPTIMAL
     for i in sequence
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
@@ -146,7 +144,6 @@ function _solve_in_sequence(
             break
         end
         X, Y = _compute_point(model, variables, f)
-        _log_solution(model, Y)
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
         set = if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
             MOI.LessThan(Y + rtol * abs(Y))

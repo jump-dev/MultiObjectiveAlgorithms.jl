@@ -79,12 +79,11 @@ function _solve_weighted_sum(
 end
 
 function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
-    start_time = time()
     if MOI.output_dimension(model.f) > 2
         error("Only scalar or bi-objective problems supported.")
     end
     if MOI.output_dimension(model.f) == 1
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             return ret, nothing
         end
         status, solution = _solve_weighted_sum(model, algorithm, [1.0])
@@ -107,7 +106,7 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
     limit = MOI.get(algorithm, SolutionLimit())
     status = MOI.OPTIMAL
     while length(queue) > 0 && length(solutions) < limit
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
