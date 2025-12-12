@@ -260,6 +260,14 @@ function _test_printing()
     ]
         @test occursin(line, contents)
     end
+    @test MOI.supports(model, MOI.Silent())
+    @test MOI.get(model, MOI.Silent()) == false
+    MOI.set(model, MOI.Silent(), true)
+    open(joinpath(dir, "log2.txt"), "w") do io
+        redirect_stdout(() -> MOI.optimize!(model), io)
+        return
+    end
+    @test read(joinpath(dir, "log2.txt"), String) == ""
     return
 end
 
