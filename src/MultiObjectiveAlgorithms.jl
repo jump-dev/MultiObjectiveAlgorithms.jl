@@ -849,8 +849,6 @@ _format(x::Int) = Printf.@sprintf("%5d", x)
 
 _format(x::Float64) = Printf.@sprintf("% .5e", x)
 
-_format(::Nothing) = "            "
-
 function _optimize!(model::Optimizer)
     model.start_time = time()
     empty!(model.solutions)

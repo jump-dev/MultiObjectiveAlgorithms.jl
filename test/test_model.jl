@@ -234,7 +234,7 @@ function test_check_interrupt()
     return
 end
 
-function _test_printing()
+function test_printing()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.KirlikSayin())
     x = MOI.add_variables(model, 2)
