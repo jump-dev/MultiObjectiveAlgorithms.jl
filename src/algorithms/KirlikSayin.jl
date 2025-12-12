@@ -83,7 +83,6 @@ end
 
 function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     solutions = SolutionPoint[]
     # Problem with p objectives.
     # Set k = 1, meaning the nondominated points will get projected
@@ -106,6 +105,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_subproblem_solve(model, variables)
         model.ideal_point[i] = yI[i] = Y
         # Nadir point
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -118,13 +118,14 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_subproblem_solve(model, variables)
         yN[i] = Y + δ
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
     L = [_Rectangle(_project(yI, k), _project(yN, k))]
     status = MOI.OPTIMAL
     while !isempty(L)
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
@@ -152,6 +153,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             push!(ε_constraints, ci)
         end
         optimize_inner!(model)
+        _log_subproblem_solve(model, "auxillary subproblem")
         if !_is_scalar_status_optimal(model)
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
@@ -172,6 +174,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         )
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
+            _log_subproblem_solve(model, "subproblem not optimal")
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
             MOI.delete.(model, ε_constraints)
@@ -180,6 +183,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             continue
         end
         X, Y = _compute_point(model, variables, model.f)
+        _log_subproblem_solve(model, Y)
         Y_proj = _project(Y, k)
         if !(Y in YN)
             push!(solutions, SolutionPoint(X, Y))

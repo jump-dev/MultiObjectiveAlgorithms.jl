@@ -7,6 +7,7 @@ module MultiObjectiveAlgorithms
 
 import Combinatorics
 import MathOptInterface as MOI
+import Printf
 
 """
     struct SolutionPoint
@@ -170,7 +171,9 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     f::Union{Nothing,MOI.AbstractVectorFunction}
     solutions::Vector{SolutionPoint}
     termination_status::MOI.TerminationStatusCode
+    silent::Bool
     time_limit_sec::Union{Nothing,Float64}
+    start_time::Float64
     solve_time::Float64
     ideal_point::Vector{Float64}
     compute_ideal_point::Bool
@@ -178,13 +181,19 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     optimizer_factory::Any
 
     function Optimizer(optimizer_factory)
+        inner = MOI.instantiate(optimizer_factory; with_cache_type = Float64)
+        if MOI.supports(inner, MOI.Silent())
+            MOI.set(inner, MOI.Silent(), true)
+        end
         return new(
-            MOI.instantiate(optimizer_factory; with_cache_type = Float64),
+            inner,
             nothing,
             nothing,
             SolutionPoint[],
             MOI.OPTIMIZE_NOT_CALLED,
+            false,
             nothing,
+            NaN,
             NaN,
             Float64[],
             _default(ComputeIdealPoint()),
@@ -200,6 +209,7 @@ function MOI.empty!(model::Optimizer)
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.solve_time = NaN
+    model.start_time = NaN
     empty!(model.ideal_point)
     model.subproblem_count = 0
     return
@@ -218,6 +228,17 @@ MOI.supports_incremental_interface(::Optimizer) = true
 
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
     return MOI.Utilities.default_copy_to(dest, src)
+end
+
+### Silent
+
+MOI.supports(::Optimizer, ::MOI.Silent) = true
+
+MOI.get(model::Optimizer, ::MOI.Silent) = model.silent
+
+function MOI.set(model::Optimizer, ::MOI.Silent, value::Bool)
+    model.silent = value
+    return
 end
 
 ### TimeLimitSec
@@ -646,9 +667,9 @@ function optimize_inner!(model::Optimizer)
     return
 end
 
-function _compute_ideal_point(model::Optimizer, start_time)
+function _compute_ideal_point(model::Optimizer)
     for (i, f) in enumerate(MOI.Utilities.eachscalar(model.f))
-        if _check_premature_termination(model, start_time) !== nothing
+        if _check_premature_termination(model) !== nothing
             return
         end
         if !isnan(model.ideal_point[i])
@@ -733,11 +754,11 @@ function _check_interrupt(f)
     end
 end
 
-function _check_premature_termination(model::Optimizer, start_time::Float64)
+function _check_premature_termination(model::Optimizer)
     return _check_interrupt() do
         time_limit = MOI.get(model, MOI.TimeLimitSec())
         if time_limit !== nothing
-            time_remaining = time_limit - (time() - start_time)
+            time_remaining = time_limit - (time() - model.start_time)
             if time_remaining <= 0
                 return MOI.TIME_LIMIT
             end
@@ -754,8 +775,82 @@ function MOI.optimize!(model::Optimizer)
     return
 end
 
+function _print_header(io::IO, model::Optimizer)
+    rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
+    println(io, rule)
+    println(io, "        MultiObjectiveAlgorithms.jl")
+    println(io, rule)
+    println(
+        io,
+        "Algorithm: ",
+        replace(
+            string(typeof(model.algorithm)),
+            "MultiObjectiveAlgorithms." => "",
+        ),
+    )
+    println(io, rule)
+    print(io, "solve #")
+    for i in 1:MOI.output_dimension(model.f)
+        print(io, lpad("Obj. $i  ", 13))
+    end
+    println(io, "     Time    ")
+    println(io, rule)
+    return
+end
+
+function _print_footer(io::IO, model::Optimizer)
+    rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
+    println(io, rule)
+    println(io, "TerminationStatus: ", model.termination_status)
+    println(io, "ResultCount: ", length(model.solutions))
+    println(io, rule)
+    return
+end
+
+"""
+    _log_subproblem_solve(model::Optimizer, variables::Vector{MOI.VariableIndex})
+
+Log the solution. We don't have a pre-computed point, so compute one from the
+variable values.
+"""
+function _log_subproblem_solve(model::Optimizer, arg)
+    if !model.silent
+        _log_subproblem_inner(model, arg)
+    end
+    return
+end
+
+# Variables; compute the associated Y
+function _log_subproblem_inner(model::Optimizer, x::Vector{MOI.VariableIndex})
+    _, Y = _compute_point(model, x, model.f)
+    _log_subproblem_solve(model, Y)
+    return
+end
+
+# We have a pre-computed point.
+function _log_subproblem_inner(model::Optimizer, Y::Vector)
+    print(_format(model.subproblem_count), "  ")
+    for y in Y
+        print(" ", _format(y))
+    end
+    println(" ", _format(time() - model.start_time))
+    return
+end
+
+# Assume the subproblem failed to solve.
+function _log_subproblem_inner(model::Optimizer, msg::String)
+    print(_format(model.subproblem_count), "  ")
+    print(rpad(msg, 13 * MOI.output_dimension(model.f)))
+    println(" ", _format(time() - model.start_time))
+    return
+end
+
+_format(x::Int) = Printf.@sprintf("%5d", x)
+
+_format(x::Float64) = Printf.@sprintf("% .5e", x)
+
 function _optimize!(model::Optimizer)
-    start_time = time()
+    model.start_time = time()
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.subproblem_count = 0
@@ -763,6 +858,9 @@ function _optimize!(model::Optimizer)
         model.termination_status = MOI.INVALID_MODEL
         empty!(model.ideal_point)
         return
+    end
+    if !model.silent
+        _print_header(stdout, model)
     end
     # We need to clear the ideal point prior to starting the solve. Algorithms
     # may update this during the solve, otherwise we will update it at the end.
@@ -774,13 +872,16 @@ function _optimize!(model::Optimizer)
         model.solutions = solutions
         _sort!(model.solutions, MOI.get(model, MOI.ObjectiveSense()))
     end
+    if !model.silent
+        _print_footer(stdout, model)
+    end
     if MOI.get(model, ComputeIdealPoint())
-        _compute_ideal_point(model, start_time)
+        _compute_ideal_point(model)
     end
     if MOI.supports(model.inner, MOI.TimeLimitSec())
         MOI.set(model.inner, MOI.TimeLimitSec(), nothing)
     end
-    model.solve_time = time() - start_time
+    model.solve_time = time() - model.start_time
     return
 end
 

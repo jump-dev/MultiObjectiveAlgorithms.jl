@@ -38,18 +38,19 @@ function _solve_constrained_model(
     optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
+        _log_subproblem_solve(model, "subproblem not optimal")
         MOI.delete.(model, c)
         return status, nothing
     end
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     X, Y = _compute_point(model, variables, model.f)
+    _log_subproblem_solve(model, Y)
     MOI.delete.(model, c)
     return status, SolutionPoint(X, Y)
 end
 
 function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("Chalmet requires exactly two objectives")
     end
@@ -66,6 +67,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         return status, solutions
     end
     _, y1[2] = _compute_point(model, variables, f2)
+    _log_subproblem_solve(model, variables)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
     y1_constraint = MOI.Utilities.normalize_and_add_constraint(
         model.inner,
@@ -78,6 +80,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         return status, solutions
     end
     x1, y1[1] = _compute_point(model, variables, f1)
+    _log_subproblem_solve(model, y1)
     MOI.delete(model.inner, y1_constraint)
     push!(solutions, SolutionPoint(x1, y1))
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
@@ -87,6 +90,7 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         return status, solutions
     end
     _, y2[1] = _compute_point(model, variables, f1)
+    _log_subproblem_solve(model, variables)
     if y2[1] ≈ solutions[1].y[1]
         return MOI.OPTIMAL, solutions
     end
@@ -102,12 +106,13 @@ function minimize_multiobjective!(algorithm::Chalmet, model::Optimizer)
         return status, solutions
     end
     x2, y2[2] = _compute_point(model, variables, f2)
+    _log_subproblem_solve(model, y2)
     MOI.delete(model.inner, y2_constraint)
     push!(solutions, SolutionPoint(x2, y2))
     push!(Q, (1, 2))
     t = 3
     while !isempty(Q)
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             return ret, solutions
         end
         r, s = pop!(Q)

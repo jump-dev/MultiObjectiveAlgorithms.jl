@@ -93,7 +93,6 @@ function minimize_multiobjective!(
     model::Optimizer,
 )
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     warm_start_supported = false
     if MOI.supports(model, MOI.VariablePrimalStart(), MOI.VariableIndex)
         warm_start_supported = true
@@ -112,6 +111,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_subproblem_solve(model, variables)
         yI[i] = Y
         model.ideal_point[i] = Y
         MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -122,6 +122,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
+        _log_subproblem_solve(model, variables)
         yN[i] = Y + 1
     end
     MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -130,7 +131,7 @@ function minimize_multiobjective!(
     U_N[yN] = [[_get_child(yN, yI, k)] for k in 1:n]
     status = MOI.OPTIMAL
     while !isempty(U_N)
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
@@ -165,6 +166,7 @@ function minimize_multiobjective!(
             end
         end
         optimize_inner!(model)
+        _log_subproblem_solve(model, "auxillary subproblem")
         status = MOI.get(model.inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             MOI.delete.(model, ε_constraints)
@@ -186,6 +188,7 @@ function minimize_multiobjective!(
             return status, nothing
         end
         X, Y = _compute_point(model, variables, model.f)
+        _log_subproblem_solve(model, Y)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, y_k_constraint)
         push!(V[k], (u, Y))

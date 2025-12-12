@@ -112,6 +112,10 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         if round == length(objective_subsets)
             break
         end
+        if !model.silent
+            X, Y = _compute_point(model, variables, model.f)
+            _log_subproblem_solve(model, Y)
+        end
         # Add tolerance constraints
         X, Y = _compute_point(model, variables, new_vector_f)
         for (i, fi) in enumerate(MOI.Utilities.eachscalar(new_vector_f))
@@ -122,6 +126,7 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         end
     end
     X, Y = _compute_point(model, variables, model.f)
+    _log_subproblem_solve(model, Y)
     # Remove tolerance constraints
     for c in constraints
         MOI.delete(model, c)

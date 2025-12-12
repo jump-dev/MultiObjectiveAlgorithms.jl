@@ -234,6 +234,43 @@ function test_check_interrupt()
     return
 end
 
+function test_printing()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.KirlikSayin())
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x[2], MOI.LessThan(3.0))
+    MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.vectorize([3.0 * x[1] + x[2], -1.0 * x[1] - 2.0 * x[2]])
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    dir = mktempdir()
+    open(joinpath(dir, "log.txt"), "w") do io
+        redirect_stdout(() -> MOI.optimize!(model), io)
+        return
+    end
+    contents = read(joinpath(dir, "log.txt"), String)
+    for line in [
+        "Algorithm: KirlikSayin",
+        "auxillary subproblem",
+        "1    0.00000e+00  0.00000e+00",
+        "----------------------------------------------",
+        "TerminationStatus: OPTIMAL",
+        "ResultCount: 10",
+    ]
+        @test occursin(line, contents)
+    end
+    @test MOI.supports(model, MOI.Silent())
+    @test MOI.get(model, MOI.Silent()) == false
+    MOI.set(model, MOI.Silent(), true)
+    open(joinpath(dir, "log2.txt"), "w") do io
+        redirect_stdout(() -> MOI.optimize!(model), io)
+        return
+    end
+    @test read(joinpath(dir, "log2.txt"), String) == ""
+    return
+end
+
 end  # module
 
 TestModel.run_tests()

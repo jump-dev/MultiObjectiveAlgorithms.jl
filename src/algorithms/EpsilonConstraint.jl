@@ -76,7 +76,6 @@ function minimize_multiobjective!(
     model::Optimizer,
 )
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    start_time = time()
     if MOI.output_dimension(model.f) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
@@ -117,7 +116,7 @@ function minimize_multiobjective!(
     bound -= constant
     status = MOI.OPTIMAL
     for _ in 3:n_points
-        if (ret = _check_premature_termination(model, start_time)) !== nothing
+        if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
@@ -127,6 +126,7 @@ function minimize_multiobjective!(
             break
         end
         X, Y = _compute_point(model, variables, model.f)
+        _log_subproblem_solve(model, Y)
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end
