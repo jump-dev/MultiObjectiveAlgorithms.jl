@@ -30,6 +30,8 @@ mutable struct Dichotomy <: AbstractAlgorithm
     Dichotomy() = new(nothing)
 end
 
+_describe(::Dichotomy) = "Dichotomy()"
+
 """
     NISE()
 

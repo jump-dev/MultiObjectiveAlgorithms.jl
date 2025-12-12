@@ -37,6 +37,8 @@ mutable struct Hierarchical <: AbstractAlgorithm
     Hierarchical() = new(Int[], Float64[], Float64[])
 end
 
+_describe(::Hierarchical) = "Hierarchical()"
+
 MOI.supports(::Hierarchical, ::ObjectivePriority) = true
 
 function MOI.get(alg::Hierarchical, attr::ObjectivePriority)

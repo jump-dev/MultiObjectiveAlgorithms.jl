@@ -26,6 +26,8 @@ This algorithm is restricted to problems with:
 """
 struct DominguezRios <: AbstractAlgorithm end
 
+_describe(::DominguezRios) = "DominguezRios()"
+
 mutable struct _DominguezRiosBox
     l::Vector{Float64}
     u::Vector{Float64}

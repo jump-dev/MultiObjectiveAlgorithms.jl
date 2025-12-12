@@ -43,6 +43,8 @@ mutable struct Lexicographic <: AbstractAlgorithm
     end
 end
 
+_describe(::Lexicographic) = "Lexicographic()"
+
 MOI.supports(::Lexicographic, ::ObjectiveRelativeTolerance) = true
 
 function MOI.get(alg::Lexicographic, attr::ObjectiveRelativeTolerance)
@@ -102,8 +104,7 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     solutions = SolutionPoint[]
     status = MOI.OPTIMAL
     for sequence in Combinatorics.permutations(sequence)
-        status, solution =
-            _solve_in_sequence(algorithm, model, sequence)
+        status, solution = _solve_in_sequence(algorithm, model, sequence)
         if !isempty(solution)
             push!(solutions, solution[1])
         end

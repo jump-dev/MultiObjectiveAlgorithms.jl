@@ -27,6 +27,8 @@ mutable struct RandomWeighting <: AbstractAlgorithm
     RandomWeighting() = new(nothing)
 end
 
+_describe(::RandomWeighting) = "RandomWeighting()"
+
 MOI.supports(::RandomWeighting, ::SolutionLimit) = true
 
 function MOI.set(alg::RandomWeighting, ::SolutionLimit, value)

@@ -32,6 +32,8 @@ This algorithm is restricted to problems with:
 """
 struct TambyVanderpooten <: AbstractAlgorithm end
 
+_describe(::TambyVanderpooten) = "TambyVanderpooten()"
+
 function _update_search_region(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
     y::Vector{Float64},

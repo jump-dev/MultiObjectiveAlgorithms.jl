@@ -36,6 +36,8 @@ mutable struct EpsilonConstraint <: AbstractAlgorithm
     EpsilonConstraint() = new(nothing, nothing)
 end
 
+_describe(::EpsilonConstraint) = "EpsilonConstraint()"
+
 MOI.supports(::EpsilonConstraint, ::SolutionLimit) = true
 
 function MOI.set(alg::EpsilonConstraint, ::SolutionLimit, value)

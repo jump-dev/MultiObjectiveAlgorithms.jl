@@ -25,6 +25,8 @@ This algorithm is restricted to problems with:
 """
 struct Chalmet <: AbstractAlgorithm end
 
+_describe(::Chalmet) = "Chalmet()"
+
 function _solve_constrained_model(
     model::Optimizer,
     ::Chalmet,

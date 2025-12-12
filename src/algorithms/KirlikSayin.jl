@@ -31,6 +31,8 @@ This algorithm is restricted to problems with:
 """
 struct KirlikSayin <: AbstractAlgorithm end
 
+_describe(::KirlikSayin) = "KirlikSayin()"
+
 struct _Rectangle
     l::Vector{Float64}
     u::Vector{Float64}

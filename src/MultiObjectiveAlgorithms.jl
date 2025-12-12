@@ -7,6 +7,7 @@ module MultiObjectiveAlgorithms
 
 import Combinatorics
 import MathOptInterface as MOI
+import Printf
 
 """
     struct SolutionPoint
@@ -648,8 +649,6 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
     return
 end
 
-import Printf
-
 """
     optimize_inner!(model::Optimizer)
 
@@ -689,7 +688,7 @@ Log the solution. We have a pre-computed point.
 """
 function _log_solution(model::Optimizer, Y)
     if !model.silent
-        print(_format(model.subproblem_count))
+        print(_format(model.subproblem_count), "  ")
         for y in Y
             print(" ", _format(y))
         end
@@ -704,8 +703,8 @@ Log the solution. Assume the subproblem failed to solve.
 """
 function _log_solution(model::Optimizer, msg::String)
     if !model.silent
-        print(_format(model.subproblem_count), "   ")
-        print(rpad(msg, 13 * MOI.output_dimension(model.f) - 3))
+        print(_format(model.subproblem_count), "  ")
+        print(rpad(msg, 13 * MOI.output_dimension(model.f)))
         println(" ", _format(time() - model.start_time))
     end
     return
@@ -834,11 +833,18 @@ function _optimize!(model::Optimizer)
         return
     end
     if !model.silent
-        print("Iter.")
+        rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
+        println(rule)
+        println("        MultiObjectiveAlgorithms.jl")
+        println(rule)
+        println("Algorithm: ", _describe(model.algorithm))
+        println(rule)
+        print("solve #")
         for i in 1:MOI.output_dimension(model.f)
             print(lpad("Obj. $i  ", 13))
         end
         println("     Time    ")
+        println(rule)
     end
     # We need to clear the ideal point prior to starting the solve. Algorithms
     # may update this during the solve, otherwise we will update it at the end.
@@ -851,7 +857,10 @@ function _optimize!(model::Optimizer)
         _sort!(model.solutions, MOI.get(model, MOI.ObjectiveSense()))
     end
     if !model.silent
-        println("Found $(length(model.solutions)) solutions")
+        println(rule)
+        println("Terminating with status: ", status)
+        println("Number of non-dominated solutions: ", length(model.solutions))
+        println(rule)
     end
     if MOI.get(model, ComputeIdealPoint())
         _compute_ideal_point(model)
