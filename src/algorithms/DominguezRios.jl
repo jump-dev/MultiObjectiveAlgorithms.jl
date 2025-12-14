@@ -190,7 +190,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     solutions = SolutionPoint[]
     k = 0
     status = MOI.OPTIMAL
-    B_prevs = Vector{_DominguezRiosBox}(undef, n)
+    B_prevs = Vector{Union{Nothing, _DominguezRiosBox}}(nothing, n)
     iter = 0
     while any(!isempty(l) for l in L)
         iter += 1
@@ -201,9 +201,11 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         i, k = _select_next_box(L, k)
         B = L[k][i]
         if iter > n
-            if (B_prevs[k].l ≈ B.l) && (B_prevs[k].u ≈ B.u)
-                deleteat!(L[k], i)
-                continue
+            if !isnothing(B_prevs[k])
+                if (B_prevs[k].l ≈ B.l) && (B_prevs[k].u ≈ B.u)
+                    deleteat!(L[k], i)
+                    continue
+                end
             end
         end
         B_prevs[k] = B
