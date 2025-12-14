@@ -171,7 +171,7 @@ function test_lp()
         ],
         fill(0.0, 2),
     )
-    MOI.add_constraint(model, 3x1 - x2, MOI.LessThan(6.0))
+    MOI.add_constraint(model, 3.0 * x1 - x2, MOI.LessThan(6.0))
     MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
