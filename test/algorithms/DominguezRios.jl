@@ -162,12 +162,14 @@ function test_lp()
     x2 = MOI.add_variable(model)
     MOI.add_constraint(model, x1, MOI.GreaterThan(0.0))
     MOI.add_constraint(model, x2, MOI.Interval(0.0, 3.0))
+    C = Float64[
+        3 1
+        -1 -2
+    ]
     f = MOI.VectorAffineFunction(
         [
-            MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(3.0, x1))
-            MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x2));
-            MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-1.0, x1))
-            MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-2.0, x2))
+            MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(C[i, j], x[j])) for
+            i in 1:2 for j in 1:2
         ],
         fill(0.0, 2),
     )
