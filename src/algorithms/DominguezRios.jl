@@ -190,13 +190,24 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     solutions = SolutionPoint[]
     k = 0
     status = MOI.OPTIMAL
+    B_prevs = Vector{_DominguezRiosBox}(undef, n)
+    iter = 0
     while any(!isempty(l) for l in L)
+        iter += 1
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
         i, k = _select_next_box(L, k)
         B = L[k][i]
+        if iter > n
+            if (B_prevs[k].l ≈ B.l) && (B_prevs[k].u ≈ B.u)
+                @info "B and B_prev are the same!"
+                deleteat!(L[k], i)
+                continue
+            end
+        end
+        B_prevs[k] = B
         # We're going to scale `w` here by `scale` instead of the usual
         # `1 / max(...)`. It will show up in a few places bbelow.
         w = scale ./ max.(1, B.u - yI)
