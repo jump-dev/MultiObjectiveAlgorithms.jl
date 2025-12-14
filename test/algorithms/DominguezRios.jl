@@ -165,14 +165,16 @@ function test_lp()
     f = MOI.VectorAffineFunction(
         [
             MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(3.0, x1))
-            MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x1));
+            MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x2));
             MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-1.0, x1))
-            MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-2.0, x1))
+            MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-2.0, x2))
         ],
         fill(0.0, 2),
     )
-    MOI.add_constraint(model, 3.0 * x1 - x2, MOI.LessThan(6.0))
+    MOI.add_constraint(model, 3.0 * x1 - 1.0 * x2, MOI.LessThan(6.0))
     MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
 end
