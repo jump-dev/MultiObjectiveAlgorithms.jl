@@ -152,6 +152,18 @@ function test_vector_of_variables_objective()
     return
 end
 
+function test_lp()
+    model = Model(() -> MOA.Optimizer(HiGHS.Optimizer))
+    set_silent(model)
+    @variable(model, x1 >= 0)
+    @variable(model, 0 <= x2 <= 3)
+    @objective(model, Min, [3x1 + x2, -x1 - 2x2])
+    @constraint(model, 3x1 - x2 <= 6)
+    set_attribute(model, MOA.Algorithm(), MOA.DominguezRios())
+    optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+end
+
 end  # module TestDominguezRios
 
 TestDominguezRios.run_tests()
