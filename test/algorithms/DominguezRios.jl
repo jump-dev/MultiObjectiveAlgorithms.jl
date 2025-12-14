@@ -158,10 +158,9 @@ function test_lp()
     end
     MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
     MOI.set(model, MOI.Silent(), true)
-    x1 = MOI.add_variable(model)
-    x2 = MOI.add_variable(model)
-    MOI.add_constraint(model, x1, MOI.GreaterThan(0.0))
-    MOI.add_constraint(model, x2, MOI.Interval(0.0, 3.0))
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint(model, x[1], MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x[2], MOI.Interval(0.0, 3.0))
     C = Float64[
         3 1
         -1 -2
@@ -173,7 +172,7 @@ function test_lp()
         ],
         fill(0.0, 2),
     )
-    MOI.add_constraint(model, 3.0 * x1 - 1.0 * x2, MOI.LessThan(6.0))
+    MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
     MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
