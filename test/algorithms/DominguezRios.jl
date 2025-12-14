@@ -161,23 +161,14 @@ function test_lp()
     x = MOI.add_variables(model, 2)
     MOI.add_constraint(model, x[1], MOI.GreaterThan(0.0))
     MOI.add_constraint(model, x[2], MOI.Interval(0.0, 3.0))
-    C = Float64[
-        3 1
-        -1 -2
-    ]
-    f = MOI.VectorAffineFunction(
-        [
-            MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(C[i, j], x[j])) for
-            i in 1:2 for j in 1:2
-        ],
-        fill(0.0, 2),
-    )
     MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
-    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.vectorize([3.0 1.0; -1.0 -2.0] * x)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.ResultCount()) > 1
+    return
 end
 
 end  # module TestDominguezRios
