@@ -153,14 +153,27 @@ function test_vector_of_variables_objective()
 end
 
 function test_lp()
-    model = Model(() -> MOA.Optimizer(HiGHS.Optimizer))
-    set_silent(model)
-    @variable(model, x1 >= 0)
-    @variable(model, 0 <= x2 <= 3)
-    @objective(model, Min, [3x1 + x2, -x1 - 2x2])
-    @constraint(model, 3x1 - x2 <= 6)
-    set_attribute(model, MOA.Algorithm(), MOA.DominguezRios())
-    optimize!(model)
+    model = MOI.instantiate(; with_bridge_type = Float64) do
+        return MOA.Optimizer(HiGHS.Optimizer)
+    end
+    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+    MOI.set(model, MOI.Silent(), true)
+    x1 = MOI.add_variable(model)
+    x2 = MOI.add_variable(model)
+    MOI.add_constraint(model, x1, MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x2, MOI.Interval(0.0, 3.0))
+    f = MOI.VectorAffineFunction(
+        [
+            MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(3.0, x1))
+            MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x1));
+            MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-1.0, x1))
+            MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(-2.0, x1))
+        ],
+        fill(0.0, 2),
+    )
+    MOI.add_constraint(model, 3x1 - x2, MOI.LessThan(6.0))
+    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+    MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
 end
 
