@@ -202,7 +202,6 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         B = L[k][i]
         if iter > n
             if (B_prevs[k].l ≈ B.l) && (B_prevs[k].u ≈ B.u)
-                @info "B and B_prev are the same!"
                 deleteat!(L[k], i)
                 continue
             end
