@@ -195,20 +195,16 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     k = 0
     status = MOI.OPTIMAL
     B_prev = Vector{Union{Nothing,_DominguezRiosBox}}(nothing, n)
-    iter = 0
     while any(!isempty(l) for l in L)
-        iter += 1
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
         i, k = _select_next_box(L, k)
         B = L[k][i]
-        # We check for the repeated search of similar boxes
-        # in the same optimization direction. We wait for n 
-        # iterations so that every direction has at least 
-        # one box. If the same box were search before, we 
-        # delete it from the list of boxes.
+        # We check for the repeated search of similar boxes in the same
+        # optimization direction. If the same box was searched before, we delete
+        # it from the list of boxes.
         if _isapprox(B_prev[k], B)
             deleteat!(L[k], i)
             continue
