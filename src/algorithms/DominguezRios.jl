@@ -148,6 +148,10 @@ function _update!(
     return
 end
 
+_isapprox(::Nothing, ::_DominguezRiosBox) = false
+
+_isapprox(A::_DominguezRiosBox, B::_DominguezRiosBox) = A.l ≈ B.l && A.u ≈ B.u
+
 function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     n = MOI.output_dimension(model.f)
@@ -190,7 +194,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
     solutions = SolutionPoint[]
     k = 0
     status = MOI.OPTIMAL
-    B_prevs = Vector{Union{Nothing,_DominguezRiosBox}}(nothing, n)
+    B_prev = Vector{Union{Nothing,_DominguezRiosBox}}(nothing, n)
     iter = 0
     while any(!isempty(l) for l in L)
         iter += 1
@@ -200,15 +204,16 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         end
         i, k = _select_next_box(L, k)
         B = L[k][i]
-        if iter > n
-            if !isnothing(B_prevs[k])
-                if (B_prevs[k].l ≈ B.l) && (B_prevs[k].u ≈ B.u)
-                    deleteat!(L[k], i)
-                    continue
-                end
-            end
+        # We check for the repeated search of similar boxes
+        # in the same optimization direction. We wait for n 
+        # iterations so that every direction has at least 
+        # one box. If the same box were search before, we 
+        # delete it from the list of boxes.
+        if _isapprox(B_prev[k], B)
+            deleteat!(L[k], i)
+            continue
         end
-        B_prevs[k] = B
+        B_prev[k] = B
         # We're going to scale `w` here by `scale` instead of the usual
         # `1 / max(...)`. It will show up in a few places bbelow.
         w = scale ./ max.(1, B.u - yI)
