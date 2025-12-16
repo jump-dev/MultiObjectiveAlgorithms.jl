@@ -152,6 +152,25 @@ function test_vector_of_variables_objective()
     return
 end
 
+function test_lp()
+    model = MOI.instantiate(; with_bridge_type = Float64) do
+        return MOA.Optimizer(HiGHS.Optimizer)
+    end
+    MOI.set(model, MOA.Algorithm(), MOA.DominguezRios())
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint(model, x[1], MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x[2], MOI.Interval(0.0, 3.0))
+    MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.vectorize([3.0 1.0; -1.0 -2.0] * x)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+    @test MOI.get(model, MOI.ResultCount()) > 1
+    return
+end
+
 end  # module TestDominguezRios
 
 TestDominguezRios.run_tests()
