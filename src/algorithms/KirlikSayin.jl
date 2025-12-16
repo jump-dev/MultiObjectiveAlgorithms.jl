@@ -194,5 +194,5 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, zₖ_constraint)
     end
-    return status, filter_nondominated(MOI.MIN_SENSE, solutions)
+    return status, solutions
 end

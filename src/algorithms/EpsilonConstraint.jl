@@ -133,5 +133,5 @@ function minimize_multiobjective!(
         bound = min(Y[1] - constant - ε, bound - ε)
     end
     MOI.delete(model, ci)
-    return status, filter_nondominated(MOI.MIN_SENSE, solutions)
+    return status, solutions
 end

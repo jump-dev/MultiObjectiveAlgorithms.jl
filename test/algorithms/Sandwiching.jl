@@ -93,13 +93,12 @@ function test_molp_2()
     C = Float64[3 -2; -1 2]
     A = Float64[-4 -8; 3 -6; 4 -2; 1 0; -1 3; -2 4; -6 3]
     b = Float64[-8, 6, 14, 6, 15, 18, 9]
-    results = sort([
-        [1.0, 5.0] => [-7.0, 9.0], # not sure about this
+    results = [
         [3.0, 6.0] => [-3.0, 9.0],
         [4.0, 1.0] => [10.0, -2.0],
         [6.0, 5.0] => [8.0, 4.0],
         [6.0, 7.0] => [4.0, 8.0],
-    ])
+    ]
     sense = MOI.MAX_SENSE
     return _test_molp(C, A, b, results, sense)
 end

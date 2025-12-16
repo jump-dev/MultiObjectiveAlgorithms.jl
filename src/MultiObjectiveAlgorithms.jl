@@ -869,8 +869,8 @@ function _optimize!(model::Optimizer)
     status, solutions = optimize_multiobjective!(algorithm, model)
     model.termination_status = status
     if solutions !== nothing
-        model.solutions = solutions
-        _sort!(model.solutions, MOI.get(model, MOI.ObjectiveSense()))
+        sense = MOI.get(model, MOI.ObjectiveSense())
+        model.solutions = filter_nondominated(sense, solutions)
     end
     if !model.silent
         _print_footer(stdout, model)

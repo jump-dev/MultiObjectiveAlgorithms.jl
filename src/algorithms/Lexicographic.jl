@@ -110,8 +110,7 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
             break
         end
     end
-    sense = MOI.get(model.inner, MOI.ObjectiveSense())
-    return status, filter_nondominated(sense, solutions)
+    return status, solutions
 end
 
 function _solve_in_sequence(
