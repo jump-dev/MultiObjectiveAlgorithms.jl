@@ -81,5 +81,5 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
         end
         solutions = filter_nondominated(sense, solutions)
     end
-    return MOI.OPTIMAL, filter_nondominated(sense, solutions)
+    return MOI.OPTIMAL, solutions
 end
