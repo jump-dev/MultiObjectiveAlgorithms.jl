@@ -1,6 +1,6 @@
 name = "MultiObjectiveAlgorithms"
 uuid = "0327d340-17cd-11ea-3e99-2fd5d98cecda"
-version = "1.8.0"
+version = "1.8.1"
 authors = ["Oscar Dowson <o.dowson@gmail.com>"]
 
 [deps]
