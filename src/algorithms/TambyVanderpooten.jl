@@ -41,7 +41,7 @@ function _update_search_region(
     bounds_to_remove = Vector{Float64}[]
     bounds_to_add = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}()
     for u in keys(U_N)
-        if all(y .< u)
+        if _is_less(y, u, 0) # k=0 here because we want to check every element
             push!(bounds_to_remove, u)
             for l in 1:p
                 u_l = _get_child(u, y, l)
@@ -55,7 +55,7 @@ function _update_search_region(
             end
         else
             for k in 1:p
-                if (y[k] == u[k]) && all(_project(y, k) .< _project(u, k))
+                if _is_less(y, u, k)
                     push!(U_N[u][k], y)
                 end
             end
@@ -66,6 +66,21 @@ function _update_search_region(
     end
     merge!(U_N, bounds_to_add)
     return
+end
+
+function _is_less(y, u, k)
+    for i in 1:length(y)
+        if i == k
+            if !(y[i] == u[i])
+                return false
+            end
+        else
+            if !(y[i] < u[i])
+                return false
+            end
+        end
+    end
+    return true
 end
 
 function _get_child(u::Vector{Float64}, y::Vector{Float64}, k::Int)
@@ -80,52 +95,78 @@ function _select_search_zone(
 )
     upper_bounds = collect(keys(U_N))
     p = length(yI)
-    hvs = [
-        u[k] == yN[k] ? 0.0 : prod(_project(u, k) .- _project(yI, k)) for
-        k in 1:p, u in upper_bounds
-    ]
-    k_star, j_star = argmax(hvs).I
-    return k_star, upper_bounds[j_star]
+    k_star, u_star, v_star = 1, first(upper_bounds), 0.0
+    for k in 1:p
+        for u in upper_bounds
+            if u[k] != yN[k]
+                v = 1.0
+                for i in 1:p
+                    if i != k
+                        v *= u[i] - yI[i]
+                    end
+                end
+                if v > v_star
+                    k_star, u_star, v_star = k, u, v
+                end
+            end
+        end
+    end
+    return k_star, u_star
 end
 
 function minimize_multiobjective!(
     algorithm::TambyVanderpooten,
     model::Optimizer,
 )
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    warm_start_supported = false
-    if MOI.supports(model, MOI.VariablePrimalStart(), MOI.VariableIndex)
-        warm_start_supported = true
-    end
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    n = MOI.output_dimension(model.f)
+    status = _minimize_multiobjective!(
+        algorithm,
+        model,
+        model.inner,
+        model.f,
+        solutions,
+    )::MOI.TerminationStatusCode
+    return status, SolutionPoint[SolutionPoint(X, Y) for (Y, X) in solutions]
+end
+
+function _minimize_multiobjective!(
+    algorithm::TambyVanderpooten,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+    solutions::Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}},
+)
+    @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    warm_start_supported =
+        MOI.supports(inner, MOI.VariablePrimalStart(), MOI.VariableIndex)
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
+    n = MOI.output_dimension(f)
     yI, yN = zeros(n), zeros(n)
-    scalars = MOI.Utilities.scalarize(model.f)
+    scalars = MOI.Utilities.scalarize(f)
     for (i, f_i) in enumerate(scalars)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
-            return status, nothing
+            return status
         end
         _, Y = _compute_point(model, variables, f_i)
         _log_subproblem_solve(model, variables)
         yI[i] = Y
         model.ideal_point[i] = Y
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             _warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
-            return status, nothing
+            return status
         end
         _, Y = _compute_point(model, variables, f_i)
         _log_subproblem_solve(model, variables)
         yN[i] = Y + 1
     end
-    MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     U_N = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}()
     V = [Tuple{Vector{Float64},Vector{Float64}}[] for k in 1:n]
     U_N[yN] = [[_get_child(yN, yI, k)] for k in 1:n]
@@ -137,7 +178,7 @@ function minimize_multiobjective!(
         end
         k, u = _select_search_zone(U_N, yI, yN)
         MOI.set(
-            model.inner,
+            inner,
             MOI.ObjectiveFunction{typeof(scalars[k])}(),
             scalars[k],
         )
@@ -145,7 +186,7 @@ function minimize_multiobjective!(
         for (i, f_i) in enumerate(scalars)
             if i != k
                 ci = MOI.Utilities.normalize_and_add_constraint(
-                    model.inner,
+                    inner,
                     f_i,
                     MOI.LessThan{Float64}(u[i] - 1),
                 )
@@ -157,7 +198,7 @@ function minimize_multiobjective!(
                 variables_start = solutions[first(U_N[u][k])]
                 for x_i in variables
                     MOI.set(
-                        model.inner,
+                        inner,
                         MOI.VariablePrimalStart(),
                         x_i,
                         variables_start[x_i],
@@ -167,27 +208,27 @@ function minimize_multiobjective!(
         end
         optimize_inner!(model)
         _log_subproblem_solve(model, "auxillary subproblem")
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             MOI.delete.(model, ε_constraints)
-            return status, nothing
+            return status
         end
-        y_k = MOI.get(model.inner, MOI.ObjectiveValue())
+        y_k = MOI.get(inner, MOI.ObjectiveValue())::Float64
         sum_f = sum(1.0 * s for s in scalars)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
         y_k_constraint = MOI.Utilities.normalize_and_add_constraint(
-            model.inner,
+            inner,
             scalars[k],
             MOI.EqualTo(y_k),
         )
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             MOI.delete.(model, ε_constraints)
             MOI.delete(model, y_k_constraint)
-            return status, nothing
+            return status
         end
-        X, Y = _compute_point(model, variables, model.f)
+        X, Y = _compute_point(model, variables, f)
         _log_subproblem_solve(model, Y)
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, y_k_constraint)
@@ -205,8 +246,9 @@ function minimize_multiobjective!(
                     push!(bounds_to_remove, u_i)
                 else
                     for (u_j, y_j) in V[k]
-                        if all(_project(u_i, k) .<= _project(u_j, k)) &&
-                           isapprox(y_j[k], u_i[k]; atol = 1e-6)
+                        if isapprox(y_j[k], u_i[k]; atol = 1e-6) &&
+                           _is_less_eq(u_i, u_j, k)
+
                             push!(bounds_to_remove, u_i)
                         end
                     end
@@ -219,5 +261,14 @@ function minimize_multiobjective!(
             end
         end
     end
-    return status, [SolutionPoint(X, Y) for (Y, X) in solutions]
+    return status
+end
+
+function _is_less_eq(y, u, k)
+    for i in 1:length(y)
+        if i != k && !(y[i] <= u[i])
+            return false
+        end
+    end
+    return true
 end
