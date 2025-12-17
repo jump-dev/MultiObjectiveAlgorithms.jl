@@ -177,11 +177,7 @@ function _minimize_multiobjective!(
             break
         end
         k, u = _select_search_zone(U_N, yI, yN)
-        MOI.set(
-            inner,
-            MOI.ObjectiveFunction{typeof(scalars[k])}(),
-            scalars[k],
-        )
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(scalars[k])}(), scalars[k])
         ε_constraints = Any[]
         for (i, f_i) in enumerate(scalars)
             if i != k
@@ -248,7 +244,6 @@ function _minimize_multiobjective!(
                     for (u_j, y_j) in V[k]
                         if isapprox(y_j[k], u_i[k]; atol = 1e-6) &&
                            _is_less_eq(u_i, u_j, k)
-
                             push!(bounds_to_remove, u_i)
                         end
                     end
