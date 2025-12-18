@@ -127,7 +127,7 @@ function _solve_in_sequence(
     algorithm::Lexicographic,
     model::Optimizer,
     inner::MOI.ModelLike,
-    f::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
     sequence::AbstractVector{Int},
 )
     variables = MOI.get(inner, MOI.ListOfVariableIndices())
