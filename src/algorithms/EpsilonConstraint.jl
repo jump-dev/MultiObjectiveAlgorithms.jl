@@ -105,49 +105,42 @@ function minimize_multiobjective!(
     solutions = SolutionPoint[only(solution_1), only(solution_2)]
     f1, f2 = MOI.Utilities.eachscalar(f)
     MOI.set(inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
-    # Add epsilon constraint
-    variables = MOI.get(inner, MOI.ListOfVariableIndices())
-    bound_1 = right - ε
-    constant_1 = MOI.constant(f1, Float64)
-    ci_1 = MOI.Utilities.normalize_and_add_constraint(
-        inner,
-        f1,
-        MOI.LessThan(bound_1),
-    )
-    yN = max(solution_1[1].y[2], solution_2[1].y[2])
-    constant_2 = MOI.constant(f2, Float64)
+    # Add epsilon constraints
+    u_1 = right
+    c_1 = MOI.constant(f1, Float64)
+    ci_1 =
+        MOI.Utilities.normalize_and_add_constraint(inner, f1, MOI.LessThan(u_1))
+    u_2 = max(solution_1[1].y[2], solution_2[1].y[2])
+    c_2 = MOI.constant(f2, Float64)
     ci_2 =
-        MOI.Utilities.normalize_and_add_constraint(inner, f2, MOI.LessThan(yN))
-    bound_1 -= constant_1
+        MOI.Utilities.normalize_and_add_constraint(inner, f2, MOI.LessThan(u_2))
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
     status = MOI.OPTIMAL
     for _ in 3:n_points
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
-        # First-stage solve: minimize f₂: f₂ <= bound_1
+        # First-stage solve: minimize f₂: f₁ <= u₁ - ε
         MOI.set(inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
-        MOI.set(inner, MOI.ConstraintSet(), ci_1, MOI.LessThan(bound_1))
-        MOI.set(inner, MOI.ConstraintSet(), ci_2, MOI.LessThan(yN - constant_2))
+        MOI.set(inner, MOI.ConstraintSet(), ci_1, MOI.LessThan(u_1 - c_1 - ε))
+        MOI.set(inner, MOI.ConstraintSet(), ci_2, MOI.LessThan(u_2 - c_2))
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             break
         end
         # Second-stage solve: minimize f₁: f₂ <= f₂^*
-        f_2_star = MOI.get(inner, MOI.ObjectiveValue())::Float64
+        f_2_opt = MOI.get(inner, MOI.ObjectiveValue())::Float64
         MOI.set(inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
-        bound_2 = f_2_star - constant_2
-        MOI.set(inner, MOI.ConstraintSet(), ci_2, MOI.LessThan(bound_2))
+        MOI.set(inner, MOI.ConstraintSet(), ci_2, MOI.LessThan(f_2_opt - c_2))
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             break
         end
         X, Y = _compute_point(model, variables, f)
         _log_subproblem_solve(model, Y)
-        if isempty(solutions) || !(Y ≈ solutions[end].y)
-            push!(solutions, SolutionPoint(X, Y))
-        end
-        bound_1 = min(Y[1] - constant_1 - ε, bound_1 - ε)
+        push!(solutions, SolutionPoint(X, Y))
+        u_1 = Y[1]
     end
     MOI.delete(inner, ci_1)
     MOI.delete(inner, ci_2)
