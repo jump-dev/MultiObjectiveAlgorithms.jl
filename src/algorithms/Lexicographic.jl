@@ -81,7 +81,7 @@ function optimize_multiobjective!(
     sequence = 1:MOI.output_dimension(model.f)
     perm = MOI.get(algorithm, LexicographicAllPermutations())
     if !something(perm, _default(LexicographicAllPermutations()))
-        return _solve_in_sequence(algorithm, model, sequence)
+        return _solve_in_sequence(algorithm, model, inner, f, sequence)
     end
     if perm === nothing && length(sequence) >= 5
         o, n = length(sequence), factorial(length(sequence))
