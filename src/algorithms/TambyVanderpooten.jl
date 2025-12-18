@@ -257,7 +257,7 @@ function _clean_search_region(U_N, yI, V, k)
     to_delete = fill(false, length(map_keys))
     Threads.@threads for (i, u′) in map_keys
         to_delete[i] = _clean_search_region_inner(u′, U_N, yI, V, k)
-    end
+    end                                                                         # COV_EXCL_LINE
     for (i, u′) in map_keys
         if to_delete[i]
             delete!(U_N, u′)
