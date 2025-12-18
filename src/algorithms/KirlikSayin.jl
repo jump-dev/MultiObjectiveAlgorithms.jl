@@ -81,26 +81,31 @@ function _update_list(L::Vector{_Rectangle}, f::Vector{Float64})
     return L_new
 end
 
-function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+function minimize_multiobjective!(
+    algorithm::KirlikSayin,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+)
+    @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     solutions = SolutionPoint[]
     # Problem with p objectives.
     # Set k = 1, meaning the nondominated points will get projected
     # down to the objective {2, 3, ..., p}
     k = 1
     YN = Vector{Float64}[]
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    n = MOI.output_dimension(model.f)
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
+    n = MOI.output_dimension(f)
     yI, yN = zeros(n), zeros(n)
     # This tolerance is really important!
     δ = 1.0
-    scalars = MOI.Utilities.scalarize(model.f)
+    scalars = MOI.Utilities.scalarize(f)
     # Ideal and Nadir point estimation
     for (i, f_i) in enumerate(scalars)
         # Ideal point
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
         end
@@ -108,19 +113,19 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         _log_subproblem_solve(model, variables)
         model.ideal_point[i] = yI[i] = Y
         # Nadir point
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             # Repair ObjectiveSense before exiting
-            MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+            MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
             _warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
             return status, nothing
         end
         _, Y = _compute_point(model, variables, f_i)
         _log_subproblem_solve(model, variables)
         yN[i] = Y + δ
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
     L = [_Rectangle(_project(yI, k), _project(yN, k))]
     status = MOI.OPTIMAL
@@ -135,18 +140,14 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
         #   minimize: f_1(x)
         #       s.t.: f_i(x) <= u_i - δ
         @assert k == 1
-        MOI.set(
-            model.inner,
-            MOI.ObjectiveFunction{typeof(scalars[k])}(),
-            scalars[k],
-        )
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(scalars[k])}(), scalars[k])
         ε_constraints = Any[]
         for (i, f_i) in enumerate(scalars)
             if i == k
                 continue
             end
             ci = MOI.Utilities.normalize_and_add_constraint(
-                model.inner,
+                inner,
                 f_i,
                 MOI.LessThan{Float64}(uᵢ[i-1] - δ),
             )
@@ -161,14 +162,14 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             MOI.delete.(model, ε_constraints)
             continue
         end
-        zₖ = MOI.get(model.inner, MOI.ObjectiveValue())
+        zₖ = MOI.get(inner, MOI.ObjectiveValue())
         # Solving the second stage model: Q_k(ε, zₖ)
-        # Set objective sum(model.f)
+        # Set objective sum(f)
         sum_f = MOI.Utilities.operate(+, Float64, scalars...)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
         # Constraint to eliminate weak dominance
         zₖ_constraint = MOI.Utilities.normalize_and_add_constraint(
-            model.inner,
+            inner,
             scalars[k],
             MOI.EqualTo(zₖ),
         )
@@ -182,7 +183,7 @@ function minimize_multiobjective!(algorithm::KirlikSayin, model::Optimizer)
             _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
             continue
         end
-        X, Y = _compute_point(model, variables, model.f)
+        X, Y = _compute_point(model, variables, f)
         _log_subproblem_solve(model, Y)
         Y_proj = _project(Y, k)
         if !(Y in YN)

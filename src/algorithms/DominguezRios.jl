@@ -152,19 +152,24 @@ _isapprox(::Nothing, ::_DominguezRiosBox) = false
 
 _isapprox(A::_DominguezRiosBox, B::_DominguezRiosBox) = A.l ≈ B.l && A.u ≈ B.u
 
-function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+function minimize_multiobjective!(
+    algorithm::DominguezRios,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+)
+    @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     n = MOI.output_dimension(model.f)
     L = [_DominguezRiosBox[] for i in 1:n]
     scalars = MOI.Utilities.scalarize(model.f)
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
     yI, yN = zeros(n), zeros(n)
     # Ideal and Nadir point estimation
     for (i, f_i) in enumerate(scalars)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
         end
@@ -172,9 +177,9 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         _log_subproblem_solve(model, variables)
         yI[i] = Y
         model.ideal_point[i] = Y
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             _warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
             return status, nothing
@@ -183,14 +188,14 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         _log_subproblem_solve(model, variables)
         yN[i] = Y + 1
     end
-    MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     ϵ = 1 / (2 * n * (maximum(yN - yI) - 1))
     # If ϵ is small, then the scalar objectives can contain terms that fall
     # below the tolerance level of the solver. To fix this, we rescale the
     # objective so that the coefficients have magnitude `1e+00` or larger.
     scale = max(1.0, 1 / ϵ)
     push!(L[1], _DominguezRiosBox(yI, yN, 0.0))
-    t_max = MOI.add_variable(model.inner)
+    t_max = MOI.add_variable(inner)
     solutions = SolutionPoint[]
     k = 0
     status = MOI.OPTIMAL
@@ -215,7 +220,7 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         w = scale ./ max.(1, B.u - yI)
         constraints = [
             MOI.Utilities.normalize_and_add_constraint(
-                model.inner,
+                inner,
                 # `w` is the scaled version here. This epigraph constraint will
                 # make `t_max` similarly scaled.
                 t_max - (w[i] * (scalars[i] - yI[i])),
@@ -226,12 +231,12 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
         #  * t_max is already covered in `constraints`
         #  * the `ϵ` term is already covered in `w`
         new_f = t_max + ϵ * sum(w[i] * (scalars[i] - yI[i]) for i in 1:n)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         optimize_inner!(model)
         if _is_scalar_status_optimal(model)
             X, Y = _compute_point(model, variables, model.f)
             _log_subproblem_solve(model, Y)
-            obj = MOI.get(model.inner, MOI.ObjectiveValue())
+            obj = MOI.get(inner, MOI.ObjectiveValue())
             # We need to undo the scaling of the scalar objective. There's no
             # need to unscale `Y` because we have evaluated this explicitly from
             # the modified `model.f`.
@@ -251,8 +256,8 @@ function minimize_multiobjective!(algorithm::DominguezRios, model::Optimizer)
             _log_subproblem_solve(model, "subproblem not optimal")
             deleteat!(L[k], i)
         end
-        MOI.delete.(model.inner, constraints)
+        MOI.delete.(inner, constraints)
     end
-    MOI.delete(model.inner, t_max)
+    MOI.delete(inner, t_max)
     return status, solutions
 end

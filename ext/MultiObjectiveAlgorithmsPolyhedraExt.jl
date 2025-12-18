@@ -37,12 +37,14 @@ end
 function MOA.minimize_multiobjective!(
     algorithm::MOA.Sandwiching,
     model::MOA.Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
 )
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    n = MOI.output_dimension(model.f)
-    scalars = MOI.Utilities.scalarize(model.f)
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
+    n = MOI.output_dimension(f)
+    scalars = MOI.Utilities.scalarize(f)
     status = MOI.OPTIMAL
     δ_OPS_optimizer = MOI.instantiate(model.optimizer_factory)
     if MOI.supports(δ_OPS_optimizer, MOI.Silent())
@@ -52,26 +54,26 @@ function MOA.minimize_multiobjective!(
     anchors = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     yI, yUB = zeros(n), zeros(n)
     for (i, f_i) in enumerate(scalars)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         MOA.optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
             return status, nothing
         end
-        X, Y = MOA._compute_point(model, variables, model.f)
+        X, Y = MOA._compute_point(model, variables, f)
         model.ideal_point[i] = Y[i]
         yI[i] = Y[i]
         anchors[Y] = X
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         MOA.optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
             MOA._warn_on_nonfinite_anti_ideal(algorithm, MOI.MIN_SENSE, i)
             return status, nothing
         end
         _, Y = MOA._compute_point(model, variables, f_i)
         yUB[i] = Y
-        MOI.set(model.inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         e_i = Float64.(1:n .== i)
         MOI.add_constraint(
             δ_OPS_optimizer,
@@ -86,14 +88,13 @@ function MOA.minimize_multiobjective!(
     end
     IPS = [yUB, keys(anchors)...]
     merge!(solutions, anchors)
-    u = MOI.add_variables(model.inner, n)
+    u = MOI.add_variables(inner, n)
     u_constraints = [ # u_i >= 0 for all i = 1:n
-        MOI.add_constraint(model.inner, u_i, MOI.GreaterThan{Float64}(0))
-        for u_i in u
+        MOI.add_constraint(inner, u_i, MOI.GreaterThan{Float64}(0)) for u_i in u
     ]
     f_constraints = [ # f_i + u_i <= yUB_i for all i = 1:n
         MOI.Utilities.normalize_and_add_constraint(
-            model.inner,
+            inner,
             scalars[i] + u[i],
             MOI.LessThan(yUB[i]),
         ) for i in 1:n
@@ -113,14 +114,14 @@ function MOA.minimize_multiobjective!(
         end
         # would not terminate when precision is set to 0
         new_f = sum(w[i] * (scalars[i] + u[i]) for i in 1:n) # w' * (f(x) + u)
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         MOA.optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !MOA._is_scalar_status_optimal(model)
             return status, nothing
         end
-        β̄ = MOI.get(model.inner, MOI.ObjectiveValue())
-        X, Y = MOA._compute_point(model, variables, model.f)
+        β̄ = MOI.get(inner, MOI.ObjectiveValue())
+        X, Y = MOA._compute_point(model, variables, f)
         solutions[Y] = X
         MOI.add_constraint(
             δ_OPS_optimizer,
@@ -130,9 +131,9 @@ function MOA.minimize_multiobjective!(
         IPS = push!(IPS, Y)
         H = _halfspaces(IPS)
     end
-    MOI.delete.(model.inner, f_constraints)
-    MOI.delete.(model.inner, u_constraints)
-    MOI.delete.(model.inner, u)
+    MOI.delete.(inner, f_constraints)
+    MOI.delete.(inner, u_constraints)
+    MOI.delete.(inner, u)
     return status, [MOA.SolutionPoint(X, Y) for (Y, X) in solutions]
 end
 

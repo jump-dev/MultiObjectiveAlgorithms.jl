@@ -701,7 +701,9 @@ This function is part of the public developer API. You should not call it from
 user-facing code. You may use it when implementing new algorithms in third-party
 packages.
 """
-function minimize_multiobjective! end
+function minimize_multiobjective!(alg::AbstractAlgorithm, model::Optimizer)
+    return minimize_multiobjective!(alg, model, model.inner, model.f)
+end
 
 """
     optimize_multiobjective!(

@@ -39,20 +39,29 @@ function MOI.get(alg::RandomWeighting, attr::SolutionLimit)
 end
 
 function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
+    return optimize_multiobjective!(algorithm, model, model.inner, model.f)
+end
+
+function optimize_multiobjective!(
+    algorithm::RandomWeighting,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+)
     if MOI.get(model, MOI.TimeLimitSec()) === nothing &&
        algorithm.solution_limit === nothing
         error("At least `MOI.TimeLimitSec` or `MOA.SolutionLimit` must be set")
     end
     solutions = SolutionPoint[]
     sense = MOI.get(model, MOI.ObjectiveSense())
-    P = MOI.output_dimension(model.f)
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    f = _scalarise(model.f, ones(P))
-    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+    P = MOI.output_dimension(f)
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
+    scalar_f = _scalarise(f, ones(P))
+    MOI.set(inner, MOI.ObjectiveFunction{typeof(scalar_f)}(), scalar_f)
     optimize_inner!(model)
-    status = MOI.get(model.inner, MOI.TerminationStatus())
+    status = MOI.get(inner, MOI.TerminationStatus())
     if _is_scalar_status_optimal(status)
-        X, Y = _compute_point(model, variables, model.f)
+        X, Y = _compute_point(model, variables, f)
         _log_subproblem_solve(model, Y)
         push!(solutions, SolutionPoint(X, Y))
     else
@@ -69,12 +78,12 @@ function optimize_multiobjective!(algorithm::RandomWeighting, model::Optimizer)
                 return ret, filter_nondominated(sense, solutions)
             end
             weights = rand(P)
-            f = _scalarise(model.f, weights)
-            MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+            scalar_f = _scalarise(f, weights)
+            MOI.set(inner, MOI.ObjectiveFunction{typeof(scalar_f)}(), scalar_f)
             optimize_inner!(model)
-            status = MOI.get(model.inner, MOI.TerminationStatus())
+            status = MOI.get(inner, MOI.TerminationStatus())
             if _is_scalar_status_optimal(status)
-                X, Y = _compute_point(model, variables, model.f)
+                X, Y = _compute_point(model, variables, f)
                 _log_subproblem_solve(model, Y)
                 push!(solutions, SolutionPoint(X, Y))
             end

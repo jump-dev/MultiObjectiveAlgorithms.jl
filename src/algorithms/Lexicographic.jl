@@ -69,10 +69,19 @@ function MOI.set(alg::Lexicographic, ::LexicographicAllPermutations, val::Bool)
 end
 
 function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
+    return optimize_multiobjective!(algorithm, model, model.inner, model.f)
+end
+
+function optimize_multiobjective!(
+    algorithm::Lexicographic,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+)
     sequence = 1:MOI.output_dimension(model.f)
     perm = MOI.get(algorithm, LexicographicAllPermutations())
     if !something(perm, _default(LexicographicAllPermutations()))
-        return _solve_in_sequence(algorithm, model, sequence)
+        return _solve_in_sequence(algorithm, model, inner, f, sequence)
     end
     if perm === nothing && length(sequence) >= 5
         o, n = length(sequence), factorial(length(sequence))
@@ -102,7 +111,8 @@ function optimize_multiobjective!(algorithm::Lexicographic, model::Optimizer)
     solutions = SolutionPoint[]
     status = MOI.OPTIMAL
     for sequence in Combinatorics.permutations(sequence)
-        status, solution = _solve_in_sequence(algorithm, model, sequence)
+        status, solution =
+            _solve_in_sequence(algorithm, model, inner, f, sequence)
         if !isempty(solution)
             push!(solutions, solution[1])
         end
@@ -116,11 +126,13 @@ end
 function _solve_in_sequence(
     algorithm::Lexicographic,
     model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
     sequence::AbstractVector{Int},
 )
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
     constraints = Any[]
-    scalars = MOI.Utilities.eachscalar(model.f)
+    scalars = MOI.Utilities.eachscalar(f)
     solution = SolutionPoint[]
     status = MOI.OPTIMAL
     for i in sequence
@@ -128,27 +140,27 @@ function _solve_in_sequence(
             status = ret
             break
         end
-        f = scalars[i]
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+        scalar_f = scalars[i]
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(scalar_f)}(), scalar_f)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
-        primal_status = MOI.get(model.inner, MOI.PrimalStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
+        primal_status = MOI.get(inner, MOI.PrimalStatus())
         if _is_scalar_status_feasible_point(primal_status)
-            X, Y = _compute_point(model, variables, model.f)
+            X, Y = _compute_point(model, variables, f)
             _log_subproblem_solve(model, Y)
             solution = [SolutionPoint(X, Y)]
         end
         if !_is_scalar_status_optimal(status)
             break
         end
-        X, Y = _compute_point(model, variables, f)
+        X, Y = _compute_point(model, variables, scalar_f)
         rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
-        set = if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+        set = if MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
             MOI.LessThan(Y + rtol * abs(Y))
         else
             MOI.GreaterThan(Y - rtol * abs(Y))
         end
-        ci = MOI.Utilities.normalize_and_add_constraint(model, f, set)
+        ci = MOI.Utilities.normalize_and_add_constraint(model, scalar_f, set)
         push!(constraints, ci)
     end
     for c in constraints

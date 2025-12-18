@@ -89,11 +89,16 @@ function _sorted_priorities(priorities::Vector{Int})
     return [findall(isequal(u), priorities) for u in unique_priorities]
 end
 
-function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    objectives = MOI.Utilities.eachscalar(model.f)
+function minimize_multiobjective!(
+    algorithm::Hierarchical,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+)
+    @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    objectives = MOI.Utilities.eachscalar(f)
     N = length(objectives)
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
     # Find list of objectives with same priority
     constraints = Any[]
     priorities = [MOI.get(algorithm, ObjectivePriority(i)) for i in 1:N]
@@ -103,9 +108,9 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
         # Solve weighted sum
         new_vector_f = objectives[indices]
         new_f = _scalarise(new_vector_f, weights[indices])
-        MOI.set(model.inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(new_f)}(), new_f)
         optimize_inner!(model)
-        status = MOI.get(model.inner, MOI.TerminationStatus())
+        status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             return status, nothing
         end
@@ -113,7 +118,7 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
             break
         end
         if !model.silent
-            X, Y = _compute_point(model, variables, model.f)
+            X, Y = _compute_point(model, variables, f)
             _log_subproblem_solve(model, Y)
         end
         # Add tolerance constraints
@@ -125,7 +130,7 @@ function minimize_multiobjective!(algorithm::Hierarchical, model::Optimizer)
             push!(constraints, ci)
         end
     end
-    X, Y = _compute_point(model, variables, model.f)
+    X, Y = _compute_point(model, variables, f)
     _log_subproblem_solve(model, Y)
     # Remove tolerance constraints
     for c in constraints
