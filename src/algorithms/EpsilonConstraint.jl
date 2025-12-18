@@ -103,7 +103,7 @@ function minimize_multiobjective!(
         ε = abs(right - left) / (n_points - 1)
     end
     solutions = SolutionPoint[only(solution_1), only(solution_2)]
-    f1, f2 = MOI.Utilities.eachscalar(inner)
+    f1, f2 = MOI.Utilities.eachscalar(f)
     MOI.set(inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
     variables = MOI.get(inner, MOI.ListOfVariableIndices())
@@ -127,7 +127,7 @@ function minimize_multiobjective!(
         if !_is_scalar_status_optimal(model)
             break
         end
-        X, Y = _compute_point(model, variables, inner)
+        X, Y = _compute_point(model, variables, f)
         _log_subproblem_solve(model, Y)
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
