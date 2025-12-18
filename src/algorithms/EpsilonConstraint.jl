@@ -116,11 +116,8 @@ function minimize_multiobjective!(
     )
     yN = max(solution_1[1].y[2], solution_2[1].y[2])
     constant_2 = MOI.constant(f2, Float64)
-    ci_2 = MOI.Utilities.normalize_and_add_constraint(
-        inner,
-        f2,
-        MOI.LessThan(yN)
-    )
+    ci_2 =
+        MOI.Utilities.normalize_and_add_constraint(inner, f2, MOI.LessThan(yN))
     bound_1 -= constant_1
     status = MOI.OPTIMAL
     for _ in 3:n_points
