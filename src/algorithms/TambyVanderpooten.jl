@@ -108,9 +108,6 @@ function _select_search_zone(
     yI::Vector{Float64},
     yN::Vector{Float64},
 )
-    if isempty(U_N)
-        return 1, yN
-    end
     k_star, u_star, v_star = 1, yN, -Inf
     for k in 1:length(yI), u in keys(U_N)
         if !isapprox(u[k], yN[k]; atol = 1e-6)
