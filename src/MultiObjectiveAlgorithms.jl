@@ -178,6 +178,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     ideal_point::Vector{Float64}
     compute_ideal_point::Bool
     subproblem_count::Int
+    solve_time_inner::Float64
     optimizer_factory::Any
 
     function Optimizer(optimizer_factory)
@@ -198,6 +199,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             Float64[],
             _default(ComputeIdealPoint()),
             0,
+            0.0,
             optimizer_factory,
         )
     end
@@ -653,7 +655,7 @@ end
     optimize_inner!(model::Optimizer)
 
 A function that must be called instead of `MOI.optimize!(model.inner)` because
-it also increments the `subproblem_count`.
+it also increments `subproblem_count` and `solve_time_inner`.
 
 ## Usage
 
@@ -662,7 +664,9 @@ user-facing code. You may use it when implementing new algorithms in third-party
 packages.
 """
 function optimize_inner!(model::Optimizer)
+    start_time = time()
     MOI.optimize!(model.inner)
+    model.solve_time_inner += time() - start_time
     model.subproblem_count += 1
     return
 end
@@ -803,8 +807,19 @@ end
 function _print_footer(io::IO, model::Optimizer)
     rule = "-"^(7 + 13 * (MOI.output_dimension(model.f) + 1))
     println(io, rule)
-    println(io, "TerminationStatus: ", model.termination_status)
-    println(io, "ResultCount: ", length(model.solutions))
+    println(io, "termination_status: ", model.termination_status)
+    println(io, "result_count: ", length(model.solutions))
+    println(io)
+    println(io, "Total solve time:         ", _format(model.solve_time))
+    println(
+        io,
+        "Time spent in subproblems:",
+        _format(model.solve_time_inner),
+        " (",
+        round(Int, 100 * (model.solve_time_inner / model.solve_time)),
+        "%)",
+    )
+    println(io, "Number of subproblems:     ", model.subproblem_count)
     println(io, rule)
     return
 end
@@ -856,6 +871,7 @@ function _optimize!(model::Optimizer)
     empty!(model.solutions)
     model.termination_status = MOI.OPTIMIZE_NOT_CALLED
     model.subproblem_count = 0
+    model.solve_time_inner = 0.0
     if model.f === nothing
         model.termination_status = MOI.INVALID_MODEL
         empty!(model.ideal_point)
@@ -874,9 +890,6 @@ function _optimize!(model::Optimizer)
         sense = MOI.get(model, MOI.ObjectiveSense())
         model.solutions = filter_nondominated(sense, solutions)
     end
-    if !model.silent
-        _print_footer(stdout, model)
-    end
     if MOI.get(model, ComputeIdealPoint())
         _compute_ideal_point(model)
     end
@@ -884,6 +897,9 @@ function _optimize!(model::Optimizer)
         MOI.set(model.inner, MOI.TimeLimitSec(), nothing)
     end
     model.solve_time = time() - model.start_time
+    if !model.silent
+        _print_footer(stdout, model)
+    end
     return
 end
 
