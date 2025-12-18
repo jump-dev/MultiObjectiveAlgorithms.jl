@@ -133,7 +133,7 @@ function minimize_multiobjective!(
         if !_is_scalar_status_optimal(model)
             break
         end
-        # First-stage solve: minimize f₁: f₂ <= f₂^*
+        # Second-stage solve: minimize f₁: f₂ <= f₂^*
         f_2_star = MOI.get(inner, MOI.ObjectiveValue())::Float64
         MOI.set(inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
         bound_2 = f_2_star - constant_2
