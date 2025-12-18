@@ -90,8 +90,7 @@ function MOA.minimize_multiobjective!(
     merge!(solutions, anchors)
     u = MOI.add_variables(inner, n)
     u_constraints = [ # u_i >= 0 for all i = 1:n
-        MOI.add_constraint(inner, u_i, MOI.GreaterThan{Float64}(0))
-        for u_i in u
+        MOI.add_constraint(inner, u_i, MOI.GreaterThan{Float64}(0)) for u_i in u
     ]
     f_constraints = [ # f_i + u_i <= yUB_i for all i = 1:n
         MOI.Utilities.normalize_and_add_constraint(

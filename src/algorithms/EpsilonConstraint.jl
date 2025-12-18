@@ -78,7 +78,7 @@ function minimize_multiobjective!(
     f::MOI.AbstractVectorFunction,
 )
     @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    if MOI.output_dimension(inner) != 2
+    if MOI.output_dimension(f) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
     # Compute the bounding box of the objectives using Hierarchical().
