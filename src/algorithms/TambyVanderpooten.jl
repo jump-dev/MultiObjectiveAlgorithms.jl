@@ -193,16 +193,13 @@ function _minimize_multiobjective!(
         ) for (i, f_i) in enumerate(scalars)
     ]
     obj_constants = MOI.constant.(scalars)
-    # U_N:
-    #  keys: upper bound vectors
-    #  values: a vector with n elements, U_N[u][k] is a vector of y
     U_N = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}(
         # The nadir point, except for the ideal point in position k
         yN => [[_get_child(yN, yI, k)] for k in 1:n],
     )
     V = [Tuple{Vector{Float64},Vector{Float64}}[] for k in 1:n]
     status = MOI.OPTIMAL
-    sum_f = sum(1.0 * s for s in scalars)
+    sum_f = MOI.Utilities.operate(+, Float64, scalars...)
     while !isempty(U_N)
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
@@ -219,14 +216,12 @@ function _minimize_multiobjective!(
             set = MOI.LessThan(u_i - 1.0 - obj_constants[i])
             MOI.set(inner, MOI.ConstraintSet(), ε_constraints[i], set)
         end
-        # The isapprox is another way of saying does U_N[u][k] exist
-        if warm_start_supported && !isapprox(u[k], yN[k]; atol = 1e-6)
+        if warm_start_supported && !isempty(solutions)
             for (x_i, start_i) in solutions[last(U_N[u][k])]
                 MOI.set(inner, MOI.VariablePrimalStart(), x_i, start_i)
             end
         end
-        optimize_inner!(model)
-        # We don't log this first-stage subproblem.
+        optimize_inner!(model)  # We don't log this first-stage subproblem.
         status = MOI.get(inner, MOI.TerminationStatus())
         if !_is_scalar_status_optimal(status)
             break
@@ -260,15 +255,14 @@ end
 # loop over u′ is the same, but we break the inner `foreach k` loop up into
 # separate loops so that we don't need to loop over all `V` if one of the u′ has
 # reached the ideal point.
-#
-# TODO: this loop is a good candidate for parallelisation.
-#
-# TODO: we could probably also be cleverer here, and just do a partial update
-# based on the most recent changes to V. Do we need to keep re-checking
-# everything?
 function _clean_search_region(U_N, yI, V, k)
-    for u′ in keys(U_N)
-        if _clean_search_region_inner(u′, U_N, yI, V, k)
+    map_keys = collect(enumerate(keys(U_N)))
+    to_delete = fill(false, length(map_keys))
+    Threads.@threads for (i, u′) in map_keys
+        to_delete[i] = _clean_search_region_inner(u′, U_N, yI, V, k)
+    end
+    for (i, u′) in map_keys
+        if to_delete[i]
             delete!(U_N, u′)
         end
     end
