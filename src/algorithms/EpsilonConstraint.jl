@@ -107,22 +107,40 @@ function minimize_multiobjective!(
     MOI.set(inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
     variables = MOI.get(inner, MOI.ListOfVariableIndices())
-    bound = right - ε
-    constant = MOI.constant(f1, Float64)
-    ci = MOI.Utilities.normalize_and_add_constraint(
-        model,
+    bound_1 = right - ε
+    constant_1 = MOI.constant(f1, Float64)
+    ci_1 = MOI.Utilities.normalize_and_add_constraint(
+        inner,
         f1,
-        MOI.LessThan{Float64}(bound);
-        allow_modify_function = true,
+        MOI.LessThan(bound_1),
     )
-    bound -= constant
+    yN = max(solution_1[1].y[2], solution_2[1].y[2])
+    constant_2 = MOI.constant(f2, Float64)
+    ci_2 = MOI.Utilities.normalize_and_add_constraint(
+        inner,
+        f2,
+        MOI.LessThan(yN)
+    )
+    bound_1 -= constant_1
     status = MOI.OPTIMAL
     for _ in 3:n_points
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
-        MOI.set(model, MOI.ConstraintSet(), ci, MOI.LessThan{Float64}(bound))
+        # First-stage solve: minimize f₂: f₂ <= bound_1
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
+        MOI.set(inner, MOI.ConstraintSet(), ci_1, MOI.LessThan(bound_1))
+        MOI.set(inner, MOI.ConstraintSet(), ci_2, MOI.LessThan(yN - constant_2))
+        optimize_inner!(model)
+        if !_is_scalar_status_optimal(model)
+            break
+        end
+        # First-stage solve: minimize f₁: f₂ <= f₂^*
+        f_2_star = MOI.get(inner, MOI.ObjectiveValue())::Float64
+        MOI.set(inner, MOI.ObjectiveFunction{typeof(f1)}(), f1)
+        bound_2 = f_2_star - constant_2
+        MOI.set(inner, MOI.ConstraintSet(), ci_2, MOI.LessThan(bound_2))
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
             break
@@ -132,8 +150,9 @@ function minimize_multiobjective!(
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
         end
-        bound = min(Y[1] - constant - ε, bound - ε)
+        bound_1 = min(Y[1] - constant_1 - ε, bound_1 - ε)
     end
-    MOI.delete(model, ci)
+    MOI.delete(inner, ci_1)
+    MOI.delete(inner, ci_2)
     return status, solutions
 end
