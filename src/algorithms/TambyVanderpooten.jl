@@ -123,13 +123,15 @@ end
 function minimize_multiobjective!(
     algorithm::TambyVanderpooten,
     model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
 )
     solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
     status = _minimize_multiobjective!(
         algorithm,
         model,
-        model.inner,
-        model.f,
+        inner,
+        f,
         solutions,
     )::MOI.TerminationStatusCode
     return status, SolutionPoint[SolutionPoint(X, Y) for (Y, X) in solutions]

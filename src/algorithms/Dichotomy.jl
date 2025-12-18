@@ -61,37 +61,49 @@ function MOI.get(alg::Dichotomy, attr::SolutionLimit)
 end
 
 function _solve_weighted_sum(
-    model::Optimizer,
     ::Dichotomy,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
     weights::Vector{Float64},
 )
-    f = _scalarise(model.f, weights)
-    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+    f_scalar = _scalarise(f, weights)
+    MOI.set(inner, MOI.ObjectiveFunction{typeof(f_scalar)}(), f_scalar)
     optimize_inner!(model)
-    status = MOI.get(model.inner, MOI.TerminationStatus())
+    status = MOI.get(inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
         return status, nothing
     end
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    X, Y = _compute_point(model, variables, model.f)
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
+    X, Y = _compute_point(model, variables, f)
     _log_subproblem_solve(model, Y)
     return status, SolutionPoint(X, Y)
 end
 
 function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
-    if MOI.output_dimension(model.f) > 2
-        error("Only scalar or bi-objective problems supported.")
-    end
-    if MOI.output_dimension(model.f) == 1
+    return optimize_multiobjective!(algorithm, model, model.inner, model.f)
+end
+
+function optimize_multiobjective!(
+    algorithm::Dichotomy,
+    model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
+)
+    if MOI.output_dimension(f) == 1
         if (ret = _check_premature_termination(model)) !== nothing
             return ret, nothing
         end
-        status, solution = _solve_weighted_sum(model, algorithm, [1.0])
+        status, solution =
+            _solve_weighted_sum(algorithm, model, inner, f, [1.0])
         return status, [solution]
+    elseif MOI.output_dimension(f) > 2
+        error("Only scalar or bi-objective problems supported.")
     end
     solutions = Dict{Float64,SolutionPoint}()
     for (i, w) in (1 => 1.0, 2 => 0.0)
-        status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
+        status, solution =
+            _solve_weighted_sum(algorithm, model, inner, f, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
             return status, nothing
         end
@@ -113,7 +125,8 @@ function optimize_multiobjective!(algorithm::Dichotomy, model::Optimizer)
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
-        status, solution = _solve_weighted_sum(model, algorithm, [w, 1.0 - w])
+        status, solution =
+            _solve_weighted_sum(algorithm, model, inner, f, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
             break # Exit the solve with some error.
         elseif solution ≈ solutions[a] || solution ≈ solutions[b]

@@ -74,20 +74,22 @@ end
 function minimize_multiobjective!(
     algorithm::EpsilonConstraint,
     model::Optimizer,
+    inner::MOI.ModelLike,
+    f::MOI.AbstractVectorFunction,
 )
-    @assert MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
-    if MOI.output_dimension(model.f) != 2
+    @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
+    if MOI.output_dimension(inner) != 2
         error("EpsilonConstraint requires exactly two objectives")
     end
     # Compute the bounding box of the objectives using Hierarchical().
     alg = Hierarchical()
     MOI.set.(Ref(alg), ObjectivePriority.(1:2), [1, 0])
-    status, solution_1 = optimize_multiobjective!(alg, model)
+    status, solution_1 = minimize_multiobjective!(alg, model, inner, f)
     if !_is_scalar_status_optimal(status)
         return status, nothing
     end
     MOI.set(alg, ObjectivePriority(2), 2)
-    status, solution_2 = optimize_multiobjective!(alg, model)
+    status, solution_2 = minimize_multiobjective!(alg, model, inner, f)
     if !_is_scalar_status_optimal(status)
         return status, nothing
     end
@@ -101,10 +103,10 @@ function minimize_multiobjective!(
         ε = abs(right - left) / (n_points - 1)
     end
     solutions = SolutionPoint[only(solution_1), only(solution_2)]
-    f1, f2 = MOI.Utilities.eachscalar(model.f)
-    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
+    f1, f2 = MOI.Utilities.eachscalar(inner)
+    MOI.set(inner, MOI.ObjectiveFunction{typeof(f2)}(), f2)
     # Add epsilon constraint
-    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
+    variables = MOI.get(inner, MOI.ListOfVariableIndices())
     bound = right - ε
     constant = MOI.constant(f1, Float64)
     ci = MOI.Utilities.normalize_and_add_constraint(
@@ -125,7 +127,7 @@ function minimize_multiobjective!(
         if !_is_scalar_status_optimal(model)
             break
         end
-        X, Y = _compute_point(model, variables, model.f)
+        X, Y = _compute_point(model, variables, inner)
         _log_subproblem_solve(model, Y)
         if isempty(solutions) || !(Y ≈ solutions[end].y)
             push!(solutions, SolutionPoint(X, Y))
