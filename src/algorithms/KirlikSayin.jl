@@ -34,18 +34,27 @@ struct KirlikSayin <: AbstractAlgorithm end
 struct _Rectangle
     l::Vector{Float64}
     u::Vector{Float64}
+    volume::Float64
 
-    function _Rectangle(l::Vector{Float64}, u::Vector{Float64})
+    function _Rectangle(l::Vector{Float64}, u::Vector{Float64}, v::Float64)
         @assert length(l) == length(u) "Dimension mismatch between l and u"
-        return new(l, u)
+        return new(l, u, v)
     end
 end
 
-_volume(r::_Rectangle, l::Vector{Float64}) = prod(r.u - l)
+function _Rectangle(l::Vector{Float64}, u::Vector{Float64}, yI_k::Vector)
+    v = prod(u[i] - yI_k[i] for i in 1:length(u))
+    return _Rectangle(l, u, v)
+end
 
 function Base.issubset(x::_Rectangle, y::_Rectangle)
     @assert length(x.l) == length(y.l) "Dimension mismatch"
-    return all(x.l .>= y.l) && all(x.u .<= y.u)
+    for i in 1:length(x.l)
+        if x.l[i] < y.l[i] || x.u[i] > y.u[i]
+            return false
+        end
+    end
+    return true
 end
 
 function _remove_rectangle(L::Vector{_Rectangle}, R::_Rectangle)
@@ -54,31 +63,19 @@ function _remove_rectangle(L::Vector{_Rectangle}, R::_Rectangle)
     return
 end
 
-function _split_rectangle(r::_Rectangle, axis::Int, f::Float64)
-    l = [i != axis ? r.l[i] : f for i in 1:length(r.l)]
-    u = [i != axis ? r.u[i] : f for i in 1:length(r.l)]
-    return _Rectangle(r.l, u), _Rectangle(l, r.u)
-end
-
-function _update_list(L::Vector{_Rectangle}, f::Vector{Float64})
-    L_new = _Rectangle[]
-    for Rᵢ in L
-        lᵢ, uᵢ = Rᵢ.l, Rᵢ.u
-        T = [Rᵢ]
-        for j in 1:length(f)
-            if lᵢ[j] < f[j] < uᵢ[j]
-                T̄ = _Rectangle[]
-                for Rₜ in T
-                    a, b = _split_rectangle(Rₜ, j, f[j])
-                    push!(T̄, a)
-                    push!(T̄, b)
-                end
-                T = T̄
+function _update_list(L::Vector{_Rectangle}, f::Vector{Float64}, yI_k)
+    for (j, fj) in enumerate(f)
+        for i in 1:length(L)
+            R = L[i]
+            if R.l[j] < fj < R.u[j]
+                l, u = copy(R.l), copy(R.u)
+                u[j] = fj
+                push!(L, _Rectangle(l, u, yI_k))
+                R.l[j] = fj
             end
         end
-        append!(L_new, T)
     end
-    return L_new
+    return L
 end
 
 function minimize_multiobjective!(
@@ -127,15 +124,21 @@ function minimize_multiobjective!(
         yN[i] = Y + δ
         MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     end
-    L = [_Rectangle(_project(yI, k), _project(yN, k))]
+    yI_k = _project(yI, k)
+    L = [_Rectangle(copy(yI_k), _project(yN, k), yI_k)]
     status = MOI.OPTIMAL
     while !isempty(L)
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
             break
         end
-        max_volume_index = argmax([_volume(Rᵢ, _project(yI, k)) for Rᵢ in L])
-        uᵢ = L[max_volume_index].u
+        i_star, v_star = 0, 0.0
+        for (i, Li) in enumerate(L)
+            if Li.volume > v_star
+                i_star, v_star = i, Li.volume
+            end
+        end
+        uᵢ = copy(L[i_star].u)
         # Solving the first stage model: P_k(ε)
         #   minimize: f_1(x)
         #       s.t.: f_i(x) <= u_i - δ
@@ -153,12 +156,11 @@ function minimize_multiobjective!(
             )
             push!(ε_constraints, ci)
         end
-        optimize_inner!(model)
-        _log_subproblem_solve(model, "auxillary subproblem")
+        optimize_inner!(model)  # We don't log this one
         if !_is_scalar_status_optimal(model)
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
-            _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
+            _remove_rectangle(L, _Rectangle(yI_k, uᵢ, NaN))
             MOI.delete.(model, ε_constraints)
             continue
         end
@@ -180,7 +182,7 @@ function minimize_multiobjective!(
             # numerical error with this box. Just skip it.
             MOI.delete.(model, ε_constraints)
             MOI.delete(model, zₖ_constraint)
-            _remove_rectangle(L, _Rectangle(_project(yI, k), uᵢ))
+            _remove_rectangle(L, _Rectangle(yI_k, uᵢ, NaN))
             continue
         end
         X, Y = _compute_point(model, variables, f)
@@ -189,9 +191,9 @@ function minimize_multiobjective!(
         if !(Y in YN)
             push!(solutions, SolutionPoint(X, Y))
             push!(YN, Y)
-            L = _update_list(L, Y_proj)
+            L = _update_list(L, Y_proj, yI_k)
         end
-        _remove_rectangle(L, _Rectangle(Y_proj, uᵢ))
+        _remove_rectangle(L, _Rectangle(Y_proj, uᵢ, NaN))
         MOI.delete.(model, ε_constraints)
         MOI.delete(model, zₖ_constraint)
     end
