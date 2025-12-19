@@ -124,28 +124,44 @@ function _update!(
         end
     end
     L .= T
-    for k in 1:length(L)
+    for (k, L_k) in enumerate(L)
         i = 1
-        N = length(L[k])
+        N = length(L_k)
         while i < N
             index_to_remove = Int[]
-            for j in i:N
-                if i != j
-                    if all(L[k][i].u .<= L[k][j].u)
-                        L[k][i] = _join(L[k][i], L[k][j], k, z, yI, yN)
-                        push!(index_to_remove, j)
-                    elseif all(L[k][i].u .>= L[k][j].u)
-                        L[k][i] = _join(L[k][j], L[k][i], k, z, yI, yN)
-                        push!(index_to_remove, j)
-                    end
+            for j in (i+1):N
+                i_leq_j, j_leq_i = _leq_comparison(L_k[i].u, L_k[j].u)
+                if i_leq_j
+                    L_k[i] = _join(L_k[i], L_k[j], k, z, yI, yN)
+                    push!(index_to_remove, j)
+                elseif j_leq_i
+                    L_k[i] = _join(L_k[j], L_k[i], k, z, yI, yN)
+                    push!(index_to_remove, j)
                 end
             end
             i += 1
             N -= length(index_to_remove)
-            deleteat!(L[k], index_to_remove)
+            deleteat!(L_k, index_to_remove)
         end
     end
     return
+end
+
+function _leq_comparison(x::Vector, y::Vector)
+    @assert length(x) == length(y)
+    x_leq_y, y_leq_x = true, true
+    for i in 1:length(x)
+        @inbounds xi, yi = x[i], y[i]
+        if xi > yi
+            x_leq_y = false
+        elseif xi < yi
+            y_leq_x = false
+        end
+        if x_leq_y == y_leq_x == false
+            break
+        end
+    end
+    return x_leq_y, y_leq_x
 end
 
 _isapprox(::Nothing, ::_DominguezRiosBox) = false
