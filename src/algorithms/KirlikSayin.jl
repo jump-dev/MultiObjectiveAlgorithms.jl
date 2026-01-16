@@ -153,8 +153,7 @@ function minimize_multiobjective!(
             )
             push!(ε_constraints, ci)
         end
-        optimize_inner!(model)
-        _log_subproblem_solve(model, "auxillary subproblem")
+        optimize_inner!(model)  # We don't log this first-stage subproblem.
         if !_is_scalar_status_optimal(model)
             # If this fails, it likely means that the solver experienced a
             # numerical error with this box. Just skip it.
