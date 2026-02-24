@@ -68,7 +68,7 @@ function _sort!(
     sense::MOI.OptimizationSense;
     atol::Float64,
 )
-    digits = round(Int, log10(atol))
+    digits = max(0, round(Int, -log10(atol)))
     rev = sense == MOI.MAX_SENSE
     return sort!(solutions; by = p -> round.(p.y; digits), rev)
 end
