@@ -181,9 +181,9 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     solve_time_inner::Float64
     optimizer_factory::Any
 
-    function Optimizer(optimizer_factory)
+    function Optimizer(optimizer_factory; set_inner_silent = true)
         inner = MOI.instantiate(optimizer_factory; with_cache_type = Float64)
-        if MOI.supports(inner, MOI.Silent())
+        if set_inner_silent && MOI.supports(inner, MOI.Silent())
             MOI.set(inner, MOI.Silent(), true)
         end
         return new(
