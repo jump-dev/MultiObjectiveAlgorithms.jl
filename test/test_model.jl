@@ -271,6 +271,32 @@ function test_printing()
     return
 end
 
+function test_printing_silent_inner()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    @test MOI.supports(model, MOA.SilentInner())
+    @test MOI.get(model, MOA.SilentInner()) == true
+    MOI.set(model, MOA.SilentInner(), false)
+    @test MOI.get(model, MOA.SilentInner()) == false
+    MOI.set(model, MOI.Silent(), true)
+    MOI.set(model, MOA.Algorithm(), MOA.KirlikSayin())
+    x = MOI.add_variables(model, 2)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x[2], MOI.LessThan(3.0))
+    MOI.add_constraint(model, 3.0 * x[1] - 1.0 * x[2], MOI.LessThan(6.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    f = MOI.Utilities.vectorize([3.0 * x[1] + x[2], -1.0 * x[1] - 2.0 * x[2]])
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    dir = mktempdir()
+    open(joinpath(dir, "log.txt"), "w") do io
+        redirect_stdout(() -> MOI.optimize!(model), io)
+        return
+    end
+    contents = read(joinpath(dir, "log.txt"), String)
+    @test occursin("HiGHS", contents)
+    @test !occursin("MultiObjectiveAlgorithms.jl", contents)
+    return
+end
+
 end  # module
 
 TestModel.run_tests()

@@ -88,6 +88,7 @@ the solution process.
  * `MOA.ObjectivePriority(index::Int)`
  * `MOA.ObjectiveRelativeTolerance(index::Int)`
  * `MOA.ObjectiveWeight(index::Int)`
+ * `MOA.SilentInner()`
  * `MOA.SolutionLimit()`
  * `MOI.TimeLimitSec()`
 
