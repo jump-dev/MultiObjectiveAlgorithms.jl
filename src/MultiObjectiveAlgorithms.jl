@@ -274,7 +274,7 @@ end
 An optimizer attribute that controls whether the inner optimizer's `MOI.Silent`
 attribute.
 
-By default, this attribute is set to `false`. Set it to `true` to enable logging
+By default, this attribute is set to `true`. Set it to `false` to enable logging
 of the inner solver. In most cases, this will result in a large amount of output
 that is hard to interpret, but it may be helpful when debugging failed solves.
 """
