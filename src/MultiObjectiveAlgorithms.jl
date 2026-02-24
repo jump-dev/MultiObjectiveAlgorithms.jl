@@ -178,9 +178,13 @@ MOI.instantiate(optimizer_factory; with_cache_type = Float64)
 ## Example
 
 ```julia
-import MultiObjectiveAlgorithms as MOA
-import HiGHS
-optimizer = () -> MOA.Optimizer(HiGHS.Optimizer)
+julia> using JuMP
+
+julia> import MultiObjectiveAlgorithms as MOA
+
+julia> import HiGHS
+
+julia> model = Model(() -> MOA.Optimizer(HiGHS.Optimizer))
 ```
 """
 mutable struct Optimizer <: MOI.AbstractOptimizer
@@ -202,6 +206,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     function Optimizer(optimizer_factory)
         inner = MOI.instantiate(optimizer_factory; with_cache_type = Float64)
         if MOI.supports(inner, MOI.Silent())
+            # Make the default for `SilentInner` true.
             MOI.set(inner, MOI.Silent(), true)
         end
         return new(
@@ -258,6 +263,33 @@ MOI.get(model::Optimizer, ::MOI.Silent) = model.silent
 
 function MOI.set(model::Optimizer, ::MOI.Silent, value::Bool)
     model.silent = value
+    return
+end
+
+### SilentInner
+
+"""
+    SilentInner() <: MOI.AbstractOptimizerAttribute
+
+An optimizer attribute that controls whether the inner optimizer's `MOI.Silent`
+attribute.
+
+By default, this attribute is set to `true`. Set it to `false` to enable logging
+of the inner solver. In most cases, this will result in a large amount of output
+that is hard to interpret, but it may be helpful when debugging failed solves.
+"""
+struct SilentInner <: MOI.AbstractOptimizerAttribute end
+
+function MOI.supports(model::Optimizer, ::SilentInner)
+    return MOI.supports(model.inner, MOI.Silent())
+end
+
+function MOI.get(model::Optimizer, ::SilentInner)
+    return MOI.get(model.inner, MOI.Silent())
+end
+
+function MOI.set(model::Optimizer, ::SilentInner, value::Bool)
+    MOI.set(model.inner, MOI.Silent(), value)
     return
 end
 
