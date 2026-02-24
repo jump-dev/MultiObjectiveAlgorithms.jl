@@ -3,14 +3,16 @@
 #  v.2.0. If a copy of the MPL was not distributed with this file, You can
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
-using Test
+is_test_file(f) = startswith(f, "test_") && endswith(f, ".jl")
 
-@testset "$file" for file in readdir(joinpath(@__DIR__, "algorithms"))
-    include(joinpath(@__DIR__, "algorithms", file))
-end
-
-@testset "$file" for file in readdir(@__DIR__)
-    if startswith(file, "test_") && endswith(file, ".jl")
-        include(joinpath(@__DIR__, file))
+testsuite = Dict{String,Expr}()
+for (root, dirs, files) in walkdir(@__DIR__)
+    for file in joinpath.(root, filter(is_test_file, files))
+        testsuite[file] = :(include($file))
     end
 end
+
+import MultiObjectiveAlgorithms
+import ParallelTestRunner
+
+ParallelTestRunner.runtests(MultiObjectiveAlgorithms, ARGS; testsuite)
