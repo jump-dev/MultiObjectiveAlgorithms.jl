@@ -51,8 +51,26 @@ function _dominates(
     end
 end
 
-function _sort!(solutions::Vector{SolutionPoint}, sense::MOI.OptimizationSense)
-    return sort!(solutions; by = x -> x.y, rev = sense == MOI.MAX_SENSE)
+# The use of `atol` when sorting is to work-around a tolerance issue that caused
+# a test failure in #181 that wasn't reproducible on macOS. It happened on linux
+# because of a minor version change in HiGHS.
+#
+# Consider two Y vectors `y1 = [22, 37, 63]` and `y2 = [22, 54, 47]`. We clearly
+# want to return them in the order `y1`, `y2`, but if `y1[1] = 22+eps` then
+# we'll get these "round the wrong way" from the user's perspective, even though
+# it would be numerically correct.
+#
+# My solution is just to round these to the nearest `atol`. The main situation
+# that this would be confusing is when the objective is integer and we sort
+# wrongly because of 0.9999999 and 1.00000001 etc.
+function _sort!(
+    solutions::Vector{SolutionPoint},
+    sense::MOI.OptimizationSense;
+    atol::Float64,
+)
+    digits = round(Int, log10(atol))
+    rev = sense == MOI.MAX_SENSE
+    return sort!(solutions; by = p -> round.(p.y; digits), rev)
 end
 
 """
@@ -83,7 +101,7 @@ function filter_nondominated(
             push!(nondominated_solutions, candidate)
         end
     end
-    _sort!(nondominated_solutions, sense)
+    _sort!(nondominated_solutions, sense; atol)
     return nondominated_solutions
 end
 
