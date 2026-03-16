@@ -195,6 +195,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     termination_status::MOI.TerminationStatusCode
     silent::Bool
     time_limit_sec::Union{Nothing,Float64}
+    allow_inner_interrupt::Bool
     start_time::Float64
     solve_time::Float64
     ideal_point::Vector{Float64}
@@ -217,6 +218,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             MOI.OPTIMIZE_NOT_CALLED,
             false,
             nothing,
+            false,
             NaN,
             NaN,
             Float64[],
@@ -308,6 +310,34 @@ end
 
 function MOI.set(model::Optimizer, ::MOI.TimeLimitSec, ::Nothing)
     model.time_limit_sec = nothing
+    return
+end
+
+### AllowInnerInterrupt
+
+"""
+    AllowInnerInterrupt() <: MOI.AbstractOptimizerAttribute
+
+An optimizer attribute that controls whether the SIGINT (`[CTRL]+[C]`) are
+enabled during the solve of the inner optimization problems.
+
+By default, this attribute is set to `false`.
+
+!!! warning
+    This attribute should be used with caution. It is safe to set to `true` only
+    if the inner optimization has native support for safely interrupting a call
+    to `optimize!`. It is undefined behavior if you set this attribute to `true`
+    and you interrupt a solver that does not have support for safely
+    interrupting a solve.
+"""
+struct AllowInnerInterrupt <: MOI.AbstractOptimizerAttribute end
+
+MOI.supports(::Optimizer, ::AllowInnerInterrupt) = true
+
+MOI.get(model::Optimizer, ::AllowInnerInterrupt) = model.allow_inner_interrupt
+
+function MOI.set(model::Optimizer, ::AllowInnerInterrupt, value::Bool)
+    model.allow_inner_interrupt = value
     return
 end
 
@@ -701,6 +731,13 @@ function MOI.delete(model::Optimizer, ci::MOI.ConstraintIndex)
     return
 end
 
+function _call_with_sigint_if(f::Function, enable_sigint::Bool)
+    if enable_sigint
+        return reenable_sigint(f)
+    end
+    return f()
+end
+
 """
     optimize_inner!(model::Optimizer)
 
@@ -715,7 +752,18 @@ packages.
 """
 function optimize_inner!(model::Optimizer)
     start_time = time()
-    _check_interrupt(() -> MOI.optimize!(model.inner))
+    # If AllowInnerInterrupt=true, there are two cases that can happen:
+    #
+    # 1. the interrupt is gracefully caught by the inner optimizer, in which
+    #    case no error is thrown. The interrupt is handled by the regular
+    #    termination status check, just as it would for any other problematic
+    #    solve.
+    #
+    # 2. the interrupt is not gracefully caught, and an InterruptException is
+    #    thrown. Bad user. They shouldn't have set AllowInnerInterrupt.
+    _call_with_sigint_if(MOI.get(model, AllowInnerInterrupt())) do
+        return MOI.optimize!(model.inner)
+    end
     model.solve_time_inner += time() - start_time
     model.subproblem_count += 1
     return
@@ -811,9 +859,6 @@ function _check_interrupt(f)
 end
 
 function _check_premature_termination(model::Optimizer)
-    if model.termination_status == MOI.INTERRUPTED
-        return MOI.INTERRUPTED
-    end
     return _check_interrupt() do
         time_limit = MOI.get(model, MOI.TimeLimitSec())
         if time_limit !== nothing

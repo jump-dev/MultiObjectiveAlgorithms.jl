@@ -297,6 +297,29 @@ function test_printing_silent_inner()
     return
 end
 
+function test_AllowInnerInterrupt()
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    @test MOI.supports(model, MOA.AllowInnerInterrupt())
+    @test MOI.get(model, MOA.AllowInnerInterrupt()) == false
+    MOI.set(model, MOA.AllowInnerInterrupt(), true)
+    @test MOI.get(model, MOA.AllowInnerInterrupt()) == true
+    MOI.set(model, MOA.AllowInnerInterrupt(), false)
+    @test MOI.get(model, MOA.AllowInnerInterrupt()) == false
+    return
+end
+
+function test_call_with_sigint_if()
+    @test_throws(
+        ErrorException, # sigatomic error
+        MOA._call_with_sigint_if(() -> throw(InterruptException()), true),
+    )
+    @test_throws(
+        InterruptException,
+        MOA._call_with_sigint_if(() -> throw(InterruptException()), false),
+    )
+    return
+end
+
 end  # module
 
 TestModel.run_tests()

@@ -19,13 +19,13 @@ function _solve_mock(mock)
     return
 end
 
-function mock_optimizer(fail_after::Int)
+function mock_optimizer(fail_after::Int, status = MOI.NUMERICAL_ERROR)
     return () -> begin
         model = MOI.Utilities.MockOptimizer(MOI.Utilities.Model{Float64}())
         MOI.Utilities.set_mock_optimize!(
             model,
             ntuple(i -> _solve_mock, fail_after)...,
-            mock -> MOI.Utilities.mock_optimize!(mock, MOI.NUMERICAL_ERROR),
+            mock -> MOI.Utilities.mock_optimize!(mock, status),
         )
         return model
     end
