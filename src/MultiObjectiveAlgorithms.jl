@@ -715,7 +715,7 @@ packages.
 """
 function optimize_inner!(model::Optimizer)
     start_time = time()
-    MOI.optimize!(model.inner)
+    _check_interrupt(() -> MOI.optimize!(model.inner))
     model.solve_time_inner += time() - start_time
     model.subproblem_count += 1
     return
@@ -811,6 +811,9 @@ function _check_interrupt(f)
 end
 
 function _check_premature_termination(model::Optimizer)
+    if model.termination_status == MOI.INTERRUPTED
+        return MOI.INTERRUPTED
+    end
     return _check_interrupt() do
         time_limit = MOI.get(model, MOI.TimeLimitSec())
         if time_limit !== nothing
