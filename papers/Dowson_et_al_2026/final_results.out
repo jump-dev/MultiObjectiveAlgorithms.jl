@@ -1,0 +1,8 @@
+2 & 200 & \texttt{Dichotomy} & Gurobi & 34.7 & 68.9 & 1 & 88 \\
+2 & 200 & \texttt{Dichotomy} & HiGHS & 34.9 & 68.1 & 6 & 98 \\
+2 & 200 & \texttt{EpsilonConstraint} & Gurobi & 405.4 & 813.8 & 29 & 99 \\
+2 & 200 & \texttt{EpsilonConstraint} & HiGHS & 405.4 & 813.8 & 351 & 100 \\
+2 & 200 & \texttt{TambyVanderpooten} & Gurobi & 405.4 & 818.2 & 31 & 99 \\
+2 & 200 & \texttt{TambyVanderpooten} & HiGHS & 405.4 & 818.6 & 366 & 100 \\
+3 & 100 & \texttt{TambyVanderpooten} & Gurobi & 4090.0 & 14724.4 & 673 & 97 \\
+4 & 50 & \texttt{TambyVanderpooten} & Gurobi & 2240.1 & 20570.2 & 1042 & 68 \\
