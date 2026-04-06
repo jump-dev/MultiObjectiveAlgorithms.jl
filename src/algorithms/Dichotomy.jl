@@ -117,6 +117,7 @@ function optimize_multiobjective!(
     end
     limit = MOI.get(algorithm, SolutionLimit())
     status = MOI.OPTIMAL
+    atol = 1e-6
     while length(queue) > 0 && length(solutions) < limit
         if (ret = _check_premature_termination(model)) !== nothing
             status = ret
@@ -125,15 +126,24 @@ function optimize_multiobjective!(
         (a, b) = popfirst!(queue)
         y_d = solutions[a].y .- solutions[b].y
         w = y_d[2] / (y_d[2] - y_d[1])
+        if !(a <= w <= b)
+            # The weight is outside the domain. This can happen if the solver
+            # finds a solution "outside" the domain by some small numerical
+            # value, either because of constraint feasibility, or, more likely,
+            # because of the MIP gap. See MultiObjectiveAlgorithms.jl#191.
+            # We don't need to search this weight
+            continue
+        end
         status, solution =
             _solve_weighted_sum(algorithm, model, inner, f, [w, 1.0 - w])
         if !_is_scalar_status_optimal(status)
             break # Exit the solve with some error.
-        elseif solution ≈ solutions[a] || solution ≈ solutions[b]
+        end
+        if ≈(solution, solutions[a]; atol) || ≈(solution, solutions[b]; atol)
             # We have found an existing solution. We're free to prune (a, b)
             # from the search space.
         else
-            # Solution is identical to a and b, so search the domain (a, w) and
+            # Solution is different to a and b, so search the domain (a, w) and
             # (w, b), and add solution as a new Pareto-optimal solution!
             push!(queue, (a, w))
             push!(queue, (w, b))
