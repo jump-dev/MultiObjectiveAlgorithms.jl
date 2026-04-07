@@ -224,7 +224,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
             Float64[],
             _default(ComputeIdealPoint()),
             0,
-            0.0,
+            NaN,
             optimizer_factory,
         )
     end
@@ -239,6 +239,7 @@ function MOI.empty!(model::Optimizer)
     model.start_time = NaN
     empty!(model.ideal_point)
     model.subproblem_count = 0
+    model.solve_time_inner = NaN
     return
 end
 
@@ -343,9 +344,21 @@ end
 
 ### SolveTimeSec
 
-function MOI.get(model::Optimizer, ::MOI.SolveTimeSec)
-    return model.solve_time
-end
+MOI.get(model::Optimizer, ::MOI.SolveTimeSec) = model.solve_time
+
+### SolveTimeSecInner
+
+"""
+    SolveTimeSecInner <: AbstractModelAttribute -> Float64
+
+A result attribute for querying the total solve time of subproblem solves by an
+algorithm.
+"""
+struct SolveTimeSecInner <: MOI.AbstractModelAttribute end
+
+MOI.is_set_by_optimize(::SolveTimeSecInner) = true
+
+MOI.get(model::Optimizer, ::SolveTimeSecInner) = model.solve_time_inner
 
 ### ObjectiveFunction
 

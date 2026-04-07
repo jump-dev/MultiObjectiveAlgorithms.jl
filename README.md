@@ -93,8 +93,10 @@ the solution process.
  * `MOA.SolutionLimit()`
  * `MOI.TimeLimitSec()`
 
-Query the number of scalar subproblems that were solved using
+There are also the following result attributes that can be queried after the
+solve:
 
+ * `MOA.SolveTimeInner()`
  * `MOA.SubproblemCount()`
 
 For example:

@@ -94,8 +94,16 @@ function test_solve_time()
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     @test isnan(MOI.get(model, MOI.SolveTimeSec()))
+    @test MOI.is_set_by_optimize(MOA.SolveTimeSecInner())
+    @test isnan(MOI.get(model, MOA.SolveTimeSecInner()))
     MOI.optimize!(model)
     @test MOI.get(model, MOI.SolveTimeSec()) >= 0
+    @test MOI.get(model, MOA.SolveTimeSecInner()) >= 0
+    @test MOI.get(model, MOI.SolveTimeSec()) == model.solve_time
+    @test MOI.get(model, MOA.SolveTimeSecInner()) == model.solve_time_inner
+    MOI.empty!(model)
+    @test isnan(MOI.get(model, MOI.SolveTimeSec()))
+    @test isnan(MOI.get(model, MOA.SolveTimeSecInner()))
     return
 end
 
