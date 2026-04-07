@@ -32,6 +32,24 @@ This algorithm is restricted to problems with:
 """
 struct TambyVanderpooten <: AbstractAlgorithm end
 
+"""
+    const _TAMBY_VANDERPOOTEN_ATOL = 1e-3
+
+This constant is important.
+
+When we have a solution, we need to decide if the `Y` vector is at the edge of
+one of the bounds. The paper assumes exact arithmetic. Solvers have tolerances.
+
+In theory the algorithm works only for problems with integer-valued objectives.
+So we could make this as big as `0.5` or something. We previously used `1e-6`,
+but this caused problems when the solver's feasibility tolerance meant that the
+objective value was something like `1234.00005`.
+
+In future, we could consider how to rewrite the algorithm to make it more robust
+to numerical issues like this.
+"""
+const _TAMBY_VANDERPOOTEN_ATOL = 1e-3
+
 # This is Algorithm 1 from the paper.
 function _update_search_region(
     U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
@@ -110,7 +128,7 @@ function _select_search_zone(
 )
     k_star, u_star, v_star = 1, yN, -Inf
     for k in 1:length(yI), u in keys(U_N)
-        if !isapprox(u[k], yN[k]; atol = 1e-6)
+        if !isapprox(u[k], yN[k]; atol = _TAMBY_VANDERPOOTEN_ATOL)
             v = _h(k, u, yI)
             if v > v_star
                 k_star, u_star, v_star = k, u, v
@@ -205,6 +223,7 @@ function _minimize_multiobjective!(
             break
         end
         k, u = _select_search_zone(U_N, yI, yN)
+        @show k, u
         # Solve problem Π¹(k, u)
         MOI.set(inner, MOI.ObjectiveFunction{typeof(scalars[k])}(), scalars[k])
         # Update the constraints y_i < u_i. Note that this is a strict
@@ -240,7 +259,7 @@ function _minimize_multiobjective!(
         push!(V[k], (u, Y))
         # We want `if !(Y in U_N[u][k])` but this tests exact equality. We
         # want an approximate comparison.
-        if all(!isapprox(Y; atol = 1e-6), U_N[u][k])
+        if all(!isapprox(Y; atol = _TAMBY_VANDERPOOTEN_ATOL), U_N[u][k])
             _update_search_region(U_N, Y, yN)
             solutions[Y] = X
         end
@@ -270,7 +289,7 @@ end
 
 function _clean_search_region_inner(u′, U_N, yI, V, k)
     for (u′_k, yI_k) in zip(u′, yI)
-        if isapprox(u′_k, yI_k; atol = 1e-6)
+        if isapprox(u′_k, yI_k; atol = _TAMBY_VANDERPOOTEN_ATOL)
             return true
         end
     end
@@ -285,7 +304,7 @@ function _clean_search_region_inner(u′, U_N, yI, V, k)
 end
 
 function _comparison_line_16(u′, u, y_k, k)
-    if !≈(y_k[k], u′[k]; atol = 1e-6)
+    if !≈(y_k[k], u′[k]; atol = _TAMBY_VANDERPOOTEN_ATOL)
         return false
     end
     for (i, (u′_i, u_i)) in enumerate(zip(u′, u))
