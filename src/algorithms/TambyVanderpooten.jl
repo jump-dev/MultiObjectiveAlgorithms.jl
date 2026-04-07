@@ -223,7 +223,6 @@ function _minimize_multiobjective!(
             break
         end
         k, u = _select_search_zone(U_N, yI, yN)
-        @show k, u
         # Solve problem Π¹(k, u)
         MOI.set(inner, MOI.ObjectiveFunction{typeof(scalars[k])}(), scalars[k])
         # Update the constraints y_i < u_i. Note that this is a strict
