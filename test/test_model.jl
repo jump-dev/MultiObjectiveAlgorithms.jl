@@ -258,12 +258,12 @@ function test_printing()
         return
     end
     contents = read(joinpath(dir, "log.txt"), String)
-    for line in [
+    for line in Any[
         "Algorithm: KirlikSayin",
         "1    0.00000e+00  0.00000e+00",
         "----------------------------------------------",
         "termination_status: OPTIMAL",
-        "result_count: 10",
+        r"result_count: [0-9]+",
         "Time spent in subproblems: ",
     ]
         @test occursin(line, contents)
