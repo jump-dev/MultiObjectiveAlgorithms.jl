@@ -28,10 +28,9 @@ jobs:
           - version: '1.10'  # 1.10 LTS (64-bit Linux)
             os: ubuntu-latest
             arch: x64
-          # Consider disabling
-          - version: '1.10'  # 1.10 LTS (32-bit Linux)
-            os: ubuntu-latest
-            arch: x86
+          # - version: '1.10'  # 1.10 LTS (32-bit Linux)
+          #   os: ubuntu-latest
+          #   arch: x86
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v2
