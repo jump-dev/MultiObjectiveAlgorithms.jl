@@ -170,7 +170,7 @@ function minimize_multiobjective!(
         zₖ_constraint = MOI.Utilities.normalize_and_add_constraint(
             inner,
             scalars[k],
-            MOI.LessThan(zₖ),
+            MOI.LessThan(zₖ + 1e-5),
         )
         optimize_inner!(model)
         if !_is_scalar_status_optimal(model)
