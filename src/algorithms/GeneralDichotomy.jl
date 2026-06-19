@@ -1,0 +1,332 @@
+"""
+    GeneralDichotomy()
+
+    - original repository: forge.inrae.com/opteam/generaldichotomy
+    
+    - preprint: Samuel Buchet, Marianne Defresne. Efficient Enumeration of Supported Solutions for General Multi-Objective Optimization Problems. 2026. ⟨hal-05514317⟩
+
+"""
+
+using DataStructures
+
+using JuMP
+import MathOptInterface as MOI
+import MultiObjectiveAlgorithms as MOA
+
+import Polyhedra
+
+# handle floating point equality with an epsilon
+struct WeightVec
+    value::Vector{Float64}
+    value_int::Vector{Int64}
+    WeightVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
+end
+Base.:(==)(a::WeightVec, b::WeightVec) = a.value_int == b.value_int
+Base.isapprox(a::WeightVec, b::WeightVec) = (a == b)
+Base.hash(a::WeightVec) = hash(a.value_int)
+
+
+# data structure to store all information on the extreme weights
+mutable struct Weight
+    w::Vector{Float64} # weight vector
+    z::Float64 # value of the weighted objective
+    adj_bnd::Vector{Int64} # weight to boundaries adjacency
+    adj_sol::Vector{Int64} # weight to solution adjacency
+    tested::Bool # have the weights been tested ?
+    removed::Bool # weights that are no longer part of the decomposition
+    Weight() = new()
+end
+
+
+mutable struct GeneralDichotomy <: MOA.AbstractAlgorithm
+    solution_limit::Union{Nothing,Int}
+    max_iter::Int64
+    verbose::Int64
+    weights::Array{Weight}
+    epsilon::Float64
+    scaling::Float64
+    n_interm_weights::Int64
+    n_call_solve::Int64
+    GeneralDichotomy(precision::Int64) = new(nothing, 0, 0, Array{Weight}([]), 10.0^-precision, 10^precision, 0)
+end
+
+MOI.supports(::GeneralDichotomy, ::MOA.SolutionLimit) = true
+
+function MOI.set(
+    alg::GeneralDichotomy,
+    ::MOA.SolutionLimit,
+    value
+    )
+    alg.solution_limit = value
+    return
+end
+
+function MOI.get(alg::GeneralDichotomy, attr::MOA.SolutionLimit)
+    return something(alg.solution_limit, default(alg, attr))
+end
+
+function MOA._solve_weighted_sum(
+    model::MOA.Optimizer,
+    ::GeneralDichotomy,
+    weight::Vector{Float64},
+)
+    f = MOA._scalarise(model.f, weight)
+    MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
+
+    MOA.optimize_inner!(model)
+    status = MOI.get(model.inner, MOI.TerminationStatus())
+    if !MOA._is_scalar_status_optimal(status)
+        return status, nothing
+    end
+    variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
+    X, Y = MOA._compute_point(model, variables, model.f)
+    MOA._log_subproblem_solve(model, Y)
+    return status, MOA.SolutionPoint(X, Y)
+end
+
+function MOA.optimize_multiobjective!(
+    alg::GeneralDichotomy,
+    model::MOA.Optimizer
+)
+    
+    if alg.verbose > 0
+        println("starting the general dichotomy")
+    end
+
+    alg.n_call_solve = 0
+
+    start_time = time()
+
+    n_obj = MOI.output_dimension(model.f)
+    wnorm = 100.
+
+    alg.weights = Array{Weight}([])
+
+    # initial extreme weights
+    for i in 1:n_obj
+        weight = Weight()
+        weight.w = zeros(Float64, n_obj) 
+        weight.w[i] = wnorm
+        # weight to solution/boundaries adjacency
+        weight.adj_bnd = Vector{Int64}([-j for j in 1:n_obj if j != i])
+        weight.adj_sol = Vector{Int64}([1])
+        weight.tested = false
+        weight.removed = false
+        push!(alg.weights, weight)
+    end
+
+    # initial solution
+    status, solution = MOA._solve_weighted_sum(model, alg, alg.weights[1].w)
+    solutions = [solution]
+
+    # weight update for the new solution
+    for weight in alg.weights
+        weight.z = sum(weight.w.*solutions[1].y)
+    end
+    alg.weights[1].tested = true
+
+    # prevent solution duplicates
+    existing_sol = Dict([solution.y => 1])
+
+    n_removed = 0
+
+    stop = false
+
+    # list of solutions to consider when enumerating polytope vertices
+    polytope_sol = Set{Int64}()
+
+    iter_ind = 0
+
+    # main loop
+    while !stop
+
+        if alg.verbose > 0
+            println("\n\n")
+            println("####################################################")
+            println("                  Iteration ", iter_ind)
+            println("####################################################")
+            println("\n\n")
+        end
+
+        if alg.max_iter > 0 && iter_ind >= alg.max_iter # early termination
+            stop = true
+            break
+        end
+
+        iter_ind += 1
+
+        # look for a new solution by testing the extreme weights
+        found = false
+        new_sol_ind = 0
+        wind = 1
+        target_weight = 0
+        while wind <= alg.weights.size[1] && !found
+            if alg.weights[wind].tested || alg.weights[wind].removed
+                wind += 1
+                continue
+            end
+            if alg.verbose > 0
+                println("optimizing with weight ", alg.weights[wind].w)
+            end
+            status, sol = MOA._solve_weighted_sum(model, alg, alg.weights[wind].w)
+            alg.weights[wind].tested = true # this one has been tested
+            sol_z = sum(sol.y .* alg.weights[wind].w)
+            alg.n_call_solve += 1
+
+            if alg.verbose > 0
+                println("solution found: ", sol.y)
+                println("comp ", sol_z, " ", alg.weights[wind].z)
+            end
+
+            # add the new solution if it was not previously discovered
+            sol_ind = get(existing_sol, sol.y, 0)
+            if sol_ind == 0
+                push!(solutions, sol)
+                # prepare new weight index set for the new solution's adjacency
+                new_sol_ind = solutions.size[1]
+                push!(existing_sol, sol.y => new_sol_ind)
+                if sol_z < alg.weights[wind].z # triggers weight set decomp. update
+                    found = true
+                    target_weight = wind
+                    if alg.verbose > 0
+                        println("found new improving solution")
+                    end
+                end
+            elseif alg.verbose > 0
+                println("the solutions was already discovered!")
+            end
+            wind += 1
+        end
+
+        # terminate the search when no solution can be found
+        if !found
+            stop = true
+            break
+        end
+
+        empty!(polytope_sol)
+
+        # record weights with the same weighted sum to prevent duplicates
+        equal_weights = Dict{WeightVec, Int64}()
+
+        # collect adjacent solutions for constructing the new polytope
+        for wind in 1:alg.weights.size[1]
+            weight = alg.weights[wind]
+            sol_z = sum(solutions[new_sol_ind].y .* weight.w)
+            if alg.verbose > 0
+                println(" cmp ", sol_z, " vs ", weight.z)
+            end
+            if sol_z < weight.z-alg.epsilon
+                if alg.verbose > 0
+                    println("updating extreme weights", wind, weight.w)
+                end
+                if weight.adj_bnd.size[1] < n_obj # improved weighted value
+                    weight.removed = true
+                else
+                    weight.adj_sol = Vector{Int64}([new_sol_ind])
+                    weight.z = sol_z
+                end
+                union!(polytope_sol, weight.adj_sol)
+            elseif sol_z <= weight.z+alg.epsilon # equal weighted value
+                push!(weight.adj_sol, new_sol_ind)
+                union!(polytope_sol, weight.adj_sol)
+                equal_weights[WeightVec(weight.w, alg.scaling)] = wind # add equal weight
+            end
+        end
+
+        if alg.verbose > 0
+            println("\n\n")
+            println("Adjacent solutions for the new polytope: ", polytope_sol)
+        end
+
+        # construction of the weight polytope for the new solution
+        h = Polyhedra.HyperPlane( ones(n_obj), wnorm) # normalized weights
+        for i in 1:n_obj # non-negativity
+            vec = zeros(n_obj)
+            vec[i] = -1.
+            h = h ∩ Polyhedra.HalfSpace(vec, 0)
+        end
+        polytope_sol = collect(polytope_sol)
+        for other_sol_ind in polytope_sol # scalarizations inequality
+            vec = solutions[new_sol_ind].y - solutions[other_sol_ind].y
+            h = h ∩ Polyhedra.HalfSpace(vec, 0)
+        end
+        poly = Polyhedra.polyhedron(h)
+
+        if alg.verbose > 1
+            println(poly)
+            println("\n\n")
+        end
+
+        if alg.verbose > 1
+            println("Polytope extreme weights:")
+            for idx in eachindex(Polyhedra.points(poly))
+                p = get(poly, idx)
+                println(p)
+            end
+            println("\n")
+        end
+
+        # update of the extreme weights from the new polytope vertices
+        for idx in eachindex(Polyhedra.points(poly))
+            w = get(poly, idx)
+            weight_ind = get(equal_weights, WeightVec(w, alg.scaling), 0)
+            if weight_ind > 0 # update an existing extreme weight
+                alg.weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)
+                alg.weights[weight_ind].tested = true
+                alg.weights[weight_ind].adj_sol = Vector{Int64}([new_sol_ind])
+                if alg.weights[weight_ind].adj_bnd.size[1] < n_obj-1
+                    if !alg.weights[weight_ind].removed
+                        alg.weights[weight_ind].removed = true
+                        n_removed += 1
+                    end
+                else
+                    alg.weights[weight_ind].removed = false
+                end
+            else # insert a new extreme weight
+                weight_ind = alg.weights.size[1]+1
+                # push!(existing_weights, p => weight_ind)
+                new_weight = Weight()
+                new_weight.tested = false
+                new_weight.removed = false
+                new_weight.w = w
+                new_weight.z = sum(w .* solutions[new_sol_ind].y)
+                incidence = Polyhedra.incidenthalfspaceindices(poly, idx)
+                new_weight.adj_bnd = Vector{Int64}([-elt.value for elt in incidence if elt.value <= n_obj])
+                new_weight.adj_sol = Vector{Int64}([ polytope_sol[elt.value-n_obj] for elt in incidence if elt.value > n_obj])
+                push!(new_weight.adj_sol, new_sol_ind)
+                push!(alg.weights, new_weight)
+            end
+        end
+
+        # iteration summary
+        if alg.verbose > 0
+            println("Weights: ")
+            w_ind = 0
+            for weight in alg.weights
+                print("w^", w_ind, ": ")
+                print(weight.w)
+                print(" z=", weight.z)
+                print(", ", weight.adj_sol)
+                print(", ", weight.adj_bnd)
+                print(" -> ", weight.tested)
+                println(" ", weight.removed)
+                w_ind += 1
+            end
+        end
+
+        # clean removed weights
+        if 3*n_removed >= alg.weights.size[1]
+            alg.n_interm_weights += n_removed
+            alg.weights = Array{Weight}([weight for weight in alg.weights if !weight.removed])
+            n_removed = 0
+        end
+    end
+
+    # final cleaning
+    alg.n_interm_weights += n_removed
+    alg.weights = Array{Weight}([weight for weight in alg.weights if !weight.removed])
+
+    return status, solutions
+end
+
