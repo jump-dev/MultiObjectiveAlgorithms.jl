@@ -7,13 +7,13 @@
 
 """
 
-using DataStructures
+# using DataStructures
 
-using JuMP
-import MathOptInterface as MOI
-import MultiObjectiveAlgorithms as MOA
+# using JuMP
+# import MathOptInterface as MOI
+# import MultiObjectiveAlgorithms as MOA
 
-import Polyhedra
+# import Polyhedra
 
 # handle floating point equality with an epsilon
 struct WeightVec
@@ -38,7 +38,7 @@ mutable struct Weight
 end
 
 
-mutable struct GeneralDichotomy <: MOA.AbstractAlgorithm
+mutable struct GeneralDichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
     max_iter::Int64
     verbose::Int64
@@ -50,43 +50,43 @@ mutable struct GeneralDichotomy <: MOA.AbstractAlgorithm
     GeneralDichotomy(precision::Int64) = new(nothing, 0, 0, Array{Weight}([]), 10.0^-precision, 10^precision, 0)
 end
 
-MOI.supports(::GeneralDichotomy, ::MOA.SolutionLimit) = true
+MOI.supports(::GeneralDichotomy, ::SolutionLimit) = true
 
 function MOI.set(
     alg::GeneralDichotomy,
-    ::MOA.SolutionLimit,
+    ::SolutionLimit,
     value
     )
     alg.solution_limit = value
     return
 end
 
-function MOI.get(alg::GeneralDichotomy, attr::MOA.SolutionLimit)
+function MOI.get(alg::GeneralDichotomy, attr::SolutionLimit)
     return something(alg.solution_limit, default(alg, attr))
 end
 
-function MOA._solve_weighted_sum(
-    model::MOA.Optimizer,
+function _solve_weighted_sum(
+    model::Optimizer,
     ::GeneralDichotomy,
     weight::Vector{Float64},
 )
-    f = MOA._scalarise(model.f, weight)
+    f = _scalarise(model.f, weight)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
 
-    MOA.optimize_inner!(model)
+    optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
-    if !MOA._is_scalar_status_optimal(status)
+    if !_is_scalar_status_optimal(status)
         return status, nothing
     end
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
-    X, Y = MOA._compute_point(model, variables, model.f)
-    MOA._log_subproblem_solve(model, Y)
-    return status, MOA.SolutionPoint(X, Y)
+    X, Y = _compute_point(model, variables, model.f)
+    _log_subproblem_solve(model, Y)
+    return status, SolutionPoint(X, Y)
 end
 
-function MOA.optimize_multiobjective!(
+function optimize_multiobjective!(
     alg::GeneralDichotomy,
-    model::MOA.Optimizer
+    model::Optimizer
 )
     
     if alg.verbose > 0
@@ -116,8 +116,14 @@ function MOA.optimize_multiobjective!(
     end
 
     # initial solution
-    status, solution = MOA._solve_weighted_sum(model, alg, alg.weights[1].w)
+    status, solution = _solve_weighted_sum(model, alg, alg.weights[1].w)
     solutions = [solution]
+    if !_is_scalar_status_optimal(status)
+        println("Error when solving the first linear scalarization")
+        println("weight:", alg.weights[1].w)
+        println("status: ")
+        println(status)
+    end
 
     # weight update for the new solution
     for weight in alg.weights
@@ -168,7 +174,7 @@ function MOA.optimize_multiobjective!(
             if alg.verbose > 0
                 println("optimizing with weight ", alg.weights[wind].w)
             end
-            status, sol = MOA._solve_weighted_sum(model, alg, alg.weights[wind].w)
+            status, sol = _solve_weighted_sum(model, alg, alg.weights[wind].w)
             alg.weights[wind].tested = true # this one has been tested
             sol_z = sum(sol.y .* alg.weights[wind].w)
             alg.n_call_solve += 1
