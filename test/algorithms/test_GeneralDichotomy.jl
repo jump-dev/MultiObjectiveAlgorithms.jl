@@ -7,6 +7,8 @@ import HiGHS
 import MultiObjectiveAlgorithms as MOA
 import MultiObjectiveAlgorithms: MOI
 
+import Polyhedra
+
 function run_tests()
     for name in names(@__MODULE__; all = true)
         if startswith("$name", "test_")
@@ -34,6 +36,7 @@ function test_lap()
     x = reshape(x_, n, n)
     MOI.add_constraints(model, MOI.ScalarAffineFunction.([MOI.ScalarAffineTerm.(ones(n), x[i,:]) for i in 1:n], 0.0), MOI.EqualTo(1.0))
     MOI.add_constraints(model, MOI.ScalarAffineFunction.([MOI.ScalarAffineTerm.(ones(n), x[:,j]) for j in 1:n], 0.0), MOI.EqualTo(1.0))
+    MOI.add_constraint.(model, x, MOI.ZeroOne())
     f = MOI.Utilities.operate(vcat, Float64, sum(costs[1,:,:] .* x), sum(costs[2,:,:] .* x), sum(costs[3,:,:] .* x))
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -42,21 +45,16 @@ function test_lap()
     println("model: ")
     println(model)
 
-    precision = 3
+    precision = 6
 
     algorithm = MOA.GeneralDichotomy(precision)
     algorithm.verbose = 1
-
-    # algorithm = MOA.RandomWeighting()
 
     MOI.set(model, MOA.Algorithm(), algorithm)
 
     # MOI.set(optimizer, MOA.SolutionLimit(), 3)
 
-    # costs = load_instance(model, fname)
-
     println("Costs size: ", costs.size)
-
 
     # disable model log
     # set_attribute(model, MOI.Silent(), true)
@@ -64,17 +62,24 @@ function test_lap()
     MOI.optimize!(model)
 
     solve_time = MOI.get(model, MOI.SolveTimeSec())
+    @test  MOI.get(model, MOI.ResultCount()) == 10 
 
     println("Number of solutions: ", MOI.get(model, MOI.ResultCount()))
     println("solve time: ", solve_time)
-    println("solve time inner: ", optimizer.solve_time_inner)
+    println("solve time inner: ", model.solve_time_inner)
 
-    generaldichotomy_time = optimizer.solve_time-optimizer.solve_time_inner
+    generaldichotomy_time = model.solve_time-model.solve_time_inner
     println("GeneralDichotomy time: ", generaldichotomy_time, " s")
 
-    println("n weights: ", general_dichotomy.weights.size)
-    println("n intermediate weights: ", general_dichotomy.n_interm_weights)
-    println("N solved scalarization: ", general_dichotomy.n_call_solve)
+    println("n weights: ", algorithm.weights.size)
+    println("n intermediate weights: ", algorithm.n_interm_weights)
+    println("N solved scalarization: ", algorithm.n_call_solve)
+
+    println("Objective cost vectors")
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        y = MOI.get(model, MOI.ObjectiveValue(i))
+        println(y)
+    end
 
 end
 

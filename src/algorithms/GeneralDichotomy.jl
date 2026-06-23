@@ -13,7 +13,7 @@
 # import MathOptInterface as MOI
 # import MultiObjectiveAlgorithms as MOA
 
-# import Polyhedra
+import Polyhedra
 
 # handle floating point equality with an epsilon
 struct WeightVec
@@ -113,6 +113,11 @@ function optimize_multiobjective!(
         weight.tested = false
         weight.removed = false
         push!(alg.weights, weight)
+    end
+
+    if alg.verbose > 0
+        println("Initial weight tested:")
+        println(alg.weights[1].w)
     end
 
     # initial solution
