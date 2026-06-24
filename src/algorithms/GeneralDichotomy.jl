@@ -15,15 +15,15 @@
 
 import Polyhedra
 
-# handle floating point equality with an epsilon
-struct WeightVec
+# handle floating point equality
+struct CustomVec
     value::Vector{Float64}
     value_int::Vector{Int64}
-    WeightVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
+    CustomVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
 end
-Base.:(==)(a::WeightVec, b::WeightVec) = a.value_int == b.value_int
-Base.isapprox(a::WeightVec, b::WeightVec) = (a == b)
-Base.hash(a::WeightVec) = hash(a.value_int)
+Base.:(==)(a::CustomVec, b::CustomVec) = a.value_int == b.value_int
+Base.isapprox(a::CustomVec, b::CustomVec) = (a == b)
+Base.hash(a::CustomVec) = hash(a.value_int)
 
 
 # data structure to store all information on the extreme weights
@@ -72,7 +72,6 @@ function _solve_weighted_sum(
 )
     f = _scalarise(model.f, weight)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
-
     optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
@@ -93,13 +92,16 @@ function optimize_multiobjective!(
         println("starting the general dichotomy")
     end
 
-    alg.n_call_solve = 0
-
-    start_time = time()
+    mul_sense = 1. # the weighted sum comparison is reversed when problems are maximized
+    if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MAX_SENSE
+        mul_sense = -1.
+    end
 
     n_obj = MOI.output_dimension(model.f)
     wnorm = 100.
-
+    alg.n_call_solve = 0
+    start_time = time()
+    
     alg.weights = Array{Weight}([])
 
     # initial extreme weights
@@ -130,17 +132,21 @@ function optimize_multiobjective!(
         println(status)
     end
 
+    if alg.verbose > 0
+        println("Initial solution:")
+        println(solution.y)
+    end
+
     # weight update for the new solution
     for weight in alg.weights
-        weight.z = sum(weight.w.*solutions[1].y)
+        weight.z = sum(weight.w.*solutions[1].y)*mul_sense
     end
     alg.weights[1].tested = true
 
     # prevent solution duplicates
-    existing_sol = Dict([solution.y => 1])
+    existing_sol = Dict([CustomVec(solution.y, alg.scaling) => 1])
 
     n_removed = 0
-
     stop = false
 
     # list of solutions to consider when enumerating polytope vertices
@@ -177,11 +183,11 @@ function optimize_multiobjective!(
                 continue
             end
             if alg.verbose > 0
-                println("optimizing with weight ", alg.weights[wind].w)
+                println("\n\noptimizing with weight ", alg.weights[wind].w)
             end
             status, sol = _solve_weighted_sum(model, alg, alg.weights[wind].w)
             alg.weights[wind].tested = true # this one has been tested
-            sol_z = sum(sol.y .* alg.weights[wind].w)
+            sol_z = sum(sol.y .* alg.weights[wind].w)*mul_sense
             alg.n_call_solve += 1
 
             if alg.verbose > 0
@@ -190,12 +196,12 @@ function optimize_multiobjective!(
             end
 
             # add the new solution if it was not previously discovered
-            sol_ind = get(existing_sol, sol.y, 0)
+            sol_ind = get(existing_sol, CustomVec(sol.y, alg.scaling), 0)
             if sol_ind == 0
                 push!(solutions, sol)
                 # prepare new weight index set for the new solution's adjacency
                 new_sol_ind = solutions.size[1]
-                push!(existing_sol, sol.y => new_sol_ind)
+                push!(existing_sol, CustomVec(sol.y, alg.scaling) => new_sol_ind)
                 if sol_z < alg.weights[wind].z # triggers weight set decomp. update
                     found = true
                     target_weight = wind
@@ -218,12 +224,12 @@ function optimize_multiobjective!(
         empty!(polytope_sol)
 
         # record weights with the same weighted sum to prevent duplicates
-        equal_weights = Dict{WeightVec, Int64}()
+        equal_weights = Dict{CustomVec, Int64}()
 
         # collect adjacent solutions for constructing the new polytope
         for wind in 1:alg.weights.size[1]
             weight = alg.weights[wind]
-            sol_z = sum(solutions[new_sol_ind].y .* weight.w)
+            sol_z = sum(solutions[new_sol_ind].y .* weight.w)*mul_sense
             if alg.verbose > 0
                 println(" cmp ", sol_z, " vs ", weight.z)
             end
@@ -239,9 +245,12 @@ function optimize_multiobjective!(
                 end
                 union!(polytope_sol, weight.adj_sol)
             elseif sol_z <= weight.z+alg.epsilon # equal weighted value
+                if alg.verbose > 0
+                    println("equal weight found", wind, weight.w)
+                end
                 push!(weight.adj_sol, new_sol_ind)
                 union!(polytope_sol, weight.adj_sol)
-                equal_weights[WeightVec(weight.w, alg.scaling)] = wind # add equal weight
+                equal_weights[CustomVec(weight.w, alg.scaling)] = wind # add equal weight
             end
         end
 
@@ -254,17 +263,18 @@ function optimize_multiobjective!(
         h = Polyhedra.HyperPlane( ones(n_obj), wnorm) # normalized weights
         for i in 1:n_obj # non-negativity
             vec = zeros(n_obj)
-            vec[i] = -1.
+            vec[i] = -1
             h = h ∩ Polyhedra.HalfSpace(vec, 0)
         end
         polytope_sol = collect(polytope_sol)
         for other_sol_ind in polytope_sol # scalarizations inequality
-            vec = solutions[new_sol_ind].y - solutions[other_sol_ind].y
+            vec = (solutions[new_sol_ind].y - solutions[other_sol_ind].y).*mul_sense
             h = h ∩ Polyhedra.HalfSpace(vec, 0)
         end
         poly = Polyhedra.polyhedron(h)
 
         if alg.verbose > 1
+            println("Polyhedron:")
             println(poly)
             println("\n\n")
         end
@@ -281,9 +291,9 @@ function optimize_multiobjective!(
         # update of the extreme weights from the new polytope vertices
         for idx in eachindex(Polyhedra.points(poly))
             w = get(poly, idx)
-            weight_ind = get(equal_weights, WeightVec(w, alg.scaling), 0)
+            weight_ind = get(equal_weights, CustomVec(w, alg.scaling), 0)
             if weight_ind > 0 # update an existing extreme weight
-                alg.weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)
+                alg.weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)*mul_sense
                 alg.weights[weight_ind].tested = true
                 alg.weights[weight_ind].adj_sol = Vector{Int64}([new_sol_ind])
                 if alg.weights[weight_ind].adj_bnd.size[1] < n_obj-1
@@ -301,7 +311,7 @@ function optimize_multiobjective!(
                 new_weight.tested = false
                 new_weight.removed = false
                 new_weight.w = w
-                new_weight.z = sum(w .* solutions[new_sol_ind].y)
+                new_weight.z = sum(w .* solutions[new_sol_ind].y)*mul_sense
                 incidence = Polyhedra.incidenthalfspaceindices(poly, idx)
                 new_weight.adj_bnd = Vector{Int64}([-elt.value for elt in incidence if elt.value <= n_obj])
                 new_weight.adj_sol = Vector{Int64}([ polytope_sol[elt.value-n_obj] for elt in incidence if elt.value > n_obj])
@@ -323,6 +333,10 @@ function optimize_multiobjective!(
                 print(" -> ", weight.tested)
                 println(" ", weight.removed)
                 w_ind += 1
+            end
+            println("Solutions:")
+            for sol in solutions
+                println(sol.y)
             end
         end
 
