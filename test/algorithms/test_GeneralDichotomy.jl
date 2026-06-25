@@ -20,6 +20,17 @@ function run_tests()
     return
 end
 
+function test_Dichotomy_SolutionLimit() # from the Dichotomy test set
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
+    @test MOI.supports(MOA.GeneralDichotomy(), MOA.SolutionLimit())
+    @test MOI.supports(model, MOA.SolutionLimit())
+    @test MOI.get(model, MOA.SolutionLimit()) ==
+          MOA._default(MOA.SolutionLimit())
+    MOI.set(model, MOA.SolutionLimit(), 1)
+    @test MOI.get(model, MOA.SolutionLimit()) == 1
+    return
+end
 
 function test_lap() # toy instance from (Przybylski et al., 2019)
     costs = zeros(Float64, (3, 4, 4))
@@ -37,12 +48,55 @@ function test_lap() # toy instance from (Przybylski et al., 2019)
     f = MOI.Utilities.operate(vcat, Float64, sum(costs[1,:,:] .* x), sum(costs[2,:,:] .* x), sum(costs[3,:,:] .* x))
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    precision = 6
+    MOI.set(model, MOI.Silent(), true)
+    precision = 3
     algorithm = MOA.GeneralDichotomy(precision)
     MOI.set(model, MOA.Algorithm(), algorithm)
     MOI.optimize!(model)
     solve_time = MOI.get(model, MOI.SolveTimeSec())
     @test  MOI.get(model, MOI.ResultCount()) == 4 
+end
+
+function test_vlp() # test instance from Bensolve (http://www.bensolve.org/)
+    P = [1.0 0.0 1.0; 1.0 1.0 0.0; 0.0 1.0 1.0]
+    B = [1.0 1.0 1.0; 1.0 2.0 2.0; 2.0 2.0 1.0; 2 1.0 2.0]
+    a = [1.0, 3/2, 3/2, 3/2]
+
+    # println("Test Vector linear program")
+    # println("P")
+    # println(P)
+    # println("B")
+    # println(B)
+    # println("a")
+    # println(a)
+
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    x = MOI.add_variables(model, 3)
+
+    MOI.add_constraints(model, MOI.ScalarAffineFunction.([MOI.ScalarAffineTerm.(B[i,:], x) for i in 1:4], 0.0), MOI.GreaterThan.(a))
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+
+    f = MOI.Utilities.vectorize(P' * x)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.Silent(), true)
+
+    # println("vlp model:")
+    # println(model)
+
+    precision = 3
+    algorithm = MOA.GeneralDichotomy(precision)
+    algorithm.verbose = 0
+    MOI.set(model, MOA.Algorithm(), algorithm)
+    MOI.optimize!(model)
+
+    for i in 1:MOI.get(model, MOI.ResultCount())
+        println(MOI.get(model, MOI.ObjectiveValue(i)))
+    end
+
+    # solve_time = MOI.get(model, MOI.SolveTimeSec())
+    # @test  MOI.get(model, MOI.ResultCount()) == 4 
 end
 
 function test_biobjective_knapsack() # from the Dichotomy test set
@@ -85,6 +139,38 @@ function test_biobjective_knapsack() # from the Dichotomy test set
         @test results[i][2] == findall(elt -> elt > 0.9, x_sol)
         @test results[i][1] ≈ MOI.get(model, MOI.ObjectiveValue(i))
     end
+    return
+end
+
+function test_infeasible() # from the Dichotomy test set
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 6)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, 1.0 * x[1] + 1.0 * x[2], MOI.LessThan(-1.0))
+    f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.INFEASIBLE
+    @test MOI.get(model, MOI.PrimalStatus()) == MOI.NO_SOLUTION
+    @test MOI.get(model, MOI.DualStatus()) == MOI.NO_SOLUTION
+    return
+end
+
+function test_unbounded() # from the Dichotomy test set
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOI.Silent(), true)
+    x = MOI.add_variables(model, 3)
+    MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+    f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.DUAL_INFEASIBLE
+    @test MOI.get(model, MOI.PrimalStatus()) == MOI.NO_SOLUTION
+    @test MOI.get(model, MOI.DualStatus()) == MOI.NO_SOLUTION
     return
 end
 

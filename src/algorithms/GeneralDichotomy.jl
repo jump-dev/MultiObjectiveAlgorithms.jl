@@ -1,9 +1,20 @@
 """
     GeneralDichotomy()
-
-    - original repository: forge.inrae.com/opteam/generaldichotomy
     
-    - preprint: Samuel Buchet, Marianne Defresne. Efficient Enumeration of Supported Solutions for General Multi-Objective Optimization Problems. 2026. ⟨hal-05514317⟩
+- preprint: Samuel Buchet, Marianne Defresne. Efficient Enumeration of Supported Solutions for General Multi-Objective Optimization Problems. 2026. ⟨hal-05514317⟩
+
+- original repository: https://forge.inrae.com/opteam/generaldichotomy
+
+## Supported problem classes
+
+This algorithm supports all problem classes.
+
+## Supported optimizer attributes
+
+ * `MOI.TimeLimitSec()`: terminate if the time limit is exceeded and return the
+   list of current solutions.
+
+ * `MOA.SolutionLimit()`: terminate once this many solutions have been found.
 
 """
 
@@ -48,21 +59,18 @@ mutable struct GeneralDichotomy <: AbstractAlgorithm
     n_interm_weights::Int64
     n_call_solve::Int64
     GeneralDichotomy(precision::Int64) = new(nothing, 0, 0, Array{Weight}([]), 10.0^-precision, 10^precision, 0)
+    GeneralDichotomy() = new(nothing, 0, 0, Array{Weight}([]), 10.0^-3, 10^3, 0) # default precision = 3
 end
 
 MOI.supports(::GeneralDichotomy, ::SolutionLimit) = true
 
-function MOI.set(
-    alg::GeneralDichotomy,
-    ::SolutionLimit,
-    value
-    )
-    alg.solution_limit = value
-    return
+function MOI.get(alg::GeneralDichotomy, attr::SolutionLimit)
+    return something(alg.solution_limit, _default(alg, attr))
 end
 
-function MOI.get(alg::GeneralDichotomy, attr::SolutionLimit)
-    return something(alg.solution_limit, default(alg, attr))
+function MOI.set(alg::GeneralDichotomy, ::SolutionLimit, value)
+    alg.solution_limit = value
+    return
 end
 
 function _solve_weighted_sum(
@@ -124,13 +132,10 @@ function optimize_multiobjective!(
 
     # initial solution
     status, solution = _solve_weighted_sum(model, alg, alg.weights[1].w)
-    solutions = [solution]
-    if !_is_scalar_status_optimal(status)
-        println("Error when solving the first linear scalarization")
-        println("weight:", alg.weights[1].w)
-        println("status: ")
-        println(status)
+    if !_is_scalar_status_optimal(status) # return immediately if no solution nor unbounded
+        return status, nothing
     end
+    solutions = [solution]
 
     if alg.verbose > 0
         println("Initial solution:")
@@ -148,6 +153,7 @@ function optimize_multiobjective!(
 
     n_removed = 0
     stop = false
+    limit = MOI.get(alg, SolutionLimit())
 
     # list of solutions to consider when enumerating polytope vertices
     polytope_sol = Set{Int64}()
@@ -165,7 +171,7 @@ function optimize_multiobjective!(
             println("\n\n")
         end
 
-        if alg.max_iter > 0 && iter_ind >= alg.max_iter # early termination
+        if (alg.max_iter > 0 && iter_ind >= alg.max_iter) || length(solutions) >= limit # early termination
             stop = true
             break
         end
