@@ -9,7 +9,9 @@ import Polyhedra
 struct CustomVec
     value::Vector{Float64}
     value_int::Vector{Int64}
-    CustomVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
+    function CustomVec(vec::Vector{Float64}, scaling::Real)
+        return new(vec, round.(Int64, scaling .* vec))
+    end
 end
 Base.:(==)(a::CustomVec, b::CustomVec) = a.value_int == b.value_int
 Base.hash(a::CustomVec, h::UInt64) = hash(a.value_int, h)
