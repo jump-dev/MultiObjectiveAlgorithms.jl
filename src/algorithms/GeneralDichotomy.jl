@@ -12,8 +12,7 @@ struct CustomVec
     CustomVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
 end
 Base.:(==)(a::CustomVec, b::CustomVec) = a.value_int == b.value_int
-Base.isapprox(a::CustomVec, b::CustomVec) = (a == b)
-Base.hash(a::CustomVec) = hash(a.value_int)
+Base.hash(a::CustomVec, h::UInt64) = hash(a.value_int, h)
 
 # data structure to store all information on the extreme weights
 mutable struct Weight
@@ -91,7 +90,7 @@ function optimize_multiobjective!(
     alg::GeneralDichotomy,
     model::Optimizer
 )
-    
+
     if alg.verbose > 0
         println("starting the general dichotomy")
     end
@@ -104,7 +103,7 @@ function optimize_multiobjective!(
     n_obj = MOI.output_dimension(model.f)
     wnorm = 100.
     alg.n_call_solve = 0
-    start_time = time()
+    start_time = time() 
     
     alg.weights = Array{Weight}([])
 
