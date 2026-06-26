@@ -55,8 +55,9 @@ mutable struct GeneralDichotomy <: AbstractAlgorithm
     scaling::Float64
     n_interm_weights::Int64
     n_call_solve::Int64
-    GeneralDichotomy(precision::Int64) = new(nothing, 0, 0, Array{Weight}([]), 10.0^-precision, 10^precision, 0)
-    GeneralDichotomy() = new(nothing, 0, 0, Array{Weight}([]), 10.0^-3, 10^3, 0) # default precision = 3
+    function GeneralDichotomy(precision::Int64 = 3)
+        return new(nothing, 0, 0, Array{Weight}([]), 10.0^-precision, 10^precision, 0)
+    end
 end
 
 MOI.supports(::GeneralDichotomy, ::SolutionLimit) = true
