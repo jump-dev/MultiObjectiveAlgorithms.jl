@@ -183,7 +183,7 @@ function optimize_multiobjective!(
         new_sol_ind = 0
         wind = 1
         target_weight = 0
-        while wind <= alg.weights.size[1] && !found
+        while wind <= size(alg.weights, 1) && !found
             if alg.weights[wind].tested || alg.weights[wind].removed
                 wind += 1
                 continue
