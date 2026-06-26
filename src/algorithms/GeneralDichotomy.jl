@@ -1,3 +1,31 @@
+#  Copyright 2019, Oscar Dowson and contributors
+#  This Source Code Form is subject to the terms of the Mozilla Public License,
+#  v.2.0. If a copy of the MPL was not distributed with this file, You can
+#  obtain one at http://mozilla.org/MPL/2.0/.
+
+import Polyhedra
+
+# handle floating point equality
+struct CustomVec
+    value::Vector{Float64}
+    value_int::Vector{Int64}
+    CustomVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
+end
+Base.:(==)(a::CustomVec, b::CustomVec) = a.value_int == b.value_int
+Base.isapprox(a::CustomVec, b::CustomVec) = (a == b)
+Base.hash(a::CustomVec) = hash(a.value_int)
+
+# data structure to store all information on the extreme weights
+mutable struct Weight
+    w::Vector{Float64} # weight vector
+    z::Float64 # value of the weighted objective
+    adj_bnd::Vector{Int64} # weight to boundaries adjacency
+    adj_sol::Vector{Int64} # weight to solution adjacency
+    tested::Bool # have the weights been tested ?
+    removed::Bool # weights that are no longer part of the decomposition
+    Weight() = new()
+end
+
 """
     GeneralDichotomy()
     
@@ -17,38 +45,6 @@ This algorithm supports all problem classes.
  * `MOA.SolutionLimit()`: terminate once this many solutions have been found.
 
 """
-
-# using DataStructures
-
-# using JuMP
-# import MathOptInterface as MOI
-# import MultiObjectiveAlgorithms as MOA
-
-import Polyhedra
-
-# handle floating point equality
-struct CustomVec
-    value::Vector{Float64}
-    value_int::Vector{Int64}
-    CustomVec(vec, scaling) = new(vec, Vector{Int64}(round.(vec.*scaling)))
-end
-Base.:(==)(a::CustomVec, b::CustomVec) = a.value_int == b.value_int
-Base.isapprox(a::CustomVec, b::CustomVec) = (a == b)
-Base.hash(a::CustomVec) = hash(a.value_int)
-
-
-# data structure to store all information on the extreme weights
-mutable struct Weight
-    w::Vector{Float64} # weight vector
-    z::Float64 # value of the weighted objective
-    adj_bnd::Vector{Int64} # weight to boundaries adjacency
-    adj_sol::Vector{Int64} # weight to solution adjacency
-    tested::Bool # have the weights been tested ?
-    removed::Bool # weights that are no longer part of the decomposition
-    Weight() = new()
-end
-
-
 mutable struct GeneralDichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
     max_iter::Int64
