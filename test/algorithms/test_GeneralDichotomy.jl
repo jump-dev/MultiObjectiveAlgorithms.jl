@@ -91,9 +91,9 @@ function test_vlp() # test instance from Bensolve (http://www.bensolve.org/)
     MOI.set(model, MOA.Algorithm(), algorithm)
     MOI.optimize!(model)
 
-    for i in 1:MOI.get(model, MOI.ResultCount())
-        println(MOI.get(model, MOI.ObjectiveValue(i)))
-    end
+    # for i in 1:MOI.get(model, MOI.ResultCount())
+    #     println(MOI.get(model, MOI.ObjectiveValue(i)))
+    # end
 
     # solve_time = MOI.get(model, MOI.SolveTimeSec())
     # @test  MOI.get(model, MOI.ResultCount()) == 4 
@@ -151,6 +151,7 @@ function test_infeasible() # from the Dichotomy test set
     MOI.add_constraint(model, 1.0 * x[1] + 1.0 * x[2], MOI.LessThan(-1.0))
     f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.INFEASIBLE
     @test MOI.get(model, MOI.PrimalStatus()) == MOI.NO_SOLUTION

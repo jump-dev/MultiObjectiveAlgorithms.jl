@@ -97,14 +97,9 @@ function _solve_weighted_sum(
     return status, SolutionPoint(X, Y)
 end
 
-function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
+function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
     if alg.verbose > 0
         println("starting the general dichotomy")
-    end
-
-    mul_sense = 1.0 # the weighted sum comparison is reversed when problems are maximized
-    if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MAX_SENSE
-        mul_sense = -1.0
     end
 
     n_obj = MOI.output_dimension(model.f)
@@ -146,7 +141,7 @@ function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
 
     # weight update for the new solution
     for weight in alg.weights
-        weight.z = sum(weight.w .* solutions[1].y)*mul_sense
+        weight.z = sum(weight.w .* solutions[1].y)
     end
     alg.weights[1].tested = true
 
@@ -195,7 +190,7 @@ function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
             end
             status, sol = _solve_weighted_sum(model, alg, alg.weights[wind].w)
             alg.weights[wind].tested = true # this one has been tested
-            sol_z = sum(sol.y .* alg.weights[wind].w)*mul_sense
+            sol_z = sum(sol.y .* alg.weights[wind].w)
             alg.n_call_solve += 1
 
             if alg.verbose > 0
@@ -240,7 +235,7 @@ function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
         # collect adjacent solutions for constructing the new polytope
         for wind in 1:length(alg.weights)
             weight = alg.weights[wind]
-            sol_z = sum(solutions[new_sol_ind].y .* weight.w)*mul_sense
+            sol_z = sum(solutions[new_sol_ind].y .* weight.w)
             if alg.verbose > 0
                 println(" cmp ", sol_z, " vs ", weight.z)
             end
@@ -279,9 +274,7 @@ function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
         end
         polytope_sol = collect(polytope_sol)
         for other_sol_ind in polytope_sol # scalarizations inequality
-            vec =
-                (solutions[new_sol_ind].y - solutions[other_sol_ind].y) .*
-                mul_sense
+            vec = solutions[new_sol_ind].y - solutions[other_sol_ind].y
             h = h ∩ Polyhedra.HalfSpace(vec, 0)
         end
         poly = Polyhedra.polyhedron(h)
@@ -306,8 +299,7 @@ function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
             w = get(poly, idx)
             weight_ind = get(equal_weights, CustomVec(w, alg.scaling), 0)
             if weight_ind > 0 # update an existing extreme weight
-                alg.weights[weight_ind].z =
-                    sum(w .* solutions[new_sol_ind].y)*mul_sense
+                alg.weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)
                 alg.weights[weight_ind].tested = true
                 alg.weights[weight_ind].adj_sol = Vector{Int64}([new_sol_ind])
                 if length(alg.weights[weight_ind].adj_bnd) < n_obj-1
@@ -325,7 +317,7 @@ function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
                 new_weight.tested = false
                 new_weight.removed = false
                 new_weight.w = w
-                new_weight.z = sum(w .* solutions[new_sol_ind].y)*mul_sense
+                new_weight.z = sum(w .* solutions[new_sol_ind].y)
                 incidence = Polyhedra.incidenthalfspaceindices(poly, idx)
                 new_weight.adj_bnd = Vector{Int64}([
                     -elt.value for elt in incidence if elt.value <= n_obj
