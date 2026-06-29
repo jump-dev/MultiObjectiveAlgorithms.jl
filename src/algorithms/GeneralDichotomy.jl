@@ -56,7 +56,15 @@ mutable struct GeneralDichotomy <: AbstractAlgorithm
     n_interm_weights::Int64
     n_call_solve::Int64
     function GeneralDichotomy(precision::Int64 = 3)
-        return new(nothing, 0, 0, Array{Weight}([]), 10.0^-precision, 10^precision, 0)
+        return new(
+            nothing,
+            0,
+            0,
+            Array{Weight}([]),
+            10.0^-precision,
+            10^precision,
+            0,
+        )
     end
 end
 
@@ -89,31 +97,27 @@ function _solve_weighted_sum(
     return status, SolutionPoint(X, Y)
 end
 
-function optimize_multiobjective!(
-    alg::GeneralDichotomy,
-    model::Optimizer
-)
-
+function optimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
     if alg.verbose > 0
         println("starting the general dichotomy")
     end
 
-    mul_sense = 1. # the weighted sum comparison is reversed when problems are maximized
+    mul_sense = 1.0 # the weighted sum comparison is reversed when problems are maximized
     if MOI.get(model.inner, MOI.ObjectiveSense()) == MOI.MAX_SENSE
-        mul_sense = -1.
+        mul_sense = -1.0
     end
 
     n_obj = MOI.output_dimension(model.f)
-    wnorm = 100.
+    wnorm = 100.0
     alg.n_call_solve = 0
-    start_time = time() 
-    
+    start_time = time()
+
     alg.weights = Array{Weight}([])
 
     # initial extreme weights
     for i in 1:n_obj
         weight = Weight()
-        weight.w = zeros(Float64, n_obj) 
+        weight.w = zeros(Float64, n_obj)
         weight.w[i] = wnorm
         # weight to solution/boundaries adjacency
         weight.adj_bnd = Vector{Int64}([-j for j in 1:n_obj if j != i])
@@ -142,7 +146,7 @@ function optimize_multiobjective!(
 
     # weight update for the new solution
     for weight in alg.weights
-        weight.z = sum(weight.w.*solutions[1].y)*mul_sense
+        weight.z = sum(weight.w .* solutions[1].y)*mul_sense
     end
     alg.weights[1].tested = true
 
@@ -160,7 +164,6 @@ function optimize_multiobjective!(
 
     # main loop
     while !stop
-
         if alg.verbose > 0
             println("\n\n")
             println("####################################################")
@@ -169,7 +172,8 @@ function optimize_multiobjective!(
             println("\n\n")
         end
 
-        if (alg.max_iter > 0 && iter_ind >= alg.max_iter) || length(solutions) >= limit # early termination
+        if (alg.max_iter > 0 && iter_ind >= alg.max_iter) ||
+           length(solutions) >= limit # early termination
             stop = true
             break
         end
@@ -181,7 +185,7 @@ function optimize_multiobjective!(
         new_sol_ind = 0
         wind = 1
         target_weight = 0
-        while wind <= size(alg.weights, 1) && !found
+        while wind <= length(alg.weights) && !found
             if alg.weights[wind].tested || alg.weights[wind].removed
                 wind += 1
                 continue
@@ -204,8 +208,11 @@ function optimize_multiobjective!(
             if sol_ind == 0
                 push!(solutions, sol)
                 # prepare new weight index set for the new solution's adjacency
-                new_sol_ind = solutions.size[1]
-                push!(existing_sol, CustomVec(sol.y, alg.scaling) => new_sol_ind)
+                new_sol_ind = length(solutions)
+                push!(
+                    existing_sol,
+                    CustomVec(sol.y, alg.scaling) => new_sol_ind,
+                )
                 if sol_z < alg.weights[wind].z # triggers weight set decomp. update
                     found = true
                     target_weight = wind
@@ -228,10 +235,10 @@ function optimize_multiobjective!(
         empty!(polytope_sol)
 
         # record weights with the same weighted sum to prevent duplicates
-        equal_weights = Dict{CustomVec, Int64}()
+        equal_weights = Dict{CustomVec,Int64}()
 
         # collect adjacent solutions for constructing the new polytope
-        for wind in 1:alg.weights.size[1]
+        for wind in 1:length(alg.weights)
             weight = alg.weights[wind]
             sol_z = sum(solutions[new_sol_ind].y .* weight.w)*mul_sense
             if alg.verbose > 0
@@ -241,7 +248,7 @@ function optimize_multiobjective!(
                 if alg.verbose > 0
                     println("updating extreme weights", wind, weight.w)
                 end
-                if weight.adj_bnd.size[1] < n_obj # improved weighted value
+                if length(weight.adj_bnd) < n_obj # improved weighted value
                     weight.removed = true
                 else
                     weight.adj_sol = Vector{Int64}([new_sol_ind])
@@ -264,7 +271,7 @@ function optimize_multiobjective!(
         end
 
         # construction of the weight polytope for the new solution
-        h = Polyhedra.HyperPlane( ones(n_obj), wnorm) # normalized weights
+        h = Polyhedra.HyperPlane(ones(n_obj), wnorm) # normalized weights
         for i in 1:n_obj # non-negativity
             vec = zeros(n_obj)
             vec[i] = -1
@@ -272,7 +279,9 @@ function optimize_multiobjective!(
         end
         polytope_sol = collect(polytope_sol)
         for other_sol_ind in polytope_sol # scalarizations inequality
-            vec = (solutions[new_sol_ind].y - solutions[other_sol_ind].y).*mul_sense
+            vec =
+                (solutions[new_sol_ind].y - solutions[other_sol_ind].y) .*
+                mul_sense
             h = h ∩ Polyhedra.HalfSpace(vec, 0)
         end
         poly = Polyhedra.polyhedron(h)
@@ -297,10 +306,11 @@ function optimize_multiobjective!(
             w = get(poly, idx)
             weight_ind = get(equal_weights, CustomVec(w, alg.scaling), 0)
             if weight_ind > 0 # update an existing extreme weight
-                alg.weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)*mul_sense
+                alg.weights[weight_ind].z =
+                    sum(w .* solutions[new_sol_ind].y)*mul_sense
                 alg.weights[weight_ind].tested = true
                 alg.weights[weight_ind].adj_sol = Vector{Int64}([new_sol_ind])
-                if alg.weights[weight_ind].adj_bnd.size[1] < n_obj-1
+                if length(alg.weights[weight_ind].adj_bnd) < n_obj-1
                     if !alg.weights[weight_ind].removed
                         alg.weights[weight_ind].removed = true
                         n_removed += 1
@@ -309,7 +319,7 @@ function optimize_multiobjective!(
                     alg.weights[weight_ind].removed = false
                 end
             else # insert a new extreme weight
-                weight_ind = alg.weights.size[1]+1
+                weight_ind = length(alg.weights)+1
                 # push!(existing_weights, p => weight_ind)
                 new_weight = Weight()
                 new_weight.tested = false
@@ -317,8 +327,13 @@ function optimize_multiobjective!(
                 new_weight.w = w
                 new_weight.z = sum(w .* solutions[new_sol_ind].y)*mul_sense
                 incidence = Polyhedra.incidenthalfspaceindices(poly, idx)
-                new_weight.adj_bnd = Vector{Int64}([-elt.value for elt in incidence if elt.value <= n_obj])
-                new_weight.adj_sol = Vector{Int64}([ polytope_sol[elt.value-n_obj] for elt in incidence if elt.value > n_obj])
+                new_weight.adj_bnd = Vector{Int64}([
+                    -elt.value for elt in incidence if elt.value <= n_obj
+                ])
+                new_weight.adj_sol = Vector{Int64}([
+                    polytope_sol[elt.value-n_obj] for
+                    elt in incidence if elt.value > n_obj
+                ])
                 push!(new_weight.adj_sol, new_sol_ind)
                 push!(alg.weights, new_weight)
             end
@@ -345,17 +360,19 @@ function optimize_multiobjective!(
         end
 
         # clean removed weights
-        if 3*n_removed >= alg.weights.size[1]
+        if 3*n_removed >= length(alg.weights)
             alg.n_interm_weights += n_removed
-            alg.weights = Array{Weight}([weight for weight in alg.weights if !weight.removed])
+            alg.weights = Array{Weight}([
+                weight for weight in alg.weights if !weight.removed
+            ])
             n_removed = 0
         end
     end
 
     # final cleaning
     alg.n_interm_weights += n_removed
-    alg.weights = Array{Weight}([weight for weight in alg.weights if !weight.removed])
+    alg.weights =
+        Array{Weight}([weight for weight in alg.weights if !weight.removed])
 
     return status, solutions
 end
-
