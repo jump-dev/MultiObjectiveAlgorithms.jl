@@ -135,14 +135,14 @@ function test_lap_2() # testing weight set cleaning on a random lap instance
         sum(costs[1, :, :] .* x),
         sum(costs[2, :, :] .* x),
         sum(costs[3, :, :] .* x),
+        sum(costs[4, :, :] .* x),
     )
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.Silent(), true)
     MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.optimize!(model)
-    solve_time = MOI.get(model, MOI.SolveTimeSec())
-    @test MOI.get(model, MOI.ResultCount()) == 9
+    @test MOI.get(model, MOI.ResultCount()) == 19
 end
 
 function test_vlp() # test instance from Bensolve (http://www.bensolve.org/)
