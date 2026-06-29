@@ -50,21 +50,13 @@ mutable struct GeneralDichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
     max_iter::Int64
     verbose::Int64
-    weights::Array{Weight}
+    weights::Vector{Weight}
     epsilon::Float64
     scaling::Float64
     n_interm_weights::Int64
     n_call_solve::Int64
     function GeneralDichotomy(precision::Int64 = 3)
-        return new(
-            nothing,
-            0,
-            0,
-            Array{Weight}([]),
-            10.0^-precision,
-            10^precision,
-            0,
-        )
+        return new(nothing, 0, 0, Weight[], 10.0^-precision, 10^precision, 0)
     end
 end
 
@@ -107,7 +99,7 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
     alg.n_call_solve = 0
     start_time = time()
 
-    alg.weights = Array{Weight}([])
+    alg.weights = Weight[]
 
     # initial extreme weights
     for i in 1:n_obj
@@ -132,7 +124,7 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
     if !_is_scalar_status_optimal(status) # return immediately if no solution nor unbounded
         return status, nothing
     end
-    solutions = [solution]
+    solutions = SolutionPoint[solution]
 
     if alg.verbose > 0
         println("Initial solution:")
@@ -354,17 +346,15 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
         # clean removed weights
         if 3*n_removed >= length(alg.weights)
             alg.n_interm_weights += n_removed
-            alg.weights = Array{Weight}([
-                weight for weight in alg.weights if !weight.removed
-            ])
+            alg.weights =
+                Weight[weight for weight in alg.weights if !weight.removed]
             n_removed = 0
         end
     end
 
     # final cleaning
     alg.n_interm_weights += n_removed
-    alg.weights =
-        Array{Weight}([weight for weight in alg.weights if !weight.removed])
+    alg.weights = Weight[weight for weight in alg.weights if !weight.removed]
 
     return status, solutions
 end
