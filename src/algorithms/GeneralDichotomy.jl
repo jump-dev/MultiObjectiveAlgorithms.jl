@@ -115,8 +115,8 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
         weight.w = zeros(Float64, n_obj)
         weight.w[i] = wnorm
         # weight to solution/boundaries adjacency
-        weight.adj_bnd = Vector{Int64}([-j for j in 1:n_obj if j != i])
-        weight.adj_sol = Vector{Int64}([1])
+        weight.adj_bnd = Int64[-j for j in 1:n_obj if j != i]
+        weight.adj_sol = Int64[1]
         weight.tested = false
         weight.removed = false
         push!(alg.weights, weight)
@@ -247,7 +247,7 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
                     weight.removed = true
                     n_removed += 1
                 else
-                    weight.adj_sol = Vector{Int64}([new_sol_ind])
+                    weight.adj_sol = Int64[new_sol_ind]
                     weight.z = sol_z
                 end
                 union!(polytope_sol, weight.adj_sol)
@@ -302,7 +302,7 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
             if weight_ind > 0 # update an existing extreme weight
                 alg.weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)
                 alg.weights[weight_ind].tested = true
-                alg.weights[weight_ind].adj_sol = Vector{Int64}([new_sol_ind])
+                alg.weights[weight_ind].adj_sol = Int64[new_sol_ind]
                 if length(alg.weights[weight_ind].adj_bnd) < n_obj-1
                     if !alg.weights[weight_ind].removed
                         alg.weights[weight_ind].removed = true
@@ -320,13 +320,12 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
                 new_weight.w = w
                 new_weight.z = sum(w .* solutions[new_sol_ind].y)
                 incidence = Polyhedra.incidenthalfspaceindices(poly, idx)
-                new_weight.adj_bnd = Vector{Int64}([
-                    -elt.value for elt in incidence if elt.value <= n_obj
-                ])
-                new_weight.adj_sol = Vector{Int64}([
+                new_weight.adj_bnd =
+                    Int64[-elt.value for elt in incidence if elt.value <= n_obj]
+                new_weight.adj_sol = Int64[
                     polytope_sol[elt.value-n_obj] for
                     elt in incidence if elt.value > n_obj
-                ])
+                ]
                 push!(new_weight.adj_sol, new_sol_ind)
                 push!(alg.weights, new_weight)
             end
