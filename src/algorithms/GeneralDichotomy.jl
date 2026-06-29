@@ -245,6 +245,7 @@ function minimize_multiobjective!(alg::GeneralDichotomy, model::Optimizer)
                 end
                 if length(weight.adj_bnd) < n_obj # improved weighted value
                     weight.removed = true
+                    n_removed += 1
                 else
                     weight.adj_sol = Vector{Int64}([new_sol_ind])
                     weight.z = sol_z

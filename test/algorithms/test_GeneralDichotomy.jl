@@ -34,18 +34,38 @@ end
 
 function test_lap() # toy instance from (Przybylski et al., 2019)
     costs = zeros(Float64, (3, 4, 4))
-    costs[1,:,:] = [3 6 4 5; 2 3 5 4; 3 5 4 2; 4 5 3 6]
-    costs[2,:,:] = [2 3 5 4; 5 3 4 3; 5 2 6 4; 4 5 2 5]
-    costs[3,:,:] = [4 2 4 2; 4 2 4 6; 4 2 6 3; 2 4 5 3]
+    costs[1, :, :] = [3 6 4 5; 2 3 5 4; 3 5 4 2; 4 5 3 6]
+    costs[2, :, :] = [2 3 5 4; 5 3 4 3; 5 2 6 4; 4 5 2 5]
+    costs[3, :, :] = [4 2 4 2; 4 2 4 6; 4 2 6 3; 2 4 5 3]
     n = costs.size[2] # 4 variables
     d = costs.size[1] # 3 objectives
     model = MOA.Optimizer(HiGHS.Optimizer)
     x_ = MOI.add_variables(model, n * n)
     x = reshape(x_, n, n)
-    MOI.add_constraints(model, MOI.ScalarAffineFunction.([MOI.ScalarAffineTerm.(ones(n), x[i,:]) for i in 1:n], 0.0), MOI.EqualTo(1.0))
-    MOI.add_constraints(model, MOI.ScalarAffineFunction.([MOI.ScalarAffineTerm.(ones(n), x[:,j]) for j in 1:n], 0.0), MOI.EqualTo(1.0))
+    MOI.add_constraints(
+        model,
+        MOI.ScalarAffineFunction.(
+            [MOI.ScalarAffineTerm.(ones(n), x[i, :]) for i in 1:n],
+            0.0,
+        ),
+        MOI.EqualTo(1.0),
+    )
+    MOI.add_constraints(
+        model,
+        MOI.ScalarAffineFunction.(
+            [MOI.ScalarAffineTerm.(ones(n), x[:, j]) for j in 1:n],
+            0.0,
+        ),
+        MOI.EqualTo(1.0),
+    )
     MOI.add_constraint.(model, x, MOI.ZeroOne())
-    f = MOI.Utilities.operate(vcat, Float64, sum(costs[1,:,:] .* x), sum(costs[2,:,:] .* x), sum(costs[3,:,:] .* x))
+    f = MOI.Utilities.operate(
+        vcat,
+        Float64,
+        sum(costs[1, :, :] .* x),
+        sum(costs[2, :, :] .* x),
+        sum(costs[3, :, :] .* x),
+    )
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.Silent(), true)
@@ -54,7 +74,75 @@ function test_lap() # toy instance from (Przybylski et al., 2019)
     MOI.set(model, MOA.Algorithm(), algorithm)
     MOI.optimize!(model)
     solve_time = MOI.get(model, MOI.SolveTimeSec())
-    @test  MOI.get(model, MOI.ResultCount()) == 4 
+    @test MOI.get(model, MOI.ResultCount()) == 4
+end
+
+function test_lap_2() # testing weight set cleaning on a random lap instance
+    costs = zeros(Float64, (4, 5, 5))
+    costs[1, :, :] = [
+        77 89 53 70 92;
+        89 89 13 4 41;
+        7 7 34 45 87;
+        65 0 99 23 93;
+        93 58 93 18 17
+    ]
+    costs[2, :, :] = [
+        26 20 71 34 57;
+        58 42 66 22 87;
+        93 85 87 0 42;
+        26 2 38 57 2;
+        62 39 99 42 85
+    ]
+    costs[3, :, :] = [
+        36 48 65 49 13;
+        13 39 17 75 83;
+        10 17 82 99 73;
+        13 95 62 26 6;
+        21 10 19 36 27
+    ]
+    costs[4, :, :] = [
+        89 78 20 24 55;
+        59 20 64 1 19;
+        7 27 63 91 1;
+        20 26 64 80 60;
+        21 21 13 92 73
+    ]
+    n = costs.size[2] # 5 variables
+    d = costs.size[1] # 4 objectives
+    model = MOA.Optimizer(HiGHS.Optimizer)
+    x_ = MOI.add_variables(model, n * n)
+    x = reshape(x_, n, n)
+    MOI.add_constraints(
+        model,
+        MOI.ScalarAffineFunction.(
+            [MOI.ScalarAffineTerm.(ones(n), x[i, :]) for i in 1:n],
+            0.0,
+        ),
+        MOI.EqualTo(1.0),
+    )
+    MOI.add_constraints(
+        model,
+        MOI.ScalarAffineFunction.(
+            [MOI.ScalarAffineTerm.(ones(n), x[:, j]) for j in 1:n],
+            0.0,
+        ),
+        MOI.EqualTo(1.0),
+    )
+    MOI.add_constraint.(model, x, MOI.ZeroOne())
+    f = MOI.Utilities.operate(
+        vcat,
+        Float64,
+        sum(costs[1, :, :] .* x),
+        sum(costs[2, :, :] .* x),
+        sum(costs[3, :, :] .* x),
+    )
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.set(model, MOI.Silent(), true)
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
+    MOI.optimize!(model)
+    solve_time = MOI.get(model, MOI.SolveTimeSec())
+    @test MOI.get(model, MOI.ResultCount()) == 9
 end
 
 function test_vlp() # test instance from Bensolve (http://www.bensolve.org/)
@@ -73,7 +161,14 @@ function test_vlp() # test instance from Bensolve (http://www.bensolve.org/)
     model = MOA.Optimizer(HiGHS.Optimizer)
     x = MOI.add_variables(model, 3)
 
-    MOI.add_constraints(model, MOI.ScalarAffineFunction.([MOI.ScalarAffineTerm.(B[i,:], x) for i in 1:4], 0.0), MOI.GreaterThan.(a))
+    MOI.add_constraints(
+        model,
+        MOI.ScalarAffineFunction.(
+            [MOI.ScalarAffineTerm.(B[i, :], x) for i in 1:4],
+            0.0,
+        ),
+        MOI.GreaterThan.(a),
+    )
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
 
     f = MOI.Utilities.vectorize(P' * x)
@@ -89,7 +184,7 @@ function test_vlp() # test instance from Bensolve (http://www.bensolve.org/)
     algorithm = MOA.GeneralDichotomy(precision)
     algorithm.verbose = 0
     MOI.set(model, MOA.Algorithm(), algorithm)
-    MOI.optimize!(model)
+    return MOI.optimize!(model)
 
     # for i in 1:MOI.get(model, MOI.ResultCount())
     #     println(MOI.get(model, MOI.ObjectiveValue(i)))
@@ -178,4 +273,3 @@ end
 end  # module TestGeneralDichotomy
 
 TestGeneralDichotomy.run_tests()
-
