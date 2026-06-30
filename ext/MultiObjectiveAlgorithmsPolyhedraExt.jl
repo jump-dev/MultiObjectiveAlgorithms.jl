@@ -9,6 +9,7 @@ import MathOptInterface as MOI
 import MultiObjectiveAlgorithms as MOA
 import Polyhedra
 
+include("Polyhedra/GeneralDichotomy.jl")
 include("Polyhedra/Sandwiching.jl")
 
 end  # module MultiObjectiveAlgorithmsPolyhedraExt

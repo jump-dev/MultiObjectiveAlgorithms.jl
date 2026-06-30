@@ -67,6 +67,7 @@ depends on the algorithm and the problem class.
 | `MOA.Dichotomy()`         | Exactly two objectives   |
 | `MOA.DominguezRios()`     | Discrete variables only  |
 | `MOA.EpsilonConstraint()` | Exactly two objectives   |
+| `MOA.GeneralDichotomy()`  | Any                      |
 | `MOA.Hierarchical()`      | Any                      |
 | `MOA.KirlikSayin()`       | Discrete variables only  |
 | `MOA.Lexicographic()` [default] | Any                |

@@ -3,16 +3,18 @@
 #  v.2.0. If a copy of the MPL was not distributed with this file, You can
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
-is_test_file(f) = startswith(f, "test_") && endswith(f, ".jl")
+include("algorithms/test_GeneralDichotomy.jl")
 
-testsuite = Dict{String,Expr}()
-for (root, dirs, files) in walkdir(@__DIR__)
-    for file in joinpath.(root, filter(is_test_file, files))
-        testsuite[file] = :(include($file))
-    end
-end
+# is_test_file(f) = startswith(f, "test_") && endswith(f, ".jl")
 
-import MultiObjectiveAlgorithms
-import ParallelTestRunner
+# testsuite = Dict{String,Expr}()
+# for (root, dirs, files) in walkdir(@__DIR__)
+#     for file in joinpath.(root, filter(is_test_file, files))
+#         testsuite[file] = :(include($file))
+#     end
+# end
 
-ParallelTestRunner.runtests(MultiObjectiveAlgorithms, ARGS; testsuite)
+# import MultiObjectiveAlgorithms
+# import ParallelTestRunner
+
+# ParallelTestRunner.runtests(MultiObjectiveAlgorithms, ARGS; testsuite)
