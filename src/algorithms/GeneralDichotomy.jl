@@ -28,15 +28,28 @@ mutable struct Weight
 end
 
 """
-    GeneralDichotomy()
-    
-- preprint: Samuel Buchet, Marianne Defresne. Efficient Enumeration of Supported Solutions for General Multi-Objective Optimization Problems. 2026. ⟨hal-05514317⟩
+    GeneralDichotomy(precision::Int = 3)
 
-- original repository: https://forge.inrae.com/opteam/generaldichotomy
+`GeneralDichotomy` implements the algorithm from Buchet, S. and Defresne, M.
+(2026). Efficient Enumeration of Supported Solutions for General Multi-Objective
+Optimization Problems. ⟨hal-05514317⟩
+
+This implementation was contributed to MultiObjectiveAlgorithms.jl by the
+authors. Their upstream repository is: https://forge.inrae.com/opteam/generaldichotomy
 
 ## Supported problem classes
 
 This algorithm supports all problem classes.
+
+## Compat
+
+To use this algorithm you MUST first load the Polyhedra.jl Julia package:
+
+```julia
+import MultiObjectiveAlgorithms as MOA
+import Polyhedra
+algorithm = MOA.GeneralDichotomy(3)
+```
 
 ## Supported optimizer attributes
 
@@ -44,7 +57,6 @@ This algorithm supports all problem classes.
    list of current solutions.
 
  * `MOA.SolutionLimit()`: terminate once this many solutions have been found.
-
 """
 mutable struct GeneralDichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
