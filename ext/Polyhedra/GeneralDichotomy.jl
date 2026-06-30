@@ -48,6 +48,10 @@ function MOA.minimize_multiobjective!(
     existing_sol = Dict(_round(solution.y; atol) => 1)
     n_removed = 0
     while length(solutions) < MOI.get(alg, MOA.SolutionLimit())
+        if (ret = MOA._check_premature_termination(model)) !== nothing
+            status = ret
+            break
+        end
         # Look for a new solution by testing the extreme weights.
         improving_solution = false
         for (i, weight) in enumerate(weights)
@@ -55,7 +59,10 @@ function MOA.minimize_multiobjective!(
                 continue
             end
             status, sol = MOA._solve_weighted_sum(model, alg, weight.w)
-            # TODO(odow): what if this solve fails?
+            if sol === nothing
+                # TODO(odow): what to do when this solve fails?
+                return status, solutions
+            end
             weight.tested = true
             if !haskey(existing_sol, _round(sol.y; atol))
                 push!(solutions, sol)
