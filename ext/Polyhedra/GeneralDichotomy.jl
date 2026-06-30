@@ -12,18 +12,7 @@ mutable struct Weight
     removed::Bool        # weights that are no longer part of the decomposition
 end
 
-struct _ApproxVector
-    value::Vector{Float64}
-    value_int::Vector{Int}
-
-    function _ApproxVector(x::Vector{Float64}; atol::Float64 = 1e-6)
-        return new(x, round.(Int, x ./ atol))
-    end
-end
-
-Base.:(==)(a::_ApproxVector, b::_ApproxVector) = a.value_int == b.value_int
-
-Base.hash(a::_ApproxVector, h::UInt64) = hash(a.value_int, h)
+_round(x::Vector{Float64}; atol::Float64) = round.(Int, x ./ atol)
 
 function MOA.minimize_multiobjective!(
     alg::MOA.GeneralDichotomy,
@@ -54,9 +43,9 @@ function MOA.minimize_multiobjective!(
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
         push!(weights, Weight(w, z, adj_bnd, [1], i == 1, false))
     end
-    # Prevent solution duplicates: existing_sol maps an _ApproxVector of the
-    # solution to the index in `solutions::Vector{MOA.SolutionPoint}`.
-    existing_sol = Dict(_ApproxVector(solution.y) => 1)
+    # Prevent solution duplicates: existing_sol maps an rounded objective vector
+    # to its index in `solutions::Vector{MOA.SolutionPoint}`.
+    existing_sol = Dict(_round(solution.y; atol) => 1)
     n_removed = 0
     while length(solutions) < MOI.get(alg, MOA.SolutionLimit())
         # Look for a new solution by testing the extreme weights.
@@ -68,10 +57,10 @@ function MOA.minimize_multiobjective!(
             status, sol = MOA._solve_weighted_sum(model, alg, weight.w)
             # TODO(odow): what if this solve fails?
             weight.tested = true
-            if !haskey(existing_sol, _ApproxVector(sol.y))
+            if !haskey(existing_sol, _round(sol.y; atol))
                 push!(solutions, sol)
                 # Prepare new weight index set for the new solution's adjacency.
-                existing_sol[_ApproxVector(sol.y)] = length(solutions)
+                existing_sol[_round(sol.y; atol)] = length(solutions)
                 if weight.w' * sol.y < weight.z
                     improving_solution = true
                     break
@@ -82,7 +71,7 @@ function MOA.minimize_multiobjective!(
             break  # Terminate the search when no new solution can be found.
         end
         new_sol, new_sol_ind = last(solutions), length(solutions)
-        polytope_sol, equal_weights = Set{Int}(), Dict{_ApproxVector,Int}()
+        polytope_sol, equal_weights = Set{Int}(), Dict{Vector{Int},Int}()
         for (i, weight) in enumerate(weights)
             sol_z = weight.w' * new_sol.y
             if sol_z < weight.z - atol
@@ -99,7 +88,7 @@ function MOA.minimize_multiobjective!(
                 # The new solution is equal in value to the previous.
                 push!(weight.adj_sol, new_sol_ind)
                 union!(polytope_sol, weight.adj_sol)
-                equal_weights[_ApproxVector(weight.w)] = i
+                equal_weights[_round(weight.w; atol)] = i
             end
         end
         # Construction of the weight polytope for the new solution.
@@ -120,7 +109,7 @@ function MOA.minimize_multiobjective!(
         for idx in eachindex(Polyhedra.points(poly))
             w = get(poly, idx)
             z = w' * new_sol.y
-            if (i = get(equal_weights, _ApproxVector(w), nothing)) !== nothing
+            if (i = get(equal_weights, _round(w; atol), nothing)) !== nothing
                 # Update an existing extreme weight.
                 weights[i].z = z
                 weights[i].tested = true
