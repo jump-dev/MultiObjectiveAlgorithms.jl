@@ -57,7 +57,7 @@ function test_lap()
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.Silent(), true)
-    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.optimize!(model)
     @test MOI.get(model, MOI.ResultCount()) == 4
     return
@@ -134,7 +134,7 @@ function test_vlp()
     f = MOI.Utilities.vectorize(P' * x)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.Silent(), true)
-    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.optimize!(model)
     return
 end
@@ -144,7 +144,7 @@ function test_biobjective_knapsack()
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, length(w))
     MOI.add_constraint.(model, x, MOI.ZeroOne())
@@ -178,7 +178,7 @@ end
 
 function test_infeasible()
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 6)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
@@ -195,7 +195,7 @@ end
 
 function test_unbounded()
     model = MOA.Optimizer(HiGHS.Optimizer)
-    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy(3))
+    MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.set(model, MOI.Silent(), true)
     x = MOI.add_variables(model, 3)
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))

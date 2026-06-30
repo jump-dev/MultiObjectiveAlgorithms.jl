@@ -4,7 +4,7 @@
 #  obtain one at http://mozilla.org/MPL/2.0/.
 
 """
-    GeneralDichotomy(precision::Int = 3)
+    GeneralDichotomy()
 
 `GeneralDichotomy` implements the algorithm from Buchet, S. and Defresne, M.
 (2026). Efficient Enumeration of Supported Solutions for General Multi-Objective
@@ -24,7 +24,7 @@ To use this algorithm you MUST first load the Polyhedra.jl Julia package:
 ```julia
 import MultiObjectiveAlgorithms as MOA
 import Polyhedra
-algorithm = MOA.GeneralDichotomy(3)
+algorithm = MOA.GeneralDichotomy()
 ```
 
 ## Supported optimizer attributes
@@ -36,13 +36,8 @@ algorithm = MOA.GeneralDichotomy(3)
 """
 mutable struct GeneralDichotomy <: AbstractAlgorithm
     solution_limit::Union{Nothing,Int}
-    max_iter::Int
-    epsilon::Float64
-    scaling::Float64
 
-    function GeneralDichotomy(precision::Int = 3)
-        return new(nothing, 0, 10.0^-precision, 10^precision)
-    end
+    GeneralDichotomy() = new(nothing)
 end
 
 MOI.supports(::GeneralDichotomy, ::SolutionLimit) = true

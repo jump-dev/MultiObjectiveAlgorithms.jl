@@ -12,86 +12,81 @@ mutable struct Weight
     removed::Bool        # weights that are no longer part of the decomposition
 end
 
-struct CustomVec
+struct _ApproxVector
     value::Vector{Float64}
     value_int::Vector{Int}
 
-    function CustomVec(vec::Vector{Float64}, scaling::Real)
-        return new(vec, round.(Int, scaling .* vec))
+    function _ApproxVector(x::Vector{Float64}; atol::Float64 = 1e-6)
+        return new(x, round.(Int, x ./ atol))
     end
 end
 
-Base.:(==)(a::CustomVec, b::CustomVec) = a.value_int == b.value_int
+Base.:(==)(a::_ApproxVector, b::_ApproxVector) = a.value_int == b.value_int
 
-Base.hash(a::CustomVec, h::UInt64) = hash(a.value_int, h)
+Base.hash(a::_ApproxVector, h::UInt64) = hash(a.value_int, h)
 
 function MOA.minimize_multiobjective!(
     alg::MOA.GeneralDichotomy,
     model::MOA.Optimizer,
 )
+    # Some constants. These could be converted into algorithm options.
+    # - atol: the absolute tolerance used to compare solutions in objective space
+    # - wnorm: ???
+    atol, wnorm = 1e-6, 1e2
+    # Storage we need for the algorithm.
+    weights, solutions = Weight[], MOA.SolutionPoint[]
     n_obj = MOI.output_dimension(model.f)
-    wnorm = 100.0
-    start_time = time()
-    weights = Weight[]
-    # Initial extreme weights.
+    # First, minimize the first objective to obtain a primal feasible point.
+    w = zeros(Float64, n_obj)
+    w[1] = 1.0
+    status, solution = MOA._solve_weighted_sum(model, alg, w)
+    if solution === nothing
+        return status, nothing
+    end
+    push!(solutions, solution)
+    # Initialize the weights. There is one weight vector for each objective, and
+    # the weight is set to wnorm for each objective. We use the current solution
+    # obtained by minimizing the 1st objective as the reference.
     for i in 1:n_obj
         w = zeros(Float64, n_obj)
         w[i] = wnorm
+        z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
-        push!(weights, Weight(w, NaN, adj_bnd, [1], false, false))
+        push!(weights, Weight(w, z, adj_bnd, [1], i == 1, false))
     end
-    status, solution = MOA._solve_weighted_sum(model, alg, weights[1].w)
-    if !MOA._is_scalar_status_optimal(status)
-        # Return immediately if no solution nor unbounded.
-        return status, nothing
-    end
-    solutions = MOA.SolutionPoint[solution]
-    # Weight update for the new solution
-    for weight in weights
-        weight.z = sum(weight.w .* solutions[1].y)
-    end
-    weights[1].tested = true
-    # Prevent solution duplicates.
-    # existing_sol maps a CustomVec of the solution to the solution index.
-    existing_sol = Dict(CustomVec(solution.y, alg.scaling) => 1)
+    # Prevent solution duplicates: existing_sol maps an _ApproxVector of the
+    # solution to the index in `solutions::Vector{MOA.SolutionPoint}`.
+    existing_sol = Dict(_ApproxVector(solution.y) => 1)
     n_removed = 0
-    solution_limit = MOI.get(alg, MOA.SolutionLimit())
-    iteration = 0
-    while !(iteration >= alg.max_iter > 0) && length(solutions) < solution_limit
-        iteration += 1
+    while length(solutions) < MOI.get(alg, MOA.SolutionLimit())
         # Look for a new solution by testing the extreme weights.
-        found, new_sol_ind, wind, target_weight = false, 0, 1, 0
-        while wind <= length(weights) && !found
-            if weights[wind].tested || weights[wind].removed
-                wind += 1
+        improving_solution = false
+        for (i, weight) in enumerate(weights)
+            if weight.tested || weight.removed
                 continue
             end
-            status, sol = MOA._solve_weighted_sum(model, alg, weights[wind].w)
+            status, sol = MOA._solve_weighted_sum(model, alg, weight.w)
             # TODO(odow): what if this solve fails?
-            weights[wind].tested = true
-            sol_z = sum(sol.y .* weights[wind].w)
-            if !haskey(existing_sol, CustomVec(sol.y, alg.scaling))
+            weight.tested = true
+            if !haskey(existing_sol, _ApproxVector(sol.y))
                 push!(solutions, sol)
                 # Prepare new weight index set for the new solution's adjacency.
-                new_sol_ind = length(solutions)
-                existing_sol[CustomVec(sol.y, alg.scaling)] = new_sol_ind
-                if sol_z < weights[wind].z
-                    # Triggers weight set decomp. update.
-                    found = true
-                    target_weight = wind
+                existing_sol[_ApproxVector(sol.y)] = length(solutions)
+                if weight.w' * sol.y < weight.z
+                    improving_solution = true
+                    break
                 end
             end
-            wind += 1
         end
-        if !found
-            break  # Terminate the search when no solution can be found.
+        if !improving_solution
+            break  # Terminate the search when no new solution can be found.
         end
-        polytope_sol = Set{Int}()
-        equal_weights = Dict{CustomVec,Int}()
-        for (wind, weight) in enumerate(weights)
-            sol_z = sum(solutions[new_sol_ind].y .* weight.w)
-            if sol_z < weight.z - alg.epsilon
-                # Improved weighted value.
+        new_sol, new_sol_ind = last(solutions), length(solutions)
+        polytope_sol, equal_weights = Set{Int}(), Dict{_ApproxVector,Int}()
+        for (i, weight) in enumerate(weights)
+            sol_z = weight.w' * new_sol.y
+            if sol_z < weight.z - atol
+                # The new solution is strictly better than the previous.
                 if length(weight.adj_bnd) < n_obj
                     weight.removed = true
                     n_removed += 1
@@ -100,62 +95,61 @@ function MOA.minimize_multiobjective!(
                     weight.z = sol_z
                 end
                 union!(polytope_sol, weight.adj_sol)
-            elseif sol_z <= weight.z + alg.epsilon
-                # Equal weighted value.
+            elseif sol_z <= weight.z + atol
+                # The new solution is equal in value to the previous.
                 push!(weight.adj_sol, new_sol_ind)
                 union!(polytope_sol, weight.adj_sol)
-                equal_weights[CustomVec(weight.w, alg.scaling)] = wind
+                equal_weights[_ApproxVector(weight.w)] = i
             end
         end
         # Construction of the weight polytope for the new solution.
         h = Polyhedra.HyperPlane(ones(n_obj), wnorm)
         for i in 1:n_obj
-            vec = zeros(n_obj)
-            vec[i] = -1
+            vec = zeros(Float64, n_obj)
+            vec[i] = -1.0
             h = intersect(h, Polyhedra.HalfSpace(vec, 0))
         end
+        # Convert the set of polytope solutions into a vector. It's important
+        # that iteration is ordered because we're going to rely on this later.
         polytope_sol_vec = collect(polytope_sol)
-        for other_sol_ind in polytope_sol_vec
-            vec = solutions[new_sol_ind].y - solutions[other_sol_ind].y
-            h = intersect(h, Polyhedra.HalfSpace(vec, 0))
+        for i in polytope_sol_vec
+            h = intersect(h, Polyhedra.HalfSpace(new_sol.y - solutions[i].y, 0))
         end
         poly = Polyhedra.polyhedron(h)
         # Update of the extreme weights from the new polytope vertices.
         for idx in eachindex(Polyhedra.points(poly))
             w = get(poly, idx)
-            weight_ind = get(equal_weights, CustomVec(w, alg.scaling), nothing)
-            if weight_ind !== nothing
+            z = w' * new_sol.y
+            if (i = get(equal_weights, _ApproxVector(w), nothing)) !== nothing
                 # Update an existing extreme weight.
-                weights[weight_ind].z = sum(w .* solutions[new_sol_ind].y)
-                weights[weight_ind].tested = true
-                weights[weight_ind].adj_sol = Int[new_sol_ind]
-                if length(weights[weight_ind].adj_bnd) < n_obj-1
-                    if !weights[weight_ind].removed
-                        weights[weight_ind].removed = true
+                weights[i].z = z
+                weights[i].tested = true
+                weights[i].adj_sol = Int[new_sol_ind]
+                if length(weights[i].adj_bnd) < n_obj - 1
+                    if !weights[i].removed
+                        weights[i].removed = true
                         n_removed += 1
                     end
                 else
-                    weights[weight_ind].removed = false
+                    weights[i].removed = false
                 end
             else
                 # Insert a new extreme weight.
-                incidence = Polyhedra.incidenthalfspaceindices(poly, idx)
-                new_weight = Weight(
-                    w,
-                    sum(w .* solutions[new_sol_ind].y),
-                    Int[-elt.value for elt in incidence if elt.value <= n_obj],
-                    Int[
-                        polytope_sol_vec[elt.value-n_obj] for
-                        elt in incidence if elt.value > n_obj
-                    ],
-                    false,
-                    false,
-                )
-                push!(new_weight.adj_sol, new_sol_ind)
-                push!(weights, new_weight)
+                adj_bnd, adj_sol = Int[], Int[]
+                for elt in Polyhedra.incidenthalfspaceindices(poly, idx)
+                    if elt.value <= n_obj
+                        push!(adj_bnd, -elt.value)
+                    else
+                        push!(adj_sol, polytope_sol_vec[elt.value-n_obj])
+                    end
+                end
+                push!(adj_sol, new_sol_ind)
+                push!(weights, Weight(w, z, adj_bnd, adj_sol, false, false))
             end
         end
-        if 3*n_removed >= length(weights)
+        # This is a heuristic: filter the weights if approximately 1/3 of them
+        # have been removed.
+        if n_removed >= length(weights) / 3
             filter!(w -> !w.removed, weights)
             n_removed = 0
         end
