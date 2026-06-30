@@ -16,12 +16,9 @@ include(joinpath(dirname(@__DIR__), "mock_optimizer.jl"))
 include(joinpath(dirname(@__DIR__), "vOptLib.jl"))
 
 function run_tests()
-    for name in names(@__MODULE__; all = true)
-        if startswith("$name", "test_")
-            @testset "$name" begin
-                getfield(@__MODULE__, name)()
-            end
-        end
+    is_test(name) = startswith("$name", "test_")
+    @testset "$name" for name in filter(is_test, names(@__MODULE__; all = true))
+        getfield(@__MODULE__, name)()
     end
     return
 end

@@ -6,17 +6,15 @@
 module Problems
 
 using Test
+
 import MathOptInterface as MOI
 import MultiObjectiveAlgorithms as MOA
 
 function run_tests(model::MOI.ModelLike)
-    for name in names(@__MODULE__; all = true)
-        if startswith("$name", "test_")
-            @testset "$name" begin
-                MOI.empty!(model)
-                getfield(@__MODULE__, name)(model)
-            end
-        end
+    is_test(name) = startswith("$name", "test_")
+    @testset "$name" for name in filter(is_test, names(@__MODULE__; all = true))
+        MOI.empty!(model)
+        getfield(@__MODULE__, name)(model)
     end
     return
 end
