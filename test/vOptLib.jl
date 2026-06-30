@@ -6,18 +6,16 @@
 module vOptLib
 
 using Test
+
 import JSON
 import MathOptInterface as MOI
 import MultiObjectiveAlgorithms as MOA
 
 function run_tests(model::MOI.ModelLike; kwargs...)
-    for name in names(@__MODULE__; all = true)
-        if startswith("$name", "test_")
-            @testset "$name" begin
-                MOI.empty!(model)
-                getfield(@__MODULE__, name)(model; kwargs...)
-            end
-        end
+    is_test(name) = startswith("$name", "test_")
+    @testset "$name" for name in filter(is_test, names(@__MODULE__; all = true))
+        MOI.empty!(model)
+        getfield(@__MODULE__, name)(model; kwargs...)
     end
     return
 end
