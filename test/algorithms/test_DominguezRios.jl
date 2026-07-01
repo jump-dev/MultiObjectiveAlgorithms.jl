@@ -18,12 +18,9 @@ function run_tests()
     if Sys.WORD_SIZE == 32
         return  # Skip on 32-bit because HiGHS fails
     end
-    for name in names(@__MODULE__; all = true)
-        if startswith("$name", "test_")
-            @testset "$name" begin
-                getfield(@__MODULE__, name)()
-            end
-        end
+    is_test(name) = startswith("$name", "test_")
+    @testset "$name" for name in filter(is_test, names(@__MODULE__; all = true))
+        getfield(@__MODULE__, name)()
     end
     return
 end

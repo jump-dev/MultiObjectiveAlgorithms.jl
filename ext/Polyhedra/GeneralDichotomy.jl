@@ -20,8 +20,12 @@ function MOA.minimize_multiobjective!(
 )
     # Some constants. These could be converted into algorithm options.
     # - atol: the absolute tolerance used to compare solutions in objective space
+<<<<<<< HEAD
     # - wnorm: ???
     atol, wnorm = 1e-6, 1e2
+=======
+    atol = 1e-6
+>>>>>>> MOA/master
     # Storage we need for the algorithm.
     weights, solutions = Weight[], MOA.SolutionPoint[]
     n_obj = MOI.output_dimension(model.f)
@@ -34,11 +38,11 @@ function MOA.minimize_multiobjective!(
     end
     push!(solutions, solution)
     # Initialize the weights. There is one weight vector for each objective, and
-    # the weight is set to wnorm for each objective. We use the current solution
+    # the weight is set to 1.0 for each objective. We use the current solution
     # obtained by minimizing the 1st objective as the reference.
     for i in 1:n_obj
         w = zeros(Float64, n_obj)
-        w[i] = wnorm
+        w[i] = 1.0
         z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
         push!(weights, Weight(w, z, adj_bnd, [1], i == 1, false))
@@ -99,7 +103,11 @@ function MOA.minimize_multiobjective!(
             end
         end
         # Construction of the weight polytope for the new solution.
+<<<<<<< HEAD
         h = Polyhedra.HyperPlane(ones(n_obj), wnorm)
+=======
+        h = Polyhedra.HyperPlane(ones(n_obj), 1.0)
+>>>>>>> MOA/master
         for i in 1:n_obj
             vec = zeros(Float64, n_obj)
             vec[i] = -1.0
