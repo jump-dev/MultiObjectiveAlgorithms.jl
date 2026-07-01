@@ -20,18 +20,12 @@ function MOA.minimize_multiobjective!(
 )
     # Some constants. These could be converted into algorithm options.
     # - atol: the absolute tolerance used to compare solutions in objective space
-<<<<<<< HEAD
-    # - wnorm: ???
-    atol, wnorm = 1e-6, 1e2
-=======
     atol = 1e-6
->>>>>>> MOA/master
     # Storage we need for the algorithm.
     weights, solutions = Weight[], MOA.SolutionPoint[]
     n_obj = MOI.output_dimension(model.f)
-    # First, minimize the first objective to obtain a primal feasible point.
-    w = zeros(Float64, n_obj)
-    w[1] = 1.0
+    # First, minimize the combined objectives to obtain a primal feasible point.
+    w = ones(Float64, n_obj)
     status, solution = MOA._solve_weighted_sum(model, alg, w)
     if solution === nothing
         return status, nothing
@@ -45,7 +39,7 @@ function MOA.minimize_multiobjective!(
         w[i] = 1.0
         z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
-        push!(weights, Weight(w, z, adj_bnd, [1], i == 1, false))
+        push!(weights, Weight(w, z, adj_bnd, [1], false, false))
     end
     # Prevent solution duplicates: existing_sol maps an rounded objective vector
     # to its index in `solutions::Vector{MOA.SolutionPoint}`.
@@ -64,8 +58,7 @@ function MOA.minimize_multiobjective!(
             end
             status, sol = MOA._solve_weighted_sum(model, alg, weight.w)
             if sol === nothing
-                # TODO(odow): what to do when this solve fails?
-                return status, solutions
+                return MOI.NUMERICAL_ERROR, solutions
             end
             weight.tested = true
             if !haskey(existing_sol, _round(sol.y; atol))
@@ -103,11 +96,7 @@ function MOA.minimize_multiobjective!(
             end
         end
         # Construction of the weight polytope for the new solution.
-<<<<<<< HEAD
-        h = Polyhedra.HyperPlane(ones(n_obj), wnorm)
-=======
         h = Polyhedra.HyperPlane(ones(n_obj), 1.0)
->>>>>>> MOA/master
         for i in 1:n_obj
             vec = zeros(Float64, n_obj)
             vec[i] = -1.0
@@ -154,7 +143,7 @@ function MOA.minimize_multiobjective!(
         # This is a heuristic: filter the weights if approximately 1/3 of them
         # have been removed.
         if n_removed >= length(weights) / 3
-            filter!(w -> !w.removed, weights)
+            filter!(w -> !w.removed && !w.tested, weights)
             n_removed = 0
         end
     end
