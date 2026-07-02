@@ -51,7 +51,7 @@ function MOA.minimize_multiobjective!(
         w[i] = 1.0
         z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
-        tested = i <= init_sol_idx ? true : false
+        tested = i <= init_sol_idx
         removed = i < init_sol_idx
         push!(weights, Weight(w, z, adj_bnd, [1], tested, removed))
     end
