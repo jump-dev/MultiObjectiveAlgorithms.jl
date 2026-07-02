@@ -52,7 +52,7 @@ function MOA.minimize_multiobjective!(
         z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
         tested = i <= init_sol_idx ? true : false
-        removed = i < init_sol_idx ? true : false
+        removed = i < init_sol_idx
         push!(weights, Weight(w, z, adj_bnd, [1], tested, removed))
     end
     # Prevent solution duplicates: existing_sol maps an rounded objective vector
