@@ -61,6 +61,7 @@ function _solve_weighted_sum(
     optimize_inner!(model)
     status = MOI.get(model.inner, MOI.TerminationStatus())
     if !_is_scalar_status_optimal(status)
+        _log_subproblem_solve(model, "subproblem not optimal")
         return status, nothing
     end
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())

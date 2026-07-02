@@ -32,9 +32,6 @@ function MOA.minimize_multiobjective!(
         w[i] = 1.0
         status, solution = MOA._solve_weighted_sum(model, alg, w)
         if solution !== nothing
-            if !MOA._is_scalar_status_optimal(model)
-                _log_subproblem_solve(model, "subproblem not optimal")
-            end
             init_sol_idx = i
             push!(solutions, solution)
             break
@@ -72,13 +69,10 @@ function MOA.minimize_multiobjective!(
             end
             status, sol = MOA._solve_weighted_sum(model, alg, weight.w)
             weight.tested = true
-            # the weight is skipped if there is no solution
-            # the procedure can continue in case of sub-optimality
+            # The weight is skipped if there is no solution. The algortihm can
+            # continue in case of sub-optimality.
             if sol === nothing
                 continue
-            end
-            if !MOA._is_scalar_status_optimal(model)
-                _log_subproblem_solve(model, "subproblem not optimal")
             end
             if !haskey(existing_sol, _round(sol.y; atol))
                 push!(solutions, sol)
