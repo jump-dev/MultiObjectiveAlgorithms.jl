@@ -127,6 +127,12 @@ function test_vlp()
     MOI.set(model, MOI.Silent(), true)
     MOI.set(model, MOA.Algorithm(), MOA.GeneralDichotomy())
     MOI.optimize!(model)
+    N = MOI.get(model, MOI.ResultCount())
+    y_sol = [round.(Int, y) for y in (MOI.get.(model, MOI.ObjectiveValue.(1:N)) .* 10)]
+    Y_N = [[15, 15, 0], [5, 10, 5], [5, 5, 10], [10, 5, 5]]
+    for i in length(Y_N)
+        @test Y_N[i] ∈ y_sol
+    end
     return
 end
 

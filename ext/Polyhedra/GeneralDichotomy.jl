@@ -81,15 +81,15 @@ function MOA.minimize_multiobjective!(
         for (i, weight) in enumerate(weights)
             sol_z = weight.w' * new_sol.y
             if sol_z < weight.z - atol
-                # The new solution is strictly better than the previous.
                 if length(weight.adj_bnd) < n_obj
                     weight.removed = true
                     n_removed += 1
-                else
+                end
+                union!(polytope_sol, weight.adj_sol)
+                if !weight.removed
                     weight.adj_sol = Int[new_sol_ind]
                     weight.z = sol_z
                 end
-                union!(polytope_sol, weight.adj_sol)
             elseif sol_z <= weight.z + atol
                 # The new solution is equal in value to the previous.
                 push!(weight.adj_sol, new_sol_ind)
@@ -115,20 +115,7 @@ function MOA.minimize_multiobjective!(
         for idx in eachindex(Polyhedra.points(poly))
             w = get(poly, idx)
             z = w' * new_sol.y
-            if (i = get(equal_weights, _round(w; atol), nothing)) !== nothing
-                # Update an existing extreme weight.
-                weights[i].z = z
-                weights[i].tested = true
-                weights[i].adj_sol = Int[new_sol_ind]
-                if length(weights[i].adj_bnd) < n_obj - 1
-                    if !weights[i].removed
-                        weights[i].removed = true
-                        n_removed += 1
-                    end
-                else
-                    weights[i].removed = false
-                end
-            else
+            if (i = get(equal_weights, _round(w; atol), nothing)) === nothing
                 # Insert a new extreme weight.
                 adj_bnd, adj_sol = Int[], Int[]
                 for elt in Polyhedra.incidenthalfspaceindices(poly, idx)
