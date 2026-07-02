@@ -24,14 +24,25 @@ function MOA.minimize_multiobjective!(
     # Storage we need for the algorithm.
     weights, solutions = Weight[], MOA.SolutionPoint[]
     n_obj = MOI.output_dimension(model.f)
-    # First, minimize the first objective to obtain a primal feasible point.
-    w = zeros(Float64, n_obj)
-    w[1] = 1.0
-    status, solution = MOA._solve_weighted_sum(model, alg, w)
-    if solution === nothing
+    # First, search for an initial primal feasible point.
+    init_sol_idx = 0
+    status, solution = nothing, nothing
+    for i in 1:n_obj
+        w = zeros(Float64, n_obj)
+        w[i] = 1.0
+        status, solution = MOA._solve_weighted_sum(model, alg, w)
+        if solution !== nothing
+            if !MOA._is_scalar_status_optimal(model)
+                _log_subproblem_solve(model, "subproblem not optimal")
+            end
+            init_sol_idx = i
+            push!(solutions, solution)
+            break
+        end
+    end
+    if length(solutions) == 0
         return status, nothing
     end
-    push!(solutions, solution)
     # Initialize the weights. There is one weight vector for each objective, and
     # the weight is set to 1.0 for each objective. We use the current solution
     # obtained by minimizing the 1st objective as the reference.
@@ -40,7 +51,9 @@ function MOA.minimize_multiobjective!(
         w[i] = 1.0
         z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
-        push!(weights, Weight(w, z, adj_bnd, [1], i == 1, false))
+        tested = i <= init_sol_idx ? true : false
+        removed = i < init_sol_idx ? true : false
+        push!(weights, Weight(w, z, adj_bnd, [1], tested, removed))
     end
     # Prevent solution duplicates: existing_sol maps an rounded objective vector
     # to its index in `solutions::Vector{MOA.SolutionPoint}`.
@@ -58,11 +71,15 @@ function MOA.minimize_multiobjective!(
                 continue
             end
             status, sol = MOA._solve_weighted_sum(model, alg, weight.w)
-            if sol === nothing
-                # TODO(odow): what to do when this solve fails?
-                return status, solutions
-            end
             weight.tested = true
+            # the weight is skipped if there is no solution
+            # the procedure can continue in case of sub-optimality
+            if sol === nothing
+                continue
+            end
+            if !MOA._is_scalar_status_optimal(model)
+                _log_subproblem_solve(model, "subproblem not optimal")
+            end
             if !haskey(existing_sol, _round(sol.y; atol))
                 push!(solutions, sol)
                 # Prepare new weight index set for the new solution's adjacency.
