@@ -59,13 +59,18 @@ function _solve_weighted_sum(
     f = _scalarise(model.f, weight)
     MOI.set(model.inner, MOI.ObjectiveFunction{typeof(f)}(), f)
     optimize_inner!(model)
-    status = MOI.get(model.inner, MOI.TerminationStatus())
-    if !_is_scalar_status_optimal(status)
-        _log_subproblem_solve(model, "subproblem not optimal")
+    primal_status = MOI.get(model.inner, MOI.PrimalStatus())
+    if !_is_scalar_status_feasible_point(primal_status)
+        _log_subproblem_solve(model, "subproblem failed to solve")
         return status, nothing
     end
+    status = MOI.get(model.inner, MOI.TerminationStatus())
     variables = MOI.get(model.inner, MOI.ListOfVariableIndices())
     X, Y = _compute_point(model, variables, model.f)
-    _log_subproblem_solve(model, Y)
+    if !_is_scalar_status_optimal(status)
+        _log_subproblem_solve(model, "subproblem not optimal")
+    else
+        _log_subproblem_solve(model, Y)
+    end
     return status, SolutionPoint(X, Y)
 end
