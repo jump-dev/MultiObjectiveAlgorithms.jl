@@ -72,8 +72,7 @@ function _solve_weighted_sum(
     X, Y = _compute_point(model, variables, model.f)
     if !_is_scalar_status_optimal(term_status)
         _log_subproblem_solve(model, "subproblem not optimal")
-    else
-        _log_subproblem_solve(model, Y)
     end
+    _log_subproblem_solve(model, Y)
     return term_status, SolutionPoint(X, Y)
 end
