@@ -537,8 +537,7 @@ function test_dichotomy_issue_191()
     return
 end
 
-
-function test_AAA_general_dichotomy_highs_solution_limit()
+function test_general_dichotomy_highs_solution_limit()
     p1 = [77, 94, 71, 63, 96, 82, 85, 75, 72, 91, 99, 63, 84, 87, 79, 94, 90]
     p2 = [65, 90, 90, 77, 95, 84, 70, 94, 66, 92, 74, 97, 60, 60, 65, 97, 93]
     w = [80, 87, 68, 72, 66, 77, 99, 85, 70, 93, 98, 72, 100, 89, 67, 86, 91]
