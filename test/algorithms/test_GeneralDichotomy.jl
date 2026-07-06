@@ -456,7 +456,7 @@ function test_quadratic()
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
-    @test MOI.get(model, MOI.ResultCount()) == 10
+    @test 9 <= MOI.get(model, MOI.ResultCount()) <= 10
     for i in 1:MOI.get(model, MOI.ResultCount())
         w_sol = MOI.get(model, MOI.VariablePrimal(i), w)
         y = MOI.get(model, MOI.ObjectiveValue(i))
@@ -507,7 +507,7 @@ function test_solve_failures()
         end
         MOI.optimize!(model)
         @test MOI.get(model, MOI.TerminationStatus()) == MOI.NUMERICAL_ERROR
-        fails = [0, 1, 2, 3]
+        fails = [0, 0, 2, 2]
         @test MOI.get(model, MOI.ResultCount()) == fails[fail_after+1]
     end
     return

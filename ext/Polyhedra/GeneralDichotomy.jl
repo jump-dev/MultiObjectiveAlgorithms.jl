@@ -24,37 +24,30 @@ function MOA.minimize_multiobjective!(
     # Storage we need for the algorithm.
     weights, solutions = Weight[], MOA.SolutionPoint[]
     n_obj = MOI.output_dimension(model.f)
+    existing_sol = Dict{Vector{Int},Int}()
     # First, search for an initial primal feasible point.
-    init_sol_idx = 0
-    status, solution = nothing, nothing
     for i in 1:n_obj
         w = zeros(Float64, n_obj)
         w[i] = 1.0
         status, solution = MOA._solve_weighted_sum(model, alg, w)
-        if solution !== nothing
-            init_sol_idx = i
-            push!(solutions, solution)
-            break
+        if solution === nothing
+            # One of the subproblems failed to solve. This means something went
+            # really wrong. A common reason is that the problem is unbounded.
+            return status, nothing
         end
+        push!(solutions, solution)
+        model.ideal_point[i] = solution.y[i]
     end
-    if length(solutions) == 0
-        return status, nothing
-    end
-    # Initialize the weights. There is one weight vector for each objective, and
-    # the weight is set to 1.0 for each objective. We use the current solution
-    # obtained by minimizing the 1st objective as the reference.
+    solution = solutions[1]
+    existing_sol[_round(solution.y; atol)] = 1
     for i in 1:n_obj
         w = zeros(Float64, n_obj)
         w[i] = 1.0
         z = w' * solution.y
         adj_bnd = Int[-j for j in 1:n_obj if j != i]
-        tested = i <= init_sol_idx
-        removed = i < init_sol_idx
-        push!(weights, Weight(w, z, adj_bnd, [1], tested, removed))
+        push!(weights, Weight(w, z, adj_bnd, [1], i == 1, false))
     end
-    # Prevent solution duplicates: existing_sol maps an rounded objective vector
-    # to its index in `solutions::Vector{MOA.SolutionPoint}`.
-    existing_sol = Dict(_round(solution.y; atol) => 1)
+    status = MOI.OPTIMAL
     n_removed = 0
     while length(solutions) < MOI.get(alg, MOA.SolutionLimit())
         if (ret = MOA._check_premature_termination(model)) !== nothing
