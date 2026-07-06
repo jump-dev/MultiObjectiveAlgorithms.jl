@@ -12,7 +12,13 @@ for (root, dirs, files) in walkdir(@__DIR__)
     end
 end
 
-import MultiObjectiveAlgorithms
-import ParallelTestRunner
+# import MultiObjectiveAlgorithms
+# import ParallelTestRunner
+#
+# ParallelTestRunner.runtests(MultiObjectiveAlgorithms, ARGS; testsuite)
 
-ParallelTestRunner.runtests(MultiObjectiveAlgorithms, ARGS; testsuite)
+# Run the tests in serial. HiGHS intermittently segfaults on v1.10 when using
+# ParallelTestRunner for some reason.
+for file in keys(testsuite)
+    include(file)
+end
