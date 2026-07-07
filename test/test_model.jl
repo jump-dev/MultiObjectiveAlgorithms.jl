@@ -268,6 +268,7 @@ function test_printing()
     @test MOI.supports(model, MOI.Silent())
     @test MOI.get(model, MOI.Silent()) == false
     MOI.set(model, MOI.Silent(), true)
+    MOI.set(model, MOA.SilentInner(), true)
     open(joinpath(dir, "log2.txt"), "w") do io
         redirect_stdout(() -> MOI.optimize!(model), io)
         return
