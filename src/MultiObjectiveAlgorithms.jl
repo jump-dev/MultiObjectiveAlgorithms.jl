@@ -208,7 +208,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         inner = MOI.instantiate(optimizer_factory; with_cache_type = Float64)
         if MOI.supports(inner, MOI.Silent())
             # Make the default for `SilentInner` true.
-            MOI.set(inner, MOI.Silent(), true)
+            # MOI.set(inner, MOI.Silent(), true)
         end
         return new(
             inner,
