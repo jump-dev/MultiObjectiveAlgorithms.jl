@@ -27,7 +27,7 @@ function test_vOptLib_runtests()
     model = MOA.Optimizer(HiGHS.Optimizer)
     MOI.set(model, MOA.Algorithm(), MOA.EpsilonConstraint())
     # MOI.set(model, MOI.Silent(), true)
-    MOI.set(model, MOA.SilentInner(), false)
+    # MOI.set(model, MOA.SilentInner(), false)
     vOptLib.run_tests(model)
     return
 end
