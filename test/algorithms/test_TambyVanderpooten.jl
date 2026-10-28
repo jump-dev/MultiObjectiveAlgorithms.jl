@@ -173,6 +173,65 @@ function test_solve_failures()
     return
 end
 
+function _solve_noisy_mock(mock, counter::Ref{Int})
+    highs = HiGHS.Optimizer()
+    MOI.set(highs, MOI.Silent(), true)
+    index_map = MOI.copy_to(highs, mock)
+    MOI.optimize!(highs)
+    x = [index_map[xi] for xi in MOI.get(mock, MOI.ListOfVariableIndices())]
+    # Perturb the solution by a deterministic amount that is within the
+    # tolerances that a typical MIP solver might return.
+    noise() = 1e-6 * sin(counter[] += 1)
+    x_primal = [xi + noise() for xi in MOI.get(highs, MOI.VariablePrimal(), x)]
+    status = MOI.get(highs, MOI.TerminationStatus())
+    MOI.Utilities.mock_optimize!(mock, status, x_primal)
+    obj = MOI.get(highs, MOI.ObjectiveValue())
+    MOI.set(mock, MOI.ObjectiveValue(), obj + noise())
+    return
+end
+
+function test_noisy_solutions()
+    C = [
+        [3 13 3 20 9; 4 13 3 4 9; 18 9 3 9 17; 1 16 16 11 3; 18 4 7 13 11],
+        [1 12 4 6 20; 18 5 13 20 7; 9 3 3 2 15; 11 18 1 7 13; 6 7 3 15 18],
+        [13 13 13 14 15; 16 3 20 7 13; 12 17 9 8 3; 6 10 4 18 5; 4 9 7 14 11],
+    ]
+    n = size(C[1], 1)
+    solutions = Dict{Bool,Set{Vector{Int}}}()
+    for noisy in (false, true)
+        counter = Ref(0)
+        model = MOA.Optimizer() do
+            mock = MOI.Utilities.MockOptimizer(MOI.Utilities.Model{Float64}())
+            MOI.Utilities.set_mock_optimize!(
+                mock,
+                m -> noisy ? _solve_noisy_mock(m, counter) : _solve_mock(m),
+            )
+            return mock
+        end
+        MOI.set(model, MOA.Algorithm(), MOA.TambyVanderpooten())
+        MOI.set(model, MOI.Silent(), true)
+        MOI.set(model, MOI.TimeLimitSec(), 60.0)
+        x = reshape(MOI.add_variables(model, n * n), n, n)
+        MOI.add_constraint.(model, x, MOI.ZeroOne())
+        for i in 1:n
+            MOI.add_constraint(model, sum(1.0 .* x[i, :]), MOI.EqualTo(1.0))
+            MOI.add_constraint(model, sum(1.0 .* x[:, i]), MOI.EqualTo(1.0))
+        end
+        f_k = [sum(1.0 * C[k] .* x) for k in 1:3]
+        f = MOI.Utilities.operate(vcat, Float64, f_k...)
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+        MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+        MOI.optimize!(model)
+        @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+        N = MOI.get(model, MOI.ResultCount())
+        Y = [round.(Int, MOI.get(model, MOI.ObjectiveValue(i))) for i in 1:N]
+        @test allunique(Y)
+        solutions[noisy] = Set(Y)
+    end
+    @test solutions[false] == solutions[true]
+    return
+end
+
 end  # module TestTambyVanderpooten
 
 TestTambyVanderpooten.run_tests()

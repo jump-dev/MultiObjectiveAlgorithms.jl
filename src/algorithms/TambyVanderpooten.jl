@@ -33,32 +33,41 @@ This algorithm is restricted to problems with:
 struct TambyVanderpooten <: AbstractAlgorithm end
 
 """
-    const _TAMBY_VANDERPOOTEN_ATOL = 1e-3
+    _round_objective(y::Float64, constant::Float64)::Int
 
-This constant is important.
+Return `y - constant`, rounded to the nearest integer.
 
-When we have a solution, we need to decide if the `Y` vector is at the edge of
-one of the bounds. The paper assumes exact arithmetic. Solvers have tolerances.
+The paper assumes exact arithmetic, and the algorithm relies on exact
+comparisons, like whether `y[k] == u[k]` or `y[k] < u[k]`, to decide if a point
+is on the edge of a search zone or strictly inside it. Solvers have tolerances,
+so the same nondominated point can be returned with different noise, for
+example, as `1234.00005` and `1233.99998`. If we compare these values directly,
+the algorithm can revisit the same point and cycle.
 
-In theory the algorithm works only for problems with integer-valued objectives.
-So we could make this as big as `0.5` or something. We previously used `1e-6`,
-but this caused problems when the solver's feasibility tolerance meant that the
-objective value was something like `1234.00005`.
+The algorithm works only for problems with integer-valued objectives (we use an
+ε of `1.0` for the strict inequalities), so we round the non-constant part of
+every objective value to the nearest integer and store it as an `Int`. This
+ensures that all comparisons are exact.
 
-In future, we could consider how to rewrite the algorithm to make it more robust
-to numerical issues like this.
+All objective values in the algorithm (`yI`, `yN`, `U_N`, `V`, and the keys of
+`solutions`) are stored without the objective constant. This does not change
+the algorithm because the comparisons are elementwise and `_h` uses only
+differences between points. It also means that the right-hand side of the
+ε-constraints, which have their constant moved to the set, is the stored value.
 """
-const _TAMBY_VANDERPOOTEN_ATOL = 1e-3
+function _round_objective(y::Float64, constant::Float64)
+    return round(Int, y - constant)
+end
 
 # This is Algorithm 1 from the paper.
 function _update_search_region(
-    U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
-    y::Vector{Float64},
-    yN::Vector{Float64},
+    U_N::Dict{Vector{Int},Vector{Vector{Vector{Int}}}},
+    y::Vector{Int},
+    yN::Vector{Int},
 )
     p = length(y)
-    bounds_to_remove = Vector{Float64}[]
-    bounds_to_add = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}()
+    bounds_to_remove = Vector{Int}[]
+    bounds_to_add = Dict{Vector{Int},Vector{Vector{Vector{Int}}}}()
     for (u, u_n) in U_N
         if _is_less(y, u, 0) # k=0 here because we want to check every element
             push!(bounds_to_remove, u)
@@ -102,19 +111,20 @@ function _is_less(y, u, k)
     return true
 end
 
-function _get_child(u::Vector{Float64}, y::Vector{Float64}, k::Int)
+function _get_child(u::Vector{Int}, y::Vector{Int}, k::Int)
     @assert length(u) == length(y)
     child = copy(u)
     child[k] = y[k]
     return child
 end
 
-# This is function h(u, k) in the paper.
-function _h(k::Int, u::Vector{Float64}, yI::Vector{Float64})
+# This is function h(u, k) in the paper. We use Float64 because the product can
+# overflow an Int.
+function _h(k::Int, u::Vector{Int}, yI::Vector{Int})
     h = 1.0
     for (i, (u_i, yI_i)) in enumerate(zip(u, yI))
         if i != k
-            h *= u_i - yI_i
+            h *= Float64(u_i - yI_i)
         end
     end
     return h
@@ -122,13 +132,13 @@ end
 
 # This is Problem (6) in the paper. The upper bound M is our nadir point yN.
 function _select_search_zone(
-    U_N::Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}},
-    yI::Vector{Float64},
-    yN::Vector{Float64},
+    U_N::Dict{Vector{Int},Vector{Vector{Vector{Int}}}},
+    yI::Vector{Int},
+    yN::Vector{Int},
 )
     k_star, u_star, v_star = 1, yN, -Inf
     for k in 1:length(yI), u in keys(U_N)
-        if !isapprox(u[k], yN[k]; atol = _TAMBY_VANDERPOOTEN_ATOL)
+        if u[k] != yN[k]
             v = _h(k, u, yI)
             if v > v_star
                 k_star, u_star, v_star = k, u, v
@@ -144,7 +154,7 @@ function minimize_multiobjective!(
     inner::MOI.ModelLike,
     f::MOI.AbstractVectorFunction,
 )
-    solutions = Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}}()
+    solutions = Dict{Vector{Int},Dict{MOI.VariableIndex,Float64}}()
     status = _minimize_multiobjective!(
         algorithm,
         model,
@@ -152,7 +162,10 @@ function minimize_multiobjective!(
         f,
         solutions,
     )::MOI.TerminationStatusCode
-    return status, SolutionPoint[SolutionPoint(X, Y) for (Y, X) in solutions]
+    obj_constants = MOI.constant.(MOI.Utilities.scalarize(f))
+    return status, SolutionPoint[
+        SolutionPoint(X, Y .+ obj_constants) for (Y, X) in solutions
+    ]
 end
 
 # To ensure the type stability of `.inner` and `.f`, we use a function barrier.
@@ -165,7 +178,7 @@ function _minimize_multiobjective!(
     model::Optimizer,
     inner::MOI.ModelLike,
     f::MOI.AbstractVectorFunction,
-    solutions::Dict{Vector{Float64},Dict{MOI.VariableIndex,Float64}},
+    solutions::Dict{Vector{Int},Dict{MOI.VariableIndex,Float64}},
 )
     @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     warm_start_supported =
@@ -173,8 +186,9 @@ function _minimize_multiobjective!(
     variables = MOI.get(inner, MOI.ListOfVariableIndices())
     n = MOI.output_dimension(f)
     # Compute the ideal (yI) and nadir (yN) points
-    yI, yN = zeros(n), zeros(n)
+    yI, yN = zeros(Int, n), zeros(Int, n)
     scalars = MOI.Utilities.scalarize(f)
+    obj_constants = MOI.constant.(scalars)
     for (i, f_i) in enumerate(scalars)
         MOI.set(inner, MOI.ObjectiveFunction{typeof(f_i)}(), f_i)
         MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -185,7 +199,8 @@ function _minimize_multiobjective!(
         end
         _, y_i = _compute_point(model, variables, f_i)
         _log_subproblem_solve(model, variables)
-        model.ideal_point[i] = yI[i] = y_i
+        yI[i] = _round_objective(y_i, obj_constants[i])
+        model.ideal_point[i] = yI[i] + obj_constants[i]
         MOI.set(inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         optimize_inner!(model)
         status = MOI.get(inner, MOI.TerminationStatus())
@@ -197,7 +212,7 @@ function _minimize_multiobjective!(
         _log_subproblem_solve(model, variables)
         # This is not really the nadir point, it's an upper bound on the
         # nadir point because we later add epsilon constraints with a -1.
-        yN[i] = y_i + 1
+        yN[i] = _round_objective(y_i, obj_constants[i]) + 1
     end
     MOI.set(inner, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     # Instead of adding and deleting constraints during the algorithm, we add
@@ -206,15 +221,14 @@ function _minimize_multiobjective!(
         MOI.Utilities.normalize_and_add_constraint(
             inner,
             f_i,
-            MOI.LessThan(yN[i]),
+            MOI.LessThan(yN[i] + obj_constants[i]),
         ) for (i, f_i) in enumerate(scalars)
     ]
-    obj_constants = MOI.constant.(scalars)
-    U_N = Dict{Vector{Float64},Vector{Vector{Vector{Float64}}}}(
+    U_N = Dict{Vector{Int},Vector{Vector{Vector{Int}}}}(
         # The nadir point, except for the ideal point in position k
         yN => [[_get_child(yN, yI, k)] for k in 1:n],
     )
-    V = [Tuple{Vector{Float64},Vector{Float64}}[] for k in 1:n]
+    V = [Tuple{Vector{Int},Vector{Int}}[] for k in 1:n]
     status = MOI.OPTIMAL
     sum_f = MOI.Utilities.operate(+, Float64, scalars...)
     while !isempty(U_N)
@@ -230,7 +244,7 @@ function _minimize_multiobjective!(
         # computing the nadir point.
         for i in 1:n
             u_i = ifelse(i == k, yN[i], u[i])
-            set = MOI.LessThan(u_i - 1.0 - obj_constants[i])
+            set = MOI.LessThan(Float64(u_i - 1))
             MOI.set(inner, MOI.ConstraintSet(), ε_constraints[i], set)
         end
         if warm_start_supported && !isempty(solutions)
@@ -244,8 +258,9 @@ function _minimize_multiobjective!(
             break
         end
         # Now solve problem Π²(k, u)
-        y_k = MOI.get(inner, MOI.ObjectiveValue())::Float64
-        set = MOI.LessThan(y_k - obj_constants[k])
+        obj = MOI.get(inner, MOI.ObjectiveValue())::Float64
+        y_k = _round_objective(obj, obj_constants[k])
+        set = MOI.LessThan(Float64(y_k))
         MOI.set(inner, MOI.ConstraintSet(), ε_constraints[k], set)
         MOI.set(inner, MOI.ObjectiveFunction{typeof(sum_f)}(), sum_f)
         optimize_inner!(model)
@@ -253,12 +268,11 @@ function _minimize_multiobjective!(
         if !_is_scalar_status_optimal(status)
             break
         end
-        X, Y = _compute_point(model, variables, f)
-        _log_subproblem_solve(model, Y)
+        X, Y_float = _compute_point(model, variables, f)
+        Y = _round_objective.(Y_float, obj_constants)
+        _log_subproblem_solve(model, Y .+ obj_constants)
         push!(V[k], (u, Y))
-        # We want `if !(Y in U_N[u][k])` but this tests exact equality. We
-        # want an approximate comparison.
-        if all(!isapprox(Y; atol = _TAMBY_VANDERPOOTEN_ATOL), U_N[u][k])
+        if !(Y in U_N[u][k])
             _update_search_region(U_N, Y, yN)
             solutions[Y] = X
         end
@@ -288,7 +302,7 @@ end
 
 function _clean_search_region_inner(u′, U_N, yI, V, k)
     for (u′_k, yI_k) in zip(u′, yI)
-        if isapprox(u′_k, yI_k; atol = _TAMBY_VANDERPOOTEN_ATOL)
+        if u′_k == yI_k
             return true
         end
     end
@@ -303,7 +317,7 @@ function _clean_search_region_inner(u′, U_N, yI, V, k)
 end
 
 function _comparison_line_16(u′, u, y_k, k)
-    if !≈(y_k[k], u′[k]; atol = _TAMBY_VANDERPOOTEN_ATOL)
+    if y_k[k] != u′[k]
         return false
     end
     for (i, (u′_i, u_i)) in enumerate(zip(u′, u))
