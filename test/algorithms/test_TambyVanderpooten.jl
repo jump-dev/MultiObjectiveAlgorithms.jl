@@ -224,7 +224,10 @@ function test_noisy_solutions()
         MOI.optimize!(model)
         @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
         N = MOI.get(model, MOI.ResultCount())
-        Y = [round.(Int, MOI.get(model, MOI.ObjectiveValue(i))) for i in 1:N]
+        Y_float = [MOI.get(model, MOI.ObjectiveValue(i)) for i in 1:N]
+        # The algorithm rounds internally, but we return the solver's values.
+        @test any(y -> any(!isinteger, y), Y_float) == noisy
+        Y = [round.(Int, y) for y in Y_float]
         @test allunique(Y)
         solutions[noisy] = Set(Y)
     end

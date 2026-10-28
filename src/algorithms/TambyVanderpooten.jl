@@ -50,7 +50,8 @@ every objective value to the nearest integer and store it as an `Int`. This
 ensures that all comparisons are exact.
 
 All objective values in the algorithm (`yI`, `yN`, `U_N`, `V`, and the keys of
-`solutions`) are stored without the objective constant. This does not change
+`solutions`) are stored without the objective constant. We still return the
+original floating point objective values to the user. This does not change
 the algorithm because the comparisons are elementwise and `_h` uses only
 differences between points. It also means that the right-hand side of the
 ε-constraints, which have their constant moved to the set, is the stored value.
@@ -154,7 +155,7 @@ function minimize_multiobjective!(
     inner::MOI.ModelLike,
     f::MOI.AbstractVectorFunction,
 )
-    solutions = Dict{Vector{Int},Dict{MOI.VariableIndex,Float64}}()
+    solutions = Dict{Vector{Int},SolutionPoint}()
     status = _minimize_multiobjective!(
         algorithm,
         model,
@@ -162,23 +163,21 @@ function minimize_multiobjective!(
         f,
         solutions,
     )::MOI.TerminationStatusCode
-    obj_constants = MOI.constant.(MOI.Utilities.scalarize(f))
-    return status, SolutionPoint[
-        SolutionPoint(X, Y .+ obj_constants) for (Y, X) in solutions
-    ]
+    return status, collect(values(solutions))
 end
 
 # To ensure the type stability of `.inner` and `.f`, we use a function barrier.
 #
 # We also pass in `solutions` to simplify the function and to ensure that we can
 # return at any point from the this inner function with a partial list of primal
-# solutions.
+# solutions. The keys of `solutions` are the rounded objective values that we
+# use in the algorithm, and the values are the original solutions.
 function _minimize_multiobjective!(
     algorithm::TambyVanderpooten,
     model::Optimizer,
     inner::MOI.ModelLike,
     f::MOI.AbstractVectorFunction,
-    solutions::Dict{Vector{Int},Dict{MOI.VariableIndex,Float64}},
+    solutions::Dict{Vector{Int},SolutionPoint},
 )
     @assert MOI.get(inner, MOI.ObjectiveSense()) == MOI.MIN_SENSE
     warm_start_supported =
@@ -199,8 +198,8 @@ function _minimize_multiobjective!(
         end
         _, y_i = _compute_point(model, variables, f_i)
         _log_subproblem_solve(model, variables)
+        model.ideal_point[i] = y_i
         yI[i] = _round_objective(y_i, obj_constants[i])
-        model.ideal_point[i] = yI[i] + obj_constants[i]
         MOI.set(inner, MOI.ObjectiveSense(), MOI.MAX_SENSE)
         optimize_inner!(model)
         status = MOI.get(inner, MOI.TerminationStatus())
@@ -248,7 +247,7 @@ function _minimize_multiobjective!(
             MOI.set(inner, MOI.ConstraintSet(), ε_constraints[i], set)
         end
         if warm_start_supported && !isempty(solutions)
-            for (x_i, start_i) in solutions[last(U_N[u][k])]
+            for (x_i, start_i) in solutions[last(U_N[u][k])].x
                 MOI.set(inner, MOI.VariablePrimalStart(), x_i, start_i)
             end
         end
@@ -269,12 +268,12 @@ function _minimize_multiobjective!(
             break
         end
         X, Y_float = _compute_point(model, variables, f)
+        _log_subproblem_solve(model, Y_float)
         Y = _round_objective.(Y_float, obj_constants)
-        _log_subproblem_solve(model, Y .+ obj_constants)
         push!(V[k], (u, Y))
         if !(Y in U_N[u][k])
             _update_search_region(U_N, Y, yN)
-            solutions[Y] = X
+            solutions[Y] = SolutionPoint(X, Y_float)
         end
         _clean_search_region(U_N, yI, V, k)
     end
