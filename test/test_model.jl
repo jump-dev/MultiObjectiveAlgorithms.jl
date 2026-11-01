@@ -50,6 +50,7 @@ function test_infeasible()
     MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
     MOI.add_constraint(model, 1.0 * x[1] + 1.0 * x[2], MOI.LessThan(-1.0))
     f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.INFEASIBLE
