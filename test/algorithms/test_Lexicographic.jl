@@ -151,6 +151,7 @@ function test_infeasible()
         x = MOI.add_variables(model, 2)
         MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
         MOI.add_constraint(model, 1.0 * x[1] + 1.0 * x[2], MOI.LessThan(-1.0))
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         f = MOI.Utilities.operate(vcat, Float64, 1.0 .* x...)
         MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
         MOI.optimize!(model)
@@ -264,6 +265,47 @@ function test_knapsack_5_objectives()
     X = round.(Int, MOI.get(model, MOI.VariablePrimal(1), x))
     Y = round.(Int, MOI.get(model, MOI.ObjectiveValue(1)))
     @test ([1, 1, 0, 0, 2] => [1, 1, 0, 0]) == (Y => X)
+    return
+end
+
+function test_objective_offset()
+    # If the objective constant is not handled correctly when adding the
+    # lexicographic constraint, then `x[1] + 10 <= 10` would become `x[1] <= 10`
+    # and the second solve would return the wrong point.
+    for (sense, s) in (MOI.MIN_SENSE => 1.0, MOI.MAX_SENSE => -1.0)
+        model = MOA.Optimizer(HiGHS.Optimizer)
+        MOI.set(model, MOA.Algorithm(), MOA.Lexicographic())
+        MOI.set(model, MOA.LexicographicAllPermutations(), true)
+        MOI.set(model, MOI.Silent(), true)
+        x = MOI.add_variables(model, 2)
+        MOI.add_constraint.(model, x, MOI.GreaterThan(0.0))
+        MOI.add_constraint.(model, x, MOI.LessThan(1.0))
+        MOI.add_constraint(model, 1.0 * x[1] + 1.0 * x[2], MOI.GreaterThan(1.0))
+        MOI.set(model, MOI.ObjectiveSense(), sense)
+        f = MOI.Utilities.operate(
+            vcat,
+            Float64,
+            s * x[1] + 10.0,
+            s * x[2] - 5.0,
+        )
+        MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+        MOI.optimize!(model)
+        @test MOI.get(model, MOI.TerminationStatus()) == MOI.OPTIMAL
+        @test MOI.get(model, MOI.ResultCount()) == 2
+        results = Dict{Vector{Float64},Vector{Float64}}()
+        for i in 1:2
+            x_sol = MOI.get(model, MOI.VariablePrimal(i), x)
+            y_sol = MOI.get(model, MOI.ObjectiveValue(i))
+            results[round.(x_sol; digits = 6) .+ 0.0] = y_sol
+        end
+        @test haskey(results, [0.0, 1.0])
+        @test haskey(results, [1.0, 0.0])
+        @test ≈(results[[0.0, 1.0]], [10.0, s - 5.0]; atol = 1e-6)
+        @test ≈(results[[1.0, 0.0]], [s + 10.0, -5.0]; atol = 1e-6)
+        # The temporary constraints must be removed after the solve.
+        F, S = MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}
+        @test MOI.get(model, MOI.NumberOfConstraints{F,S}()) == 0
+    end
     return
 end
 
