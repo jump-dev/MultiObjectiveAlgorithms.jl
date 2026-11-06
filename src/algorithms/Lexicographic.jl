@@ -109,6 +109,12 @@ function minimize_multiobjective!(
     end
     status, solutions = MOI.OPTIMAL, SolutionPoint[]
     variables = MOI.get(inner, MOI.ListOfVariableIndices())
+    # The primal values of the most recent feasible subproblem, in the order of
+    # `variables`. The full `SolutionPoint` is built from these only once per
+    # sequence, rather than after every subproblem.
+    position = Dict(x => j for (j, x) in enumerate(variables))
+    primal = Vector{Float64}(undef, length(variables))
+    get_x = x -> primal[position[x]]
     scalars = MOI.Utilities.eachscalar(f)
     set_inf = MOI.LessThan(Inf)
     constraints = map(scalars) do fi
@@ -116,7 +122,7 @@ function minimize_multiobjective!(
     end
     constants = MOI.constant(f, Float64)
     for sequence in _sequences(1:dim, perm)
-        solution = nothing
+        has_solution = false
         for i in sequence
             if (ret = _check_premature_termination(model)) !== nothing
                 status = ret
@@ -128,11 +134,13 @@ function minimize_multiobjective!(
             status = MOI.get(inner, MOI.TerminationStatus())
             primal_status = MOI.get(inner, MOI.PrimalStatus())
             if _is_scalar_status_feasible_point(primal_status)
-                X, Y = _compute_point(model, variables, f)
-                _log_subproblem_solve(model, Y)
-                solution = SolutionPoint(X, Y)
-                get_X = Base.Fix1(getindex, X)
-                Yi = MOI.Utilities.eval_variables(get_X, model, fi)
+                copyto!(primal, MOI.get(inner, MOI.VariablePrimal(), variables))
+                has_solution = true
+                if !model.silent
+                    Y = MOI.Utilities.eval_variables(get_x, model, f)
+                    _log_subproblem_solve(model, Y)
+                end
+                Yi = MOI.Utilities.eval_variables(get_x, model, fi)
                 rtol = MOI.get(algorithm, ObjectiveRelativeTolerance(i))
                 set = MOI.LessThan(Yi - constants[i] + rtol * abs(Yi))
                 MOI.set(model, MOI.ConstraintSet(), constraints[i], set)
@@ -141,8 +149,10 @@ function minimize_multiobjective!(
                 break
             end
         end
-        if solution !== nothing
-            push!(solutions, solution)
+        if has_solution
+            X = Dict{MOI.VariableIndex,Float64}(zip(variables, primal))
+            Y = MOI.Utilities.eval_variables(get_x, model, f)
+            push!(solutions, SolutionPoint(X, Y))
         end
         if !_is_scalar_status_optimal(status)
             break
